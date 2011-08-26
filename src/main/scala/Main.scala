@@ -1,7 +1,5 @@
 package org.w3.readwriteweb
 
-import org.w3.yourapp.util.ResourceManager.fromClasspath
-
 import javax.servlet._
 import javax.servlet.http._
 import unfiltered.request._
@@ -13,7 +11,9 @@ import java.io._
 import scala.io.Source
 
 import org.slf4j.{Logger, LoggerFactory}
+
 import com.hp.hpl.jena.rdf.model._
+import com.hp.hpl.jena.update._
 
 // holds some Unfiltered plans
 class ReadWriteWeb(base:File) {
@@ -29,7 +29,7 @@ class ReadWriteWeb(base:File) {
       val fis = new FileInputStream(new File(base, path))
       /* http://jena.sourceforge.net/tutorial/RDF_API/index.html#ch-Reading%20RDF */
       val model:Model = ModelFactory.createDefaultModel()
-      model.read(fis, null)
+      model.read(fis, "http://www.w3.org/People/Berners-Lee/")
       req match {
         case GET(_) => {
           Ok ~> new ResponseStreamer {
@@ -41,9 +41,20 @@ class ReadWriteWeb(base:File) {
             }
           }
         }
-        // case POST(_) => {
-        //   val query = 
-        // }
+        case POST(_) => {
+          val bodyStream = Body.stream(req)
+          /* http://openjena.org/ARQ/javadoc/com/hp/hpl/jena/update/UpdateFactory.html */
+          val update:UpdateRequest = UpdateFactory.read(bodyStream)
+          val graphStore:GraphStore = GraphStoreFactory.create(model)
+          val processor:UpdateProcessor = UpdateExecutionFactory.create(update, graphStore)
+          val result:Model = processor.getGraphStore.toDataset.getDefaultModel
+          Ok ~> new ResponseStreamer {
+            def stream(os:OutputStream):Unit = {
+              val lang = "TURTLE"
+              result.write(os, lang)
+            }
+          }
+        }
       }
     }
   }
