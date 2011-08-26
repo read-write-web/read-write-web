@@ -14,6 +14,10 @@ import org.slf4j.{Logger, LoggerFactory}
 import com.hp.hpl.jena.rdf.model._
 import com.hp.hpl.jena.query._
 import com.hp.hpl.jena.update._
+import com.hp.hpl.jena.shared.JenaException
+
+class MSAuthorVia(value:String) extends ResponseHeader("MS-Author-Via", List(value))
+object ViaSPARQL extends MSAuthorVia("SPARQL")
 
 // holds some Unfiltered plans
 class ReadWriteWeb(base:File) {
@@ -23,32 +27,75 @@ class ReadWriteWeb(base:File) {
   val echo = unfiltered.filter.Planify {
     case Path(Seg("echo" :: p :: Nil)) => ResponseString(p)
   }
-
+  
   val read = unfiltered.filter.Planify {
     case req @ Path(path) => {
-      val fis = new FileInputStream(new File(base, path))
-      /* http://jena.sourceforge.net/tutorial/RDF_API/index.html#ch-Reading%20RDF */
-      val model:Model = ModelFactory.createDefaultModel()
-      model.read(fis, "http://www.w3.org/People/Berners-Lee/")
+      val baseURI = req.underlying.getRequestURL.toString  
+      val fileOnDisk = new File(base, path)
+      
+      
+      def foo():(OutputStream, Model) = {
+        // get empty model if file not on disk
+        val model = ModelFactory.createDefaultModel()
+        if (fileOnDisk exists) {
+          val fis = new FileInputStream(fileOnDisk)
+          model.read(fis, baseURI)
+          fis.close()
+        }
+        // if file does not exist, create it
+        if (! fileOnDisk.exists) {
+          // create parent directory if needed
+          val parent = fileOnDisk.getParentFile
+          if (! parent.exists) println(parent.mkdirs)
+          val r = fileOnDisk.createNewFile()
+          logger.debug("Create file %s with success: %s" format (fileOnDisk.getAbsolutePath, r.toString))
+        }
+        val fos = new FileOutputStream(fileOnDisk)
+        (fos, model)
+      }
+      def loadModel(file:File):Model = {
+        val fis = new FileInputStream(fileOnDisk)
+        val m = ModelFactory.createDefaultModel()
+        try {
+          m.read(fis, baseURI)
+        } catch {
+          case je:JenaException => logger.error("File %s was eitheir empty or corrupted: considered as empty graph" format fileOnDisk.getAbsolutePath)
+        }
+        fis.close()
+        m
+      }
       req match {
         case GET(_) => {
-          Ok ~> new ResponseStreamer {
+          val model:Model = loadModel(fileOnDisk)
+          Ok ~> ViaSPARQL ~> new ResponseStreamer {
             def stream(os:OutputStream):Unit = {
-              /* http://jena.sourceforge.net/tutorial/RDF_API/index.html#ch-Writing%20RDF */
-              // val lang = "RDF/XML-ABBREV"
-              val lang = "TURTLE"
-              model.write(os, lang)
+              val lang = "RDF/XML-ABBREV" // "TURTLE"
+              model.write(os, lang, baseURI)
             }
           }
         }
+        case PUT(_) => {
+          val bodyModel = {
+            val m = ModelFactory.createDefaultModel()
+            m.read(Body.stream(req), baseURI)
+            m
+          }
+          val (fos, _) = foo()
+          bodyModel.write(fos, "RDF/XML-ABBREV", baseURI)
+          fos.close()
+          Ok ~> ResponseString("don't know what to return")
+        }
         case POST(_) => {
-          val bodyStream = Body.stream(req)
           /* http://openjena.org/ARQ/javadoc/com/hp/hpl/jena/update/UpdateFactory.html */
-          val update:UpdateRequest = UpdateFactory.read(bodyStream)
+          val update:UpdateRequest = UpdateFactory.read(Body.stream(req))
+          val (fos, model) = foo()
           UpdateAction.execute(update, model)
+          model.write(fos)
+          fos.close()
+          // give back the modified model
           Ok ~> new ResponseStreamer {
             def stream(os:OutputStream):Unit = {
-              val lang = "TURTLE"
+              val lang = "RDF/XML-ABBREV"
               model.write(os, lang)
             }
           }
