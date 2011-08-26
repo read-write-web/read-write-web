@@ -6,15 +6,12 @@ import Keys._
 object Dependencies {
   val specs = "org.scala-tools.testing" % "specs_2.9.0-1" % "1.6.8" % "test"
   val scalatest = "org.scalatest" % "scalatest_2.9.0" % "1.6.1" % "test"
-  val salat = "com.novus" %% "salat-core" % "0.0.8-SNAPSHOT"
-  val dispatch = "net.databinder" %% "dispatch-http" % "0.8.4"
+  val dispatch = "net.databinder" %% "dispatch-http" % "0.8.4" % "test"
   val unfiltered_filter = "net.databinder" %% "unfiltered-filter" % "0.4.1"
   val unfiltered_jetty = "net.databinder" %% "unfiltered-jetty" % "0.4.1"
-  val unfiltered_scalate = "net.databinder" %% "unfiltered-scalate" % "0.4.1"
-  val unfiltered_json = "net.databinder" %% "unfiltered-json" % "0.4.1"
   val unfiltered_spec = "net.databinder" %% "unfiltered-spec" % "0.4.1" % "test"
-  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.6.1"
-  val antiXML = "com.codecommit" %% "anti-xml" % "0.3-SNAPSHOT"
+  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.5.8"
+  val antiXML = "com.codecommit" %% "anti-xml" % "0.3-SNAPSHOT" % "test"
   val jena = "com.hp.hpl.jena" % "jena" % "2.6.4"
   val arq = "com.hp.hpl.jena" % "arq" % "2.8.8"
 //  val jenaIri = "com.hp.hpl.jena" % "iri" % "0.8" from "http://openjena.org/repo/com/hp/hpl/jena/iri/0.8/iri-0.8.jar"
@@ -59,7 +56,6 @@ object YourProjectBuild extends Build {
       libraryDependencies += dispatch,
       libraryDependencies += unfiltered_filter,
       libraryDependencies += unfiltered_jetty,
-      libraryDependencies += unfiltered_scalate,
       libraryDependencies += slf4jSimple,
       libraryDependencies += jena,
       libraryDependencies += arq

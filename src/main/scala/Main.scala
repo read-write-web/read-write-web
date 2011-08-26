@@ -4,7 +4,6 @@ import javax.servlet._
 import javax.servlet.http._
 import unfiltered.request._
 import unfiltered.response._
-import unfiltered.scalate._
 import unfiltered.jetty._
 
 import java.io._
