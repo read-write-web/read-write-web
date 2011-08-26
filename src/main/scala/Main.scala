@@ -13,6 +13,7 @@ import scala.io.Source
 import org.slf4j.{Logger, LoggerFactory}
 
 import com.hp.hpl.jena.rdf.model._
+import com.hp.hpl.jena.query._
 import com.hp.hpl.jena.update._
 
 // holds some Unfiltered plans
@@ -45,13 +46,11 @@ class ReadWriteWeb(base:File) {
           val bodyStream = Body.stream(req)
           /* http://openjena.org/ARQ/javadoc/com/hp/hpl/jena/update/UpdateFactory.html */
           val update:UpdateRequest = UpdateFactory.read(bodyStream)
-          val graphStore:GraphStore = GraphStoreFactory.create(model)
-          val processor:UpdateProcessor = UpdateExecutionFactory.create(update, graphStore)
-          val result:Model = processor.getGraphStore.toDataset.getDefaultModel
+          UpdateAction.execute(update, model)
           Ok ~> new ResponseStreamer {
             def stream(os:OutputStream):Unit = {
               val lang = "TURTLE"
-              result.write(os, lang)
+              model.write(os, lang)
             }
           }
         }

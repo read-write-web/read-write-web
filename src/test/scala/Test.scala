@@ -22,26 +22,24 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
     }
   }
 
-  val update = host / "/People/Berners-Lee/card#i"
+  val update = host / "People/Berners-Lee/card#i"
     
   val sparqlAdd =
 """
 PREFIX dc: <http://purl.org/dc/elements/1.1/>
-PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 INSERT DATA
 { 
   <http://example/book1> dc:title "A new book" ;
                          dc:creator "A.N.Other" .
-  <http://www.w3.org/data#W3C>
-      foaf:member <http://www.w3.org/People/Alexandre/> .
 }
 """
 
   "SPARQL UPDATE on TimBL's FOAF profile" should {
     "return something new" in {
       val body:String = Http(post(timBL, sparqlAdd) as_str)
-      println(body)
-      body must be matching ".*Alexandre.*"
+      // println(body)
+      body must be matching ".*A new book.*"
+//      println("here")
     }
   }
   
