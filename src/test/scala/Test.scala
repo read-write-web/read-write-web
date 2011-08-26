@@ -26,10 +26,15 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
 
   val timBL = host / "People/Berners-Lee/card#i"
     
-  "GET on TimBL's FOAF profile" should {
-    "return something" in {
-      val body:String = Http(timBL as_str)
+  "a GET on TimBL's FOAF profile" should {
+    val (via, body) = Http(timBL >+ { req =>
+      (req >:> { _("MS-Author-Via").head }, req as_str)
+    } )
+    "return an non empty document" in {
       body must not be empty
+    }
+    """have the header "MS-Author-Via" set to SPARQL""" in {
+      via must_== "SPARQL"
     }
   }
 
@@ -42,7 +47,7 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
 INSERT DATA { <http://dig.csail.xvm.mit.edu/2007/wiki/people/JoeLambda#JL> <http://xmlns.com/foaf/0.1/age> 66 }
 """
         
-  "INSERT query on Joe's URI" should {
+  "POSTing an INSERT query on Joe's URI" should {
     "return a 200" in {
       val httpCode:Int = Http(HttpCode(post(joe, insert)))
       httpCode must_== 200
