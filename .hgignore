@@ -1,0 +1,17 @@
+syntax: glob
+target/
+lib_managed/
+src_managed/
+lift_example/
+project/boot/
+.classpath
+.project
+.manager
+*~
+*.class
+*.log
+*\#
+src/main/scala.egp
+src/test/scala.egp
+sbt-launch.jar
+.scala_dependencies
