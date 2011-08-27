@@ -16,8 +16,7 @@ import com.hp.hpl.jena.query._
 import com.hp.hpl.jena.update._
 import com.hp.hpl.jena.shared.JenaException
 
-class MSAuthorVia(value:String) extends ResponseHeader("MS-Author-Via", List(value))
-object ViaSPARQL extends MSAuthorVia("SPARQL")
+import org.w3.readwriteweb.util._
 
 // holds some Unfiltered plans
 class ReadWriteWeb(base:File) {
@@ -67,23 +66,14 @@ class ReadWriteWeb(base:File) {
       req match {
         case GET(_) => {
           val model:Model = loadModel(fileOnDisk)
-          Ok ~> ViaSPARQL ~> new ResponseStreamer {
-            def stream(os:OutputStream):Unit = {
-              val lang = "RDF/XML-ABBREV" // "TURTLE"
-              model.write(os, lang, baseURI)
-            }
-          }
+          Ok ~> ViaSPARQL ~> ResponseModel(model, baseURI)
         }
         case PUT(_) => {
-          val bodyModel = {
-            val m = ModelFactory.createDefaultModel()
-            m.read(Body.stream(req), baseURI)
-            m
-          }
+          val bodyModel = modelFromInputStream(Body.stream(req), baseURI)
           val (fos, _) = foo()
           bodyModel.write(fos, "RDF/XML-ABBREV", baseURI)
           fos.close()
-          Ok ~> ResponseString("don't know what to return")
+          Ok ~> ResponseString("")
         }
         case POST(_) => {
           /* http://openjena.org/ARQ/javadoc/com/hp/hpl/jena/update/UpdateFactory.html */

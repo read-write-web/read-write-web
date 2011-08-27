@@ -11,6 +11,7 @@ import com.hp.hpl.jena.rdf.model._
 import com.hp.hpl.jena.query._
 import com.hp.hpl.jena.update._
 
+import org.w3.readwriteweb.util._
 import org.w3.readwriteweb.utiltest._
 
 object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served {
@@ -77,16 +78,16 @@ INSERT DATA { <http://dig.csail.xvm.mit.edu/2007/wiki/people/JoeLambda#JL> foaf:
 //        <foaf:openid rdf:resource="/2007/wiki/people/JoeLambda" />
 //    <foaf:img rdf:resource="/2007/wiki/people/JoeLambda/images/me.jpg" />
 
-//  "PUTing an RDF document on Joe's URI (which now does exist)" should {
-//    "return a 200" in {
-//      val httpCode:Int = Http(joe.post(joeRDF) get_statusCode)
-//      httpCode must_== 200
-//    }
-//    "create a valid rdf document with exactly XXX triple" in {
-//      val model = Http(joe as_model(joe.path))
-//      model.size must_== 1
-//    }
-//  }
+  "PUTing an RDF document on Joe's URI (which now does exist)" should {
+    "return a 200" in {
+      val httpCode:Int = Http(joe.put(joeRDF) get_statusCode)
+      httpCode must_== 200
+    }
+    "return an RDF document isomorphic with the original one" in {
+      val model = Http(joe as_model(joe.path))
+      model must beIsomorphicWith (modelFromString(joeRDF, joe.path))
+    }
+  }
     
     
     

@@ -21,8 +21,20 @@ import unfiltered.jetty._
 
 import dispatch._
 
-package object utiltest {
+import org.specs.matcher.Matcher
 
+import org.w3.readwriteweb.util._
+
+package object utiltest {
+  
+  def beIsomorphicWith(that:Model):Matcher[Model] =
+    new Matcher[Model] {
+      def apply(otherModel: => Model) =
+        (that isIsomorphicWith otherModel,
+         "Model A is isomorphic to model B",
+         "%s not isomorphic with %s" format (otherModel.toString, that.toString))
+  }
+  
   class RequestW(req:Request) {
 
     def as_model(base:String, lang:String = "RDF/XML-ABBREV"):Handler[Model] =
@@ -31,6 +43,8 @@ package object utiltest {
     def post(body:String):Request =
       (req <<< body).copy(method="POST")
       
+    def put(body:String):Request = req <<< body
+      
     def get_statusCode:Handler[Int] = new Handler(req, (c, r, e) => c, null)
     
     def get:Request = req.copy(method="GET")
@@ -38,18 +52,6 @@ package object utiltest {
   }
   
   implicit def wrapRequest(req:Request):RequestW = new RequestW(req)
-  
-  def modelFromInputStream(is:InputStream, base:String, lang:String = "RDF/XML-ABBREV"):Model = {
-    val m = ModelFactory.createDefaultModel()
-    m.read(is, base, lang)
-    m
-  }
-  
-  def modelFromString(s:String, base:String, lang:String = "RDF/XML-ABBREV"):Model = {
-    val m = ModelFactory.createDefaultModel()
-    m.read(s, base, lang)
-    m
-  }
   
 
 
