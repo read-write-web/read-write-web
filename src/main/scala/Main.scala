@@ -32,8 +32,7 @@ class ReadWriteWeb(base:File) {
     case req @ Path(path) => {
       val baseURI = req.underlying.getRequestURL.toString  
       val fileOnDisk = new File(base, path)
-      
-      
+       
       def foo():(OutputStream, Model) = {
         // get empty model if file not on disk
         val model = ModelFactory.createDefaultModel()
@@ -48,7 +47,8 @@ class ReadWriteWeb(base:File) {
           val parent = fileOnDisk.getParentFile
           if (! parent.exists) println(parent.mkdirs)
           val r = fileOnDisk.createNewFile()
-          logger.debug("Create file %s with success: %s" format (fileOnDisk.getAbsolutePath, r.toString))
+          logger.debug("Create file %s with success: %s" format
+              (fileOnDisk.getAbsolutePath, r.toString))
         }
         val fos = new FileOutputStream(fileOnDisk)
         (fos, model)
@@ -59,7 +59,7 @@ class ReadWriteWeb(base:File) {
         try {
           m.read(fis, baseURI)
         } catch {
-          case je:JenaException => logger.error("File %s was eitheir empty or corrupted: considered as empty graph" format fileOnDisk.getAbsolutePath)
+          case je:JenaException => logger.error("File %s was either empty or corrupted: considered as empty graph" format fileOnDisk.getAbsolutePath)
         }
         fis.close()
         m

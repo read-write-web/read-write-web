@@ -11,21 +11,26 @@ import com.hp.hpl.jena.rdf.model._
 import com.hp.hpl.jena.query._
 import com.hp.hpl.jena.update._
 
-// a Handler that returns the http code
-object HttpCode {
-  def apply(req:Request):Handler[Int] = new Handler(req, (c, r, e) => c, null)
-}
+import org.w3.readwriteweb.utiltest._
 
 object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served {
 
   val base = new File("src/main/resources")
+  val joe = host / "2007/wiki/people/JoeLambda"
+  val joeOnDisk = new File(base, "2007/wiki/people/JoeLambda")
   
-  def post(req:Request, body:String) = (req <<< body).copy(method="POST")
-
+  doBeforeSpec {
+    if (joeOnDisk.exists) joeOnDisk.delete()    
+  }
+  
+  doAfterSpec {
+//    if (joeOnDisk.exists) joeOnDisk.delete()
+  }
+  
   def setup = { _.filter(new ReadWriteWeb(base).read) }
 
   val timBL = host / "People/Berners-Lee/card#i"
-    
+  
   "a GET on TimBL's FOAF profile" should {
     val (via, body) = Http(timBL >+ { req =>
       (req >:> { _("MS-Author-Via").head }, req as_str)
@@ -38,33 +43,51 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
     }
   }
 
-  val joe = host / "2007/wiki/people/JoeLambda"
-  val joeOnDisk = new File(base, "2007/wiki/people/JoeLambda")
-  if (joeOnDisk.exists) joeOnDisk.delete()
     
-  val insert =
+  val insertQuery =
 """
-INSERT DATA { <http://dig.csail.xvm.mit.edu/2007/wiki/people/JoeLambda#JL> <http://xmlns.com/foaf/0.1/age> 66 }
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+INSERT DATA { <http://dig.csail.xvm.mit.edu/2007/wiki/people/JoeLambda#JL> foaf:name "Joe Lambda" }
 """
         
-  "POSTing an INSERT query on Joe's URI" should {
+  "POSTing an INSERT query on Joe's URI (which does not exist yet)" should {
     "return a 200" in {
-      val httpCode:Int = Http(HttpCode(post(joe, insert)))
+      val httpCode:Int = Http(joe.post(insertQuery) get_statusCode)
       httpCode must_== 200
     }
     "create the corresponding file on disk" in {
       joeOnDisk must exist
     }
     "create a valid rdf document with exactly one triple" in {
-      val model = Http(joe >> { is => {
-        val m = ModelFactory.createDefaultModel()
-        m.read(is, joe.path)
-        m
-      } } )
+      val model = Http(joe as_model(joe.path) )
       model.size must_== 1
     }
   }
-
-  if (joeOnDisk.exists) joeOnDisk.delete()
   
+  val joeRDF =
+"""
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"> 
+  <foaf:Person rdf:about="#JL" xmlns:foaf="http://xmlns.com/foaf/0.1/">
+    <foaf:name>Joe Lambda</foaf:name>
+    <foaf:homepage rdf:resource="/2007/wiki/people/JoeLambda" />
+  </foaf:Person>
+</rdf:RDF>
+"""
+
+//        <foaf:openid rdf:resource="/2007/wiki/people/JoeLambda" />
+//    <foaf:img rdf:resource="/2007/wiki/people/JoeLambda/images/me.jpg" />
+
+//  "PUTing an RDF document on Joe's URI (which now does exist)" should {
+//    "return a 200" in {
+//      val httpCode:Int = Http(joe.post(joeRDF) get_statusCode)
+//      httpCode must_== 200
+//    }
+//    "create a valid rdf document with exactly XXX triple" in {
+//      val model = Http(joe as_model(joe.path))
+//      model.size must_== 1
+//    }
+//  }
+    
+    
+    
 }
