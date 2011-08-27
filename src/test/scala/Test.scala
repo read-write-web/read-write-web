@@ -29,42 +29,7 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
   }
   
   def setup = { _.filter(new ReadWriteWeb(base).read) }
-
-  val timBL = host / "People/Berners-Lee/card#i"
-  
-  "a GET on TimBL's FOAF profile" should {
-    val (via, body) = Http(timBL >+ { req =>
-      (req >:> { _("MS-Author-Via").head }, req as_str)
-    } )
-    "return an non empty document" in {
-      body must not be empty
-    }
-    """have the header "MS-Author-Via" set to SPARQL""" in {
-      via must_== "SPARQL"
-    }
-  }
-
     
-  val insertQuery =
-"""
-PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-INSERT DATA { <http://dig.csail.xvm.mit.edu/2007/wiki/people/JoeLambda#JL> foaf:name "Joe Lambda" }
-"""
-        
-  "POSTing an INSERT query on Joe's URI (which does not exist yet)" should {
-    "return a 200" in {
-      val httpCode:Int = Http(joe.post(insertQuery) get_statusCode)
-      httpCode must_== 200
-    }
-    "create the corresponding file on disk" in {
-      joeOnDisk must exist
-    }
-    "create a valid rdf document with exactly one triple" in {
-      val model = Http(joe as_model(joe.path) )
-      model.size must_== 1
-    }
-  }
-  
   val joeRDF =
 """
 <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"> 
@@ -74,21 +39,50 @@ INSERT DATA { <http://dig.csail.xvm.mit.edu/2007/wiki/people/JoeLambda#JL> foaf:
   </foaf:Person>
 </rdf:RDF>
 """
+  
+  val initialModel = modelFromString(joeRDF, joe.path)
 
 //        <foaf:openid rdf:resource="/2007/wiki/people/JoeLambda" />
 //    <foaf:img rdf:resource="/2007/wiki/people/JoeLambda/images/me.jpg" />
 
-  "PUTing an RDF document on Joe's URI (which now does exist)" should {
-    "return a 200" in {
+  "PUTing an RDF document on Joe's URI (which does not exist yet)" should {
+    "return a 201" in {
       val httpCode:Int = Http(joe.put(joeRDF) get_statusCode)
-      httpCode must_== 200
+      httpCode must_== 201
     }
-    "return an RDF document isomorphic with the original one" in {
-      val model = Http(joe as_model(joe.path))
-      model must beIsomorphicWith (modelFromString(joeRDF, joe.path))
+    "create a document on disk" in {
+      joeOnDisk must exist
     }
   }
-    
-    
+  
+  "Joe's URI" should {
+    "now exist and be isomorphic with the original document" in {
+      val (statusCode, via, model) = Http(joe >++ { req => (req.get_statusCode,
+                                                            req.get_header("MS-Author-Via"),
+                                                            req as_model(joe.path))
+                                                  } )
+      statusCode must_== 200
+      via must_== "SPARQL"
+      model must beIsomorphicWith (initialModel)
+    }
+  }
+  
+  val insertQuery =
+"""
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+INSERT DATA { </2007/wiki/people/JoeLambda#JL> foaf:openid </2007/wiki/people/JoeLambda> }
+"""
+  
+  "POSTing an INSERT query on Joe's URI (which does not exist yet)" should {
+    "succeed" in {
+      val httpCode:Int = Http(joe.post(insertQuery) get_statusCode)
+      httpCode must_== 200
+    }
+    "produce a graph with one more triple than the original one" in {
+      val model = Http(joe as_model(joe.path))
+      model.size must_== (initialModel.size + 1)
+    }
+  }
+  
     
 }

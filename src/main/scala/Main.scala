@@ -73,7 +73,7 @@ class ReadWriteWeb(base:File) {
           val (fos, _) = foo()
           bodyModel.write(fos, "RDF/XML-ABBREV", baseURI)
           fos.close()
-          Ok ~> ResponseString("")
+          Created
         }
         case POST(_) => {
           /* http://openjena.org/ARQ/javadoc/com/hp/hpl/jena/update/UpdateFactory.html */

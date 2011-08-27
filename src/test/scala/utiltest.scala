@@ -47,8 +47,16 @@ package object utiltest {
       
     def get_statusCode:Handler[Int] = new Handler(req, (c, r, e) => c, null)
     
+    def get_header(header:String):Handler[String] = req >:> { _(header).head }
+    
     def get:Request = req.copy(method="GET")
     
+    def >++ [A, B, C] (block: Request => (Handler[A], Handler[B], Handler[C])) = {
+      Handler(req, { (code, res, opt_ent) =>
+        val (a, b, c) = block( /\ )
+          (a.block(code, res, opt_ent), b.block(code,res,opt_ent), c.block(code,res,opt_ent))
+      } )
+    }
   }
   
   implicit def wrapRequest(req:Request):RequestW = new RequestW(req)
