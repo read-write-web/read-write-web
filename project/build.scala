@@ -46,6 +46,20 @@ object YourProjectBuild extends Build {
   import Dependencies._
   import Resolvers._
   import BuildSettings._
+  import ProguardPlugin._
+
+  def keepUnder(pakage:String):String = "-keep class %s.**" format pakage
+  
+  val proguardSettings:Seq[Setting[_]] =
+    ProguardPlugin.proguardSettings ++ Seq[Setting[_]](
+      minJarPath := new File("readwriteweb.jar"),
+      proguardOptions += keepMain("org.w3.readwriteweb.ReadWriteWebMain"),
+      proguardOptions += keepUnder("org.w3.readwriteweb"),
+      proguardOptions += keepUnder("unfiltered"),
+      proguardOptions += keepUnder("org.apache.log4j"),
+      proguardOptions += keepUnder("com.hp.hpl.jena"),
+      proguardOptions += "-keep class com.hp.hpl.jena.rdf.model.impl.ModelCom"
+    )
 
   val yourProjectSettings =
     Seq(
@@ -56,7 +70,7 @@ object YourProjectBuild extends Build {
       libraryDependencies += dispatch,
       libraryDependencies += unfiltered_filter,
       libraryDependencies += unfiltered_jetty,
-      libraryDependencies += slf4jSimple,
+//      libraryDependencies += slf4jSimple,
       libraryDependencies += jena,
       libraryDependencies += arq,
       libraryDependencies += antiXML
@@ -65,7 +79,7 @@ object YourProjectBuild extends Build {
   lazy val yourProject = Project(
     id = "read-write-web",
     base = file("."),
-    settings = buildSettings ++ yourProjectSettings ++ sbtassembly.Plugin.assemblySettings
+    settings = buildSettings ++ yourProjectSettings ++ sbtassembly.Plugin.assemblySettings ++ proguardSettings
   )
   
 
