@@ -29,9 +29,8 @@ class ReadWriteWeb(base:File) {
   
   val read = unfiltered.filter.Planify {
     case req @ Path(path) => {
-      val baseURI = req.underlying.getRequestURL.toString  
+      val baseURI = req.underlying.getRequestURL.toString
       val fileOnDisk = new File(base, path)
-       
       def foo():(OutputStream, Model) = {
         // get empty model if file not on disk
         val model = ModelFactory.createDefaultModel()
@@ -71,7 +70,8 @@ class ReadWriteWeb(base:File) {
         case PUT(_) => {
           val bodyModel = modelFromInputStream(Body.stream(req), baseURI)
           val (fos, _) = foo()
-          bodyModel.write(fos, "RDF/XML-ABBREV", baseURI)
+          val writer = bodyModel.getWriter("RDF/XML-ABBREV")
+          writer.write(bodyModel, fos, baseURI)
           fos.close()
           Created
         }
@@ -81,14 +81,16 @@ class ReadWriteWeb(base:File) {
             case PostUpdate(update) => {
               val (fos, model) = foo()
               UpdateAction.execute(update, model)
-              model.write(fos)
+              val writer = model.getWriter("RDF/XML-ABBREV")
+              writer.write(model, fos, baseURI)
               fos.close()
               Ok
             }
             case PostRDF(diffModel) => {
               val (fos, model) = foo()
               model.add(diffModel)
-              model.write(fos)
+              val writer = model.getWriter("RDF/XML-ABBREV")
+              writer.write(model, fos, baseURI)
               fos.close()
               Ok
             }
