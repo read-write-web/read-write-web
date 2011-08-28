@@ -19,6 +19,26 @@ import unfiltered.request._
 import unfiltered.response._
 import unfiltered.jetty._
 
+sealed trait RDFEncoding
+case object RDFXML extends RDFEncoding
+case object TURTLE extends RDFEncoding
+
+object RDFEncoding {
+  
+  def apply(contentType:String):RDFEncoding =
+    contentType match {
+      case "text/turtle" => TURTLE
+      case "application/rdf+xml" => RDFXML
+      case _ => RDFXML
+    }
+    
+  def apply(req:HttpRequest[_]):RDFEncoding = {
+    val contentType = RequestContentType(req)
+    contentType map { RDFEncoding(_) } getOrElse RDFXML
+  }
+  
+}
+
 package object util {
   
   val defaultLang = "RDF/XML-ABBREV"
@@ -27,9 +47,13 @@ package object util {
   object ViaSPARQL extends MSAuthorVia("SPARQL")
   
   object ResponseModel {
-    def apply(model:Model, base:String, lang:String = defaultLang):ResponseStreamer =
+    def apply(model:Model, base:String, encoding:RDFEncoding):ResponseStreamer =
       new ResponseStreamer {
-        def stream(os:OutputStream):Unit = model.write(os, lang, base)
+        def stream(os:OutputStream):Unit =
+          encoding match {
+            case RDFXML => model.getWriter("RDF/XML-ABBREV").write(model, os, base)
+            case TURTLE => model.getWriter("TURTLE").write(model, os, base)
+          }
       }
   }
 

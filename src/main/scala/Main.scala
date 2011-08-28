@@ -64,7 +64,8 @@ class ReadWriteWeb(base:File) {
       req match {
         case GET(_) => {
           val model:Model = loadModel(fileOnDisk)
-          Ok ~> ViaSPARQL ~> ResponseModel(model, baseURI)
+          val encoding = RDFEncoding(req)
+          Ok ~> ViaSPARQL ~> ResponseModel(model, baseURI, encoding)
         }
         case PUT(_) => {
           val bodyModel = modelFromInputStream(Body.stream(req), baseURI)
@@ -94,6 +95,7 @@ class ReadWriteWeb(base:File) {
               Ok
             }
             case PostQuery(query) => {
+              lazy val encoding = RDFEncoding(req)
               import Query.{QueryTypeSelect => SELECT,
             		        QueryTypeAsk => ASK,
                             QueryTypeConstruct => CONSTRUCT,
@@ -111,11 +113,11 @@ class ReadWriteWeb(base:File) {
                 }
                 case CONSTRUCT => {
                   val result:Model = qe.execConstruct()
-                  Ok ~> ResponseModel(model, baseURI)
+                  Ok ~> ResponseModel(model, baseURI, encoding)
                 }
                 case DESCRIBE => {
                   val result:Model = qe.execDescribe()
-                  Ok ~> ResponseModel(model, baseURI)
+                  Ok ~> ResponseModel(model, baseURI, encoding)
                 }
               }
             }

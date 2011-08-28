@@ -86,6 +86,14 @@ INSERT DATA { </2007/wiki/people/JoeLambda#JL> foaf:openid </2007/wiki/people/Jo
       model.size must_== (initialModel.size + 1)
     }
   }
+
+  "a GET on Joe's URI" should {
+    "deliver TURTLE and RDF/XML graphs that are isomorphic to each other" in {
+      val rdfxml = Http(joe as_model(baseURI))
+      val turtle = Http(joe <:< Map("Content-type" -> "text/turtle") as_model(baseURI, lang="TURTLE"))
+      rdfxml must beIsomorphicWith(turtle)
+    }
+  }
   
   val diffRDF =
 """
