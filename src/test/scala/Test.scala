@@ -116,5 +116,18 @@ INSERT DATA { </2007/wiki/people/JoeLambda#JL> foaf:openid </2007/wiki/people/Jo
       model must beIsomorphicWith (expectedFinalModel)
     }
   }
+  
+  val queryFoafName =
+"""
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+SELECT ?name WHERE { [] foaf:name ?name }
+"""
+  
+  "POSTing a SPARQL query { [] foaf:name ?name } to Joe's URI" should {
+    "return Joe's name" in {
+      val resultSet = Http(joe.post(queryFoafName) >- { body => ResultSetFactory.fromXML(body) } )
+      resultSet.next().getLiteral("name").getString must_== "Joe Lambda"
+    }
+  }
     
 }

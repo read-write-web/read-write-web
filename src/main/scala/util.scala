@@ -32,7 +32,18 @@ package object util {
         def stream(os:OutputStream):Unit = model.write(os, lang, base)
       }
   }
-  
+
+  object ResponseResultSet {
+    def apply(rs:ResultSet):ResponseStreamer =
+      new ResponseStreamer {
+        def stream(os:OutputStream):Unit = ResultSetFormatter.outputAsXML(os, rs) 
+      }
+    def apply(result:Boolean):ResponseStreamer =
+      new ResponseStreamer {
+        def stream(os:OutputStream):Unit = ResultSetFormatter.outputAsXML(os, result) 
+      }
+  }
+
   def modelFromInputStream(is:InputStream, base:String, lang:String = "RDF/XML-ABBREV"):Model = {
     val m = ModelFactory.createDefaultModel()
     m.read(is, base, lang)

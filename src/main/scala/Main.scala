@@ -18,7 +18,6 @@ import com.hp.hpl.jena.shared.JenaException
 
 import org.w3.readwriteweb.util._
 
-// holds some Unfiltered plans
 class ReadWriteWeb(base:File) {
   
   val logger:Logger = LoggerFactory.getLogger(this.getClass)
@@ -94,6 +93,32 @@ class ReadWriteWeb(base:File) {
               fos.close()
               Ok
             }
+            case PostQuery(query) => {
+              import Query.{QueryTypeSelect => SELECT,
+            		        QueryTypeAsk => ASK,
+                            QueryTypeConstruct => CONSTRUCT,
+                            QueryTypeDescribe => DESCRIBE}
+              val model:Model = loadModel(fileOnDisk)
+              val qe:QueryExecution = QueryExecutionFactory.create(query, model)
+              query.getQueryType match {
+                case SELECT => {
+                  val resultSet:ResultSet = qe.execSelect()
+                  Ok ~> ResponseResultSet(resultSet)
+                }
+                case ASK => {
+                  val result:Boolean = qe.execAsk()
+                  Ok ~> ResponseResultSet(result)
+                }
+                case CONSTRUCT => {
+                  val result:Model = qe.execConstruct()
+                  Ok ~> ResponseModel(model, baseURI)
+                }
+                case DESCRIBE => {
+                  val result:Model = qe.execDescribe()
+                  Ok ~> ResponseModel(model, baseURI)
+                }
+              }
+            }
           }
           
         }
@@ -111,8 +136,6 @@ object ReadWriteWebMain {
   // regular Java main
   def main(args: Array[String]) {
     
-    // can provide the port as first argument
-    // default to 2719
     val (port, directory) = args.toList match {
       case port :: directory :: Nil => (port.toInt, directory)
       case _ => sys.error("wrong arguments")

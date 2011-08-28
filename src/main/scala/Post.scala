@@ -15,6 +15,7 @@ import org.w3.readwriteweb.util._
 sealed trait Post
 case class PostUpdate(update:UpdateRequest) extends Post
 case class PostRDF(model:Model) extends Post
+case class PostQuery(query:Query) extends Post
 
 object Post {
   
@@ -30,10 +31,16 @@ object Post {
       val update:UpdateRequest = UpdateFactory.create(s, baseURI)
       PostUpdate(update)      
     } catch {
-      case qpe:QueryParseException => {
-        val model = modelFromString(s, baseURI)
-        PostRDF(model)
-      }
+      case qpe:QueryParseException =>
+        try {
+          val model = modelFromString(s, baseURI)
+          PostRDF(model)
+        } catch {
+          case je:JenaException => {
+            val query = QueryFactory.create(s)
+            PostQuery(query)
+          }
+        }
     }
   }
   
