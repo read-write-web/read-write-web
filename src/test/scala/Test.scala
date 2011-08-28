@@ -108,12 +108,12 @@ INSERT DATA { </2007/wiki/people/JoeLambda#JL> foaf:openid </2007/wiki/people/Jo
 </rdf:RDF>
 """, baseURI)
 
-  "POSTing an RDF documenton Joe's URI" should {
+  "POSTing an RDF document to Joe's URI" should {
     "succeed" in {
       val httpCode:Int = Http(joe.post(diffRDF) get_statusCode)
       httpCode must_== 200
     }
-    "append the diff graph" in {
+    "append the diff graph to the initial graph" in {
       val model = Http(joe as_model(baseURI))
       model must beIsomorphicWith (expectedFinalModel)
     }
@@ -140,8 +140,23 @@ ASK { [] foaf:name ?name }
   
   """POSTing "ASK ?name WHERE { [] foaf:name ?name }" to Joe's URI""" should {
     "return true" in {
-      val result:Boolean = Http(joe.post(askFoafName) >~ { s => (XML.fromSource(s) \ "boolean" \ text).head.toBoolean } )
+      val result:Boolean =
+        Http(joe.post(askFoafName) >~ { s => 
+          (XML.fromSource(s) \ "boolean" \ text).head.toBoolean
+          } )
       result must_== true
+    }
+  }
+  
+  val constructIdentity =
+"""
+CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }
+"""
+  
+  """POSTing "CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }" to Joe's URI""" should {
+    "return an isomorphic RDF graph" in {
+      val model = Http(joe as_model(baseURI))
+      model must beIsomorphicWith (expectedFinalModel)
     }
   }
     
