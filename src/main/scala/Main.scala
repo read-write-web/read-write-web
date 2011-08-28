@@ -77,23 +77,55 @@ class ReadWriteWeb(base:File) {
         }
         case POST(_) => {
           /* http://openjena.org/ARQ/javadoc/com/hp/hpl/jena/update/UpdateFactory.html */
-          val update:UpdateRequest = UpdateFactory.read(Body.stream(req))
-          val (fos, model) = foo()
-          UpdateAction.execute(update, model)
-          model.write(fos)
-          fos.close()
-          // give back the modified model
-          Ok ~> new ResponseStreamer {
-            def stream(os:OutputStream):Unit = {
-              val lang = "RDF/XML-ABBREV"
-              model.write(os, lang)
+          Post.parse(Body.stream(req), baseURI) match {
+            case PostUpdate(update) => {
+              val (fos, model) = foo()
+              UpdateAction.execute(update, model)
+              model.write(fos)
+              fos.close()
+              Ok
+            }
+            case PostRDF(diffModel) => {
+              val (fos, model) = foo()
+              model.add(diffModel)
+              model.write(fos)
+              fos.close()
+              Ok
             }
           }
+          
         }
       }
     }
   }
 
+}
+
+sealed trait Post
+case class PostUpdate(update:UpdateRequest) extends Post
+case class PostRDF(model:Model) extends Post
+
+object Post {
+  
+  def parse(is:InputStream, baseURI:String):Post = {
+    val source = Source.fromInputStream(is, "UTF-8")
+    val s = source.getLines.mkString("\n")
+    parse(s, baseURI)
+  }
+  
+  def parse(s:String, baseURI:String):Post = {
+    val reader = new StringReader(s)
+    try {
+      val update:UpdateRequest = UpdateFactory.create(s, baseURI)
+      PostUpdate(update)      
+    } catch {
+      case qpe:QueryParseException => {
+        val model = modelFromString(s, baseURI)
+        PostRDF(model)
+      }
+    }
+  }
+  
 }
 
 object ReadWriteWebMain {

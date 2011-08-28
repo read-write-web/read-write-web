@@ -18,6 +18,7 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
 
   val base = new File("src/main/resources")
   val joe = host / "2007/wiki/people/JoeLambda"
+  val baseURI = "%s%s" format (joe.host, joe.path)
   val joeOnDisk = new File(base, "2007/wiki/people/JoeLambda")
   
   doBeforeSpec {
@@ -40,7 +41,7 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
 </rdf:RDF>
 """
   
-  val initialModel = modelFromString(joeRDF, joe.path)
+  val initialModel = modelFromString(joeRDF, baseURI)
 
 //        <foaf:openid rdf:resource="/2007/wiki/people/JoeLambda" />
 //    <foaf:img rdf:resource="/2007/wiki/people/JoeLambda/images/me.jpg" />
@@ -59,7 +60,7 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
     "now exist and be isomorphic with the original document" in {
       val (statusCode, via, model) = Http(joe >++ { req => (req.get_statusCode,
                                                             req.get_header("MS-Author-Via"),
-                                                            req as_model(joe.path))
+                                                            req as_model(baseURI))
                                                   } )
       statusCode must_== 200
       via must_== "SPARQL"
@@ -79,10 +80,41 @@ INSERT DATA { </2007/wiki/people/JoeLambda#JL> foaf:openid </2007/wiki/people/Jo
       httpCode must_== 200
     }
     "produce a graph with one more triple than the original one" in {
-      val model = Http(joe as_model(joe.path))
+      val model = Http(joe as_model(baseURI))
       model.size must_== (initialModel.size + 1)
     }
   }
   
+  val diffRDF =
+"""
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"> 
+  <foaf:Person rdf:about="#JL" xmlns:foaf="http://xmlns.com/foaf/0.1/">
+    <foaf:img rdf:resource="/2007/wiki/people/JoeLambda/images/me.jpg" />
+  </foaf:Person>
+</rdf:RDF>
+"""
+
+  val expectedFinalModel = modelFromString(
+"""
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"> 
+  <foaf:Person rdf:about="#JL" xmlns:foaf="http://xmlns.com/foaf/0.1/">
+    <foaf:name>Joe Lambda</foaf:name>
+    <foaf:homepage rdf:resource="/2007/wiki/people/JoeLambda" />
+    <foaf:openid rdf:resource="/2007/wiki/people/JoeLambda" />
+    <foaf:img rdf:resource="/2007/wiki/people/JoeLambda/images/me.jpg" />
+  </foaf:Person>
+</rdf:RDF>
+""", baseURI)
+
+  "POSTing an RDF documenton Joe's URI" should {
+    "succeed" in {
+      val httpCode:Int = Http(joe.post(diffRDF) get_statusCode)
+      httpCode must_== 200
+    }
+    "append the diff graph" in {
+      val model = Http(joe as_model(baseURI))
+      model must beIsomorphicWith (expectedFinalModel)
+    }
+  }
     
 }
