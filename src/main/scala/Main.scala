@@ -101,32 +101,6 @@ class ReadWriteWeb(base:File) {
 
 }
 
-sealed trait Post
-case class PostUpdate(update:UpdateRequest) extends Post
-case class PostRDF(model:Model) extends Post
-
-object Post {
-  
-  def parse(is:InputStream, baseURI:String):Post = {
-    val source = Source.fromInputStream(is, "UTF-8")
-    val s = source.getLines.mkString("\n")
-    parse(s, baseURI)
-  }
-  
-  def parse(s:String, baseURI:String):Post = {
-    val reader = new StringReader(s)
-    try {
-      val update:UpdateRequest = UpdateFactory.create(s, baseURI)
-      PostUpdate(update)      
-    } catch {
-      case qpe:QueryParseException => {
-        val model = modelFromString(s, baseURI)
-        PostRDF(model)
-      }
-    }
-  }
-  
-}
 
 object ReadWriteWebMain {
 
