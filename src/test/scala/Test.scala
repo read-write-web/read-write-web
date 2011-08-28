@@ -7,6 +7,8 @@ import unfiltered.request._
 import dispatch._
 import java.io._
 
+import com.codecommit.antixml._
+
 import com.hp.hpl.jena.rdf.model._
 import com.hp.hpl.jena.query._
 import com.hp.hpl.jena.update._
@@ -117,16 +119,29 @@ INSERT DATA { </2007/wiki/people/JoeLambda#JL> foaf:openid </2007/wiki/people/Jo
     }
   }
   
-  val queryFoafName =
+  val selectFoafName =
 """
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 SELECT ?name WHERE { [] foaf:name ?name }
 """
   
-  "POSTing a SPARQL query { [] foaf:name ?name } to Joe's URI" should {
+  """POSTing "SELECT ?name WHERE { [] foaf:name ?name }" to Joe's URI""" should {
     "return Joe's name" in {
-      val resultSet = Http(joe.post(queryFoafName) >- { body => ResultSetFactory.fromXML(body) } )
+      val resultSet = Http(joe.post(selectFoafName) >- { body => ResultSetFactory.fromXML(body) } )
       resultSet.next().getLiteral("name").getString must_== "Joe Lambda"
+    }
+  }
+  
+  val askFoafName =
+"""
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+ASK { [] foaf:name ?name }
+"""
+  
+  """POSTing "ASK ?name WHERE { [] foaf:name ?name }" to Joe's URI""" should {
+    "return true" in {
+      val result:Boolean = Http(joe.post(askFoafName) >~ { s => (XML.fromSource(s) \ "boolean" \ text).head.toBoolean } )
+      result must_== true
     }
   }
     

@@ -58,11 +58,12 @@ object YourProjectBuild extends Build {
       libraryDependencies += unfiltered_jetty,
       libraryDependencies += slf4jSimple,
       libraryDependencies += jena,
-      libraryDependencies += arq
+      libraryDependencies += arq,
+      libraryDependencies += antiXML
     )
 
   lazy val yourProject = Project(
-    id = "your-project",
+    id = "read-write-web",
     base = file("."),
     settings = buildSettings ++ yourProjectSettings ++ sbtassembly.Plugin.assemblySettings
   )
