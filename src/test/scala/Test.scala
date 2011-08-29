@@ -24,8 +24,11 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
   val joeBaseURI = baseURI(joe)
   val joeOnDisk = new File(base, "people/JoeLambda")
   
+  //base.deleteRecursively()
+
   doBeforeSpec {
-    base.deleteRecursively()
+    if (base.exists)
+      base.deleteRecursively()
     base.mkdir()
   }
   
@@ -49,6 +52,13 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
   
   val initialModel = modelFromString(joeRDF, joeBaseURI)
 
+  "a GET on a URL that does not exist" should {
+    "return a 404" in {
+      val httpCode:Int = Http.when( _ => true)(joe get_statusCode)
+      httpCode must_== 404
+    }
+  }
+  
   "PUTing an RDF document on Joe's URI (which does not exist yet)" should {
     "return a 201" in {
       val httpCode:Int = Http(joe.put(joeRDF) get_statusCode)
