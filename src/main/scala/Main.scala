@@ -30,10 +30,13 @@ class ReadWriteWeb(implicit rm:ResourceManager) {
       val baseURI = req.underlying.getRequestURL.toString
       val r:Resource = rm.resource(new URL(baseURI))
       req match {
-        case GET(_) => {
+        case GET(_) | HEAD(_) => {
           val model:Model = r.get()
           val encoding = RDFEncoding(req)
-          Ok ~> ViaSPARQL ~> ResponseModel(model, baseURI, encoding)
+          req match {
+            case GET(_) => Ok ~> ViaSPARQL ~> ResponseModel(model, baseURI, encoding)
+            case HEAD(_) => Ok ~> ViaSPARQL
+          }
         }
         case PUT(_) => {
           val bodyModel = modelFromInputStream(Body.stream(req), baseURI)
