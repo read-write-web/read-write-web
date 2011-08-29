@@ -36,7 +36,7 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
 //    if (joeOnDisk.exists) joeOnDisk.delete()
   }
   
-  val filesystem = new Filesystem(base, "/2007/wiki")
+  val filesystem = new Filesystem(base, "/2007/wiki")(ResourcesDontExistByDefault)
 
   def setup = { _.filter(new ReadWriteWeb(filesystem).read) }
     
@@ -141,15 +141,10 @@ INSERT DATA { </2007/wiki/people/JoeLambda#JL> foaf:openid </2007/wiki/people/Jo
   }
 
   "POSTing an RDF document to a resource that does not exist" should {
-    val uri = host / "2007/wiki/somewhereelse"
-    "succeed" in {
-      val httpCode:Int = Http(uri.post(finalRDF) get_statusCode)
-      // TODO is it a 201?
-      httpCode must_== 200
-    }
-    "create the graph" in {
-      val model = Http(uri as_model(baseURI(uri)))
-      model must beIsomorphicWith (modelFromString(finalRDF, baseURI(uri)))
+    val doesnotexist = host / "2007/wiki/doesnotexist"
+    "return a 404" in {
+      val httpCode:Int = Http.when( _ => true)(doesnotexist get_statusCode)
+      httpCode must_== 404
     }
   }
   

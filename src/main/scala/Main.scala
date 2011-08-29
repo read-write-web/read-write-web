@@ -30,59 +30,76 @@ class ReadWriteWeb(rm:ResourceManager) {
       val baseURI = req.underlying.getRequestURL.toString
       val r:Resource = rm.resource(new URL(baseURI))
       req match {
-        case GET(_) | HEAD(_) => {
-          val model:Model = r.get()
-          val encoding = RDFEncoding(req)
-          req match {
-            case GET(_) => Ok ~> ViaSPARQL ~> ResponseModel(model, baseURI, encoding)
-            case HEAD(_) => Ok ~> ViaSPARQL
-          }
-        }
-        case PUT(_) => {
-          val bodyModel = modelFromInputStream(Body.stream(req), baseURI)
-          r.save(bodyModel)
-          Created
-        }
-        case POST(_) => {
-          /* http://openjena.org/ARQ/javadoc/com/hp/hpl/jena/update/UpdateFactory.html */
-          Post.parse(Body.stream(req), baseURI) match {
-            case PostUnknown => BadRequest ~> ResponseString("You MUST provide valid content for either: SPARQL UPDATE, SPARQL Query, RDF/XML, TURTLE")
-            case PostUpdate(update) => {
-              val model = r.get()
-              UpdateAction.execute(update, model)
-              r.save(model)
-              Ok
+        case GET(_) | HEAD(_) =>
+          try {
+            val model:Model = r.get()
+            val encoding = RDFEncoding(req)
+            req match {
+              case GET(_) => Ok ~> ViaSPARQL ~> ResponseModel(model, baseURI, encoding)
+              case HEAD(_) => Ok ~> ViaSPARQL
             }
-            case PostRDF(diffModel) => {
-              val model = r.get()
-              model.add(diffModel)
-              r.save(model)
-              Ok
-            }
-            case PostQuery(query) => {
-              lazy val encoding = RDFEncoding(req)
-              val model:Model = r.get()
-              val qe:QueryExecution = QueryExecutionFactory.create(query, model)
-              query.getQueryType match {
-                case SELECT =>
-                  Ok ~> ResponseResultSet(qe.execSelect())
-                case ASK =>
-                  Ok ~> ResponseResultSet(qe.execAsk())
-                case CONSTRUCT => {
-                  val result:Model = qe.execConstruct()
-                  Ok ~> ResponseModel(model, baseURI, encoding)
-                }
-                case DESCRIBE => {
-                  val result:Model = qe.execDescribe()
-                  Ok ~> ResponseModel(model, baseURI, encoding)
-                }
+          } catch {
+            case fnfe:FileNotFoundException => NotFound
+            case t:Throwable => {
+              req match {
+                case GET(_) => InternalServerError ~> ViaSPARQL
+                case HEAD(_) => InternalServerError ~> ViaSPARQL ~> ResponseString(t.getStackTraceString)
               }
             }
           }
-        }
+        case PUT(_) =>
+          try {
+            val bodyModel = modelFromInputStream(Body.stream(req), baseURI)
+            r.save(bodyModel)
+            Created
+          } catch {
+            case t:Throwable => InternalServerError ~> ResponseString(t.getStackTraceString)
+          }
+        case POST(_) =>
+          try {
+            Post.parse(Body.stream(req), baseURI) match {
+              case PostUnknown =>
+                BadRequest ~> ResponseString("You MUST provide valid content for either: SPARQL UPDATE, SPARQL Query, RDF/XML, TURTLE")
+              case PostUpdate(update) => {
+                val model = r.get()
+                UpdateAction.execute(update, model)
+                r.save(model)
+                Ok
+              }
+              case PostRDF(diffModel) => {
+                val model = r.get()
+                model.add(diffModel)
+                r.save(model)
+                Ok
+              }
+              case PostQuery(query) => {
+                lazy val encoding = RDFEncoding(req)
+                val model:Model = r.get()
+                val qe:QueryExecution = QueryExecutionFactory.create(query, model)
+                query.getQueryType match {
+                  case SELECT =>
+                    Ok ~> ResponseResultSet(qe.execSelect())
+                  case ASK =>
+                    Ok ~> ResponseResultSet(qe.execAsk())
+                  case CONSTRUCT => {
+                    val result:Model = qe.execConstruct()
+                    Ok ~> ResponseModel(model, baseURI, encoding)
+                  }
+                  case DESCRIBE => {
+                    val result:Model = qe.execDescribe()
+                    Ok ~> ResponseModel(model, baseURI, encoding)
+                  }
+                }
+              }
+            }
+          } catch {
+            case fnfe:FileNotFoundException => NotFound
+            case t:Throwable => InternalServerError ~> ResponseString(t.getStackTraceString)
+          }
         case _ => MethodNotAllowed ~> Allow("GET", "PUT", "POST")
       }
     }
+
   }
 
 }
@@ -109,7 +126,7 @@ object ReadWriteWebMain {
       System.exit(2)
     }
 
-    val filesystem = new Filesystem(baseDirectory, baseURL)
+    val filesystem = new Filesystem(baseDirectory, baseURL)(ResourcesDontExistByDefault)
     
     val app = new ReadWriteWeb(filesystem)
 

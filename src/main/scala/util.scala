@@ -19,6 +19,10 @@ import unfiltered.request._
 import unfiltered.response._
 import unfiltered.jetty._
 
+sealed trait RWWMode
+case object AllResourcesAlreadyExist extends RWWMode
+case object ResourcesDontExistByDefault extends RWWMode
+
 sealed trait RDFEncoding
 case object RDFXML extends RDFEncoding
 case object TURTLE extends RDFEncoding

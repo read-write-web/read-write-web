@@ -19,7 +19,7 @@ trait Resource {
   def save(model:Model):Unit
 }
 
-class Filesystem(baseDirectory:File, basePath:String, val lang:String = "RDF/XML-ABBREV") extends ResourceManager {
+class Filesystem(baseDirectory:File, basePath:String, val lang:String = "RDF/XML-ABBREV")(implicit mode:RWWMode) extends ResourceManager {
   
   val logger:Logger = LoggerFactory.getLogger(this.getClass)
   
@@ -44,11 +44,16 @@ class Filesystem(baseDirectory:File, basePath:String, val lang:String = "RDF/XML
         try {
           m.read(fis, url.toString)
         } catch {
-          case je:JenaException => logger.error("File %s was either empty or corrupted: considered as empty graph" format fileOnDisk.getAbsolutePath)
+          case je:JenaException => sys.error("File %s was either empty or corrupted: considered as empty graph" format fileOnDisk.getAbsolutePath)
         }
         fis.close()
+        m
+      } else {
+        mode match {
+          case AllResourcesAlreadyExist => m
+          case ResourcesDontExistByDefault => throw new FileNotFoundException
       }
-      m
+      }
     }
     
     def save(model:Model):Unit = {
