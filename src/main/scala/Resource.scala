@@ -16,7 +16,6 @@ trait ResourceManager {
 }
 trait Resource {
   def get():Model
-  def getAndCreateIfDoesNotExist():Model
   def save(model:Model):Unit
 }
 
@@ -30,6 +29,14 @@ class Filesystem(baseDirectory:File, basePath:String, val lang:String = "RDF/XML
     val relativePath:String = url.getPath.replaceAll("^"+basePath.toString, "")
     val fileOnDisk = new File(baseDirectory, relativePath)
     
+    private def createFileOnDisk():Unit = {
+      // create parent directory if needed
+      val parent = fileOnDisk.getParentFile
+      if (! parent.exists) println(parent.mkdirs)
+      val r = fileOnDisk.createNewFile()
+      logger.debug("Create file %s with success: %s" format (fileOnDisk.getAbsolutePath, r.toString))
+    }
+    
     def get():Model = {
       val fis = new FileInputStream(fileOnDisk)
       val m = ModelFactory.createDefaultModel()
@@ -42,26 +49,8 @@ class Filesystem(baseDirectory:File, basePath:String, val lang:String = "RDF/XML
       m
     }
     
-    def getAndCreateIfDoesNotExist():Model = {
-      val model = ModelFactory.createDefaultModel()
-      if (fileOnDisk exists) {
-        val fis = new FileInputStream(fileOnDisk)
-        model.read(fis, url.toString, lang)
-        fis.close()
-      }
-      // if file does not exist, create it
-      if (! fileOnDisk.exists) {
-        // create parent directory if needed
-        val parent = fileOnDisk.getParentFile
-        if (! parent.exists) println(parent.mkdirs)
-        val r = fileOnDisk.createNewFile()
-        logger.debug("Create file %s with success: %s" format 
-            (fileOnDisk.getAbsolutePath, r.toString))
-      }
-      model
-    }
-    
     def save(model:Model):Unit = {
+      createFileOnDisk()
       val fos = new FileOutputStream(fileOnDisk)
       val writer = model.getWriter("RDF/XML-ABBREV")
       writer.write(model, fos, url.toString)

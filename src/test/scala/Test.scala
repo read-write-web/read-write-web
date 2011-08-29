@@ -8,6 +8,7 @@ import dispatch._
 import java.io._
 
 import com.codecommit.antixml._
+import grizzled.file.GrizzledFile._
 
 import com.hp.hpl.jena.rdf.model._
 import com.hp.hpl.jena.query._
@@ -24,8 +25,8 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
   val joeOnDisk = new File(base, "2007/wiki/people/JoeLambda")
   
   doBeforeSpec {
-    if (joeOnDisk.exists) joeOnDisk.delete()   
-    if (! base.exists) base.mkdir()
+    base.deleteRecursively()
+    base.mkdir()
   }
   
   doAfterSpec {

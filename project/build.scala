@@ -14,9 +14,7 @@ object Dependencies {
   val antiXML = "com.codecommit" %% "anti-xml" % "0.3-SNAPSHOT" % "test"
   val jena = "com.hp.hpl.jena" % "jena" % "2.6.4"
   val arq = "com.hp.hpl.jena" % "arq" % "2.8.8"
-//  val jenaIri = "com.hp.hpl.jena" % "iri" % "0.8" from "http://openjena.org/repo/com/hp/hpl/jena/iri/0.8/iri-0.8.jar"
-
-
+  val grizzled = "org.clapper" %% "grizzled-scala" % "1.0.7" % "test"
 }
 
 // some usefull repositories
@@ -73,7 +71,8 @@ object YourProjectBuild extends Build {
 //      libraryDependencies += slf4jSimple,
       libraryDependencies += jena,
       libraryDependencies += arq,
-      libraryDependencies += antiXML
+      libraryDependencies += antiXML,
+      libraryDependencies += grizzled
     )
 
   lazy val yourProject = Project(
