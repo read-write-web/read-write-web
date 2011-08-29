@@ -45,7 +45,7 @@ package object utiltest {
       
     def put(body:String):Request = req <<< body
       
-    def get_statusCode:Handler[Int] = new Handler(req, (c, r, e) => c, null)
+    def get_statusCode:Handler[Int] = new Handler(req, (c, r, e) => c, { case t => () })
     
     def get_header(header:String):Handler[String] = req >:> { _(header).head }
     

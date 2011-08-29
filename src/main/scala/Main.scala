@@ -43,6 +43,7 @@ class ReadWriteWeb(implicit rm:ResourceManager) {
         case POST(_) => {
           /* http://openjena.org/ARQ/javadoc/com/hp/hpl/jena/update/UpdateFactory.html */
           Post.parse(Body.stream(req), baseURI) match {
+            case PostUnknown => BadRequest ~> ResponseString("You MUST provide valid content for either: SPARQL UPDATE, SPARQL Query, RDF/XML, TURTLE")
             case PostUpdate(update) => {
               val model = r.get()
               UpdateAction.execute(update, model)

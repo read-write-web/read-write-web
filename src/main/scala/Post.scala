@@ -16,6 +16,7 @@ sealed trait Post
 case class PostUpdate(update:UpdateRequest) extends Post
 case class PostRDF(model:Model) extends Post
 case class PostQuery(query:Query) extends Post
+case object PostUnknown extends Post
 
 object Post {
   
@@ -28,19 +29,23 @@ object Post {
   def parse(s:String, baseURI:String):Post = {
     val reader = new StringReader(s)
     try {
-      val update:UpdateRequest = UpdateFactory.create(s, baseURI)
-      PostUpdate(update)      
-    } catch {
-      case qpe:QueryParseException =>
-        try {
-          val model = modelFromString(s, baseURI)
-          PostRDF(model)
-        } catch {
-          case je:JenaException => {
-            val query = QueryFactory.create(s)
-            PostQuery(query)
+      try {
+        val update:UpdateRequest = UpdateFactory.create(s, baseURI)
+        PostUpdate(update)      
+      } catch {
+        case qpe:QueryParseException =>
+          try {
+            val model = modelFromString(s, baseURI)
+            PostRDF(model)
+          } catch {
+            case je:JenaException => {
+              val query = QueryFactory.create(s)
+              PostQuery(query)
+            }
           }
-        }
+      }
+    } catch {
+      case _ => PostUnknown
     }
   }
   
