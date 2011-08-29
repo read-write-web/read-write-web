@@ -22,7 +22,7 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
   val base = new File(new File(System.getProperty("java.io.tmpdir")), "readwriteweb")
   val joe = host / "2007/wiki/people/JoeLambda"
   val baseURI = "%s%s" format (joe.host, joe.path)
-  val joeOnDisk = new File(base, "2007/wiki/people/JoeLambda")
+  val joeOnDisk = new File(base, "people/JoeLambda")
   
   doBeforeSpec {
     base.deleteRecursively()
@@ -33,9 +33,9 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
 //    if (joeOnDisk.exists) joeOnDisk.delete()
   }
   
-  implicit val filesystem = new Filesystem(base, "/")    
+  val filesystem = new Filesystem(base, "/2007/wiki")
 
-  def setup = { _.filter(new ReadWriteWeb()(filesystem).read) }
+  def setup = { _.filter(new ReadWriteWeb(filesystem).read) }
     
   val joeRDF =
 """
@@ -48,9 +48,6 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
 """
   
   val initialModel = modelFromString(joeRDF, baseURI)
-
-//        <foaf:openid rdf:resource="/2007/wiki/people/JoeLambda" />
-//    <foaf:img rdf:resource="/2007/wiki/people/JoeLambda/images/me.jpg" />
 
   "PUTing an RDF document on Joe's URI (which does not exist yet)" should {
     "return a 201" in {

@@ -45,6 +45,7 @@ object YourProjectBuild extends Build {
   import Resolvers._
   import BuildSettings._
   import ProguardPlugin._
+  import sbtassembly.Plugin._
 
   def keepUnder(pakage:String):String = "-keep class %s.**" format pakage
   
@@ -59,7 +60,7 @@ object YourProjectBuild extends Build {
       proguardOptions += "-keep class com.hp.hpl.jena.rdf.model.impl.ModelCom"
     )
 
-  val yourProjectSettings =
+  val projectSettings =
     Seq(
       resolvers += ScalaToolsReleases,
       resolvers += ScalaToolsSnapshots,
@@ -72,13 +73,14 @@ object YourProjectBuild extends Build {
       libraryDependencies += jena,
       libraryDependencies += arq,
       libraryDependencies += antiXML,
-      libraryDependencies += grizzled
+      libraryDependencies += grizzled,
+      jarName in Assembly := "read-write-web.jar"
     )
 
-  lazy val yourProject = Project(
+  lazy val project = Project(
     id = "read-write-web",
     base = file("."),
-    settings = buildSettings ++ yourProjectSettings ++ sbtassembly.Plugin.assemblySettings ++ proguardSettings
+    settings = buildSettings ++ assemblySettings ++ proguardSettings ++ projectSettings
   )
   
 

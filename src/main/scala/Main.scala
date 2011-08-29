@@ -21,7 +21,7 @@ import Query.{QueryTypeSelect => SELECT, QueryTypeAsk => ASK,
 
 import org.w3.readwriteweb.util._
 
-class ReadWriteWeb(implicit rm:ResourceManager) {
+class ReadWriteWeb(rm:ResourceManager) {
   
   val logger:Logger = LoggerFactory.getLogger(this.getClass)
 
@@ -95,18 +95,27 @@ object ReadWriteWebMain {
   // regular Java main
   def main(args: Array[String]) {
     
-    val (port, directory) = args.toList match {
-      case port :: directory :: Nil => (port.toInt, directory)
-      case _ => sys.error("wrong arguments")
+    val (port, baseDirectory, baseURL) = args.toList match {
+      case port :: directory :: base :: Nil => (port.toInt, new File(directory), base)
+      case _ => {
+        println("example usage:\n\tjava -jar read-write-web.jar 8080 ~/WWW/2011/09 /2011/09")
+        System.exit(1)
+        null
+      }
     }
 
-    implicit val filesystem = new Filesystem(new File(directory), "/")
+    if (! baseDirectory.exists) {
+      println("%s does not exist" format (baseDirectory.getAbsolutePath))
+      System.exit(2)
+    }
+
+    val filesystem = new Filesystem(baseDirectory, baseURL)
     
-    val app = new ReadWriteWeb
+    val app = new ReadWriteWeb(filesystem)
 
     // configures and launches a Jetty server
     unfiltered.jetty.Http(port).filter {
-      // a jee Servlet filter that logs request
+      // a jee Servlet filter that logs HTTP requests
       new Filter {
         def destroy():Unit = ()
         def doFilter(request:ServletRequest, response:ServletResponse, chain:FilterChain):Unit = {

@@ -26,7 +26,7 @@ class Filesystem(baseDirectory:File, basePath:String, val lang:String = "RDF/XML
   def sanityCheck():Boolean = baseDirectory.exists
   
   def resource(url:URL):Resource = new Resource {
-    val relativePath:String = url.getPath.replaceAll("^"+basePath.toString, "")
+    val relativePath:String = url.getPath.replaceAll("^"+basePath.toString+"/?", "")
     val fileOnDisk = new File(baseDirectory, relativePath)
     
     private def createFileOnDisk():Unit = {

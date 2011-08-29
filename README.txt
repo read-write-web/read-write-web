@@ -19,6 +19,9 @@ It comes with
 How to start geeking
 --------------------
 
+BE PATIENT: the first time, some operations take some time because it downloads
+            all the dependencies...
+
 * to launch sbt
 
 $ ./sbt
@@ -39,12 +42,15 @@ or
 
 > run 8080
 
-* to package the application as a standalone jar (ends up under target/ directory)
-
-> assembly
-
 * to generate the eclipse configuration
 
 > eclipse same-targets
 
-Have fun!
+* to package the application as a stand-alone jar (creates target/read-write-web.jar)
+
+> assembly
+
+Using the stand-alone jar
+-------------------------
+
+java -jar target/read-write-web.jar 8080 ~/WWW/2011/09 /2011/09
