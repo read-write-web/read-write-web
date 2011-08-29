@@ -26,7 +26,7 @@ class ReadWriteWeb(rm:ResourceManager) {
   val logger:Logger = LoggerFactory.getLogger(this.getClass)
 
   val read = unfiltered.filter.Planify {
-    case req @ Path(path) => {
+    case req @ Path(path) if path startsWith (rm.basePath) => {
       val baseURI = req.underlying.getRequestURL.toString
       val r:Resource = rm.resource(new URL(baseURI))
       req match {
@@ -112,21 +112,38 @@ object ReadWriteWebMain {
   // regular Java main
   def main(args: Array[String]) {
     
-    val (port, baseDirectory, baseURL) = args.toList match {
-      case port :: directory :: base :: Nil => (port.toInt, new File(directory), base)
+    val argsList = args.toList
+    
+    val (port, baseDirectory, baseURL) = argsList match {
+      case port :: directory :: base :: _ => (port.toInt, new File(directory), base)
       case _ => {
-        println("example usage:\n\tjava -jar read-write-web.jar 8080 ~/WWW/2011/09 /2011/09")
+        println(
+"""example usage:
+    java -jar read-write-web.jar 8080 ~/WWW/2011/09 /2011/09 [-strict|-relax]
+
+Options:
+ -relax all resources potentially exist, meaning you get an empty RDF graph instead of a 404 (still experimental)
+ -strict a GET on a resource will fail with a 404 (default mode if you omit it)
+""")
         System.exit(1)
         null
       }
     }
 
+    val mode =
+      if (argsList contains "-relax") {
+        logger.info("info: using experimental relax mode")
+        AllResourcesAlreadyExist
+      } else {
+        ResourcesDontExistByDefault
+      }
+    
     if (! baseDirectory.exists) {
       println("%s does not exist" format (baseDirectory.getAbsolutePath))
       System.exit(2)
     }
 
-    val filesystem = new Filesystem(baseDirectory, baseURL)(ResourcesDontExistByDefault)
+    val filesystem = new Filesystem(baseDirectory, baseURL)(mode)
     
     val app = new ReadWriteWeb(filesystem)
 

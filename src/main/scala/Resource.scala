@@ -11,6 +11,7 @@ import com.hp.hpl.jena.shared.JenaException
 import org.w3.readwriteweb.util._
 
 trait ResourceManager {
+  def basePath:String
   def sanityCheck():Boolean
   def resource(url:URL):Resource
 }
@@ -19,7 +20,7 @@ trait Resource {
   def save(model:Model):Unit
 }
 
-class Filesystem(baseDirectory:File, basePath:String, val lang:String = "RDF/XML-ABBREV")(implicit mode:RWWMode) extends ResourceManager {
+class Filesystem(baseDirectory:File, val basePath:String, val lang:String = "RDF/XML-ABBREV")(implicit mode:RWWMode) extends ResourceManager {
   
   val logger:Logger = LoggerFactory.getLogger(this.getClass)
   
