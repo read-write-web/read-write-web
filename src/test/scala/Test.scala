@@ -18,13 +18,14 @@ import org.w3.readwriteweb.utiltest._
 
 object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served {
 
-  val base = new File("src/main/resources")
+  val base = new File(new File(System.getProperty("java.io.tmpdir")), "readwriteweb")
   val joe = host / "2007/wiki/people/JoeLambda"
   val baseURI = "%s%s" format (joe.host, joe.path)
   val joeOnDisk = new File(base, "2007/wiki/people/JoeLambda")
   
   doBeforeSpec {
-    if (joeOnDisk.exists) joeOnDisk.delete()    
+    if (joeOnDisk.exists) joeOnDisk.delete()   
+    if (! base.exists) base.mkdir()
   }
   
   doAfterSpec {
