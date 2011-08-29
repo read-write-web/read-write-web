@@ -79,8 +79,8 @@ class ReadWriteWeb(implicit rm:ResourceManager) {
               }
             }
           }
-          
         }
+        case _ => MethodNotAllowed ~> Allow("GET", "PUT", "POST")
       }
     }
   }

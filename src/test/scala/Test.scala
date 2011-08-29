@@ -177,5 +177,11 @@ CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }
       statusCode must_== 400
     }
   }
-    
+
+  """a DELETE request""" should {
+    "not be supported yet" in {
+      val statusCode = Http.when(_ == 405)(joe.copy(method="DELETE") get_statusCode)
+      statusCode must_== 405
+    }
+  }
 }
