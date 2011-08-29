@@ -143,7 +143,7 @@ Options:
       System.exit(2)
     }
 
-    val filesystem = new Filesystem(baseDirectory, baseURL)(mode)
+    val filesystem = new Filesystem(baseDirectory, baseURL, lang="TURTLE")(mode)
     
     val app = new ReadWriteWeb(filesystem)
 

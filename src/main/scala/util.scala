@@ -37,7 +37,7 @@ object RDFEncoding {
     }
     
   def apply(req:HttpRequest[_]):RDFEncoding = {
-    val contentType = RequestContentType(req)
+    val contentType = Accept(req).headOption
     contentType map { RDFEncoding(_) } getOrElse RDFXML
   }
   
