@@ -32,7 +32,9 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
 //    if (joeOnDisk.exists) joeOnDisk.delete()
   }
   
-  def setup = { _.filter(new ReadWriteWeb(base).read) }
+  implicit val filesystem = new Filesystem(base, "/")    
+
+  def setup = { _.filter(new ReadWriteWeb()(filesystem).read) }
     
   val joeRDF =
 """

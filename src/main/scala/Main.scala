@@ -8,6 +8,7 @@ import unfiltered.jetty._
 
 import java.io._
 import scala.io.Source
+import java.net.URL
 
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -15,102 +16,54 @@ import com.hp.hpl.jena.rdf.model._
 import com.hp.hpl.jena.query._
 import com.hp.hpl.jena.update._
 import com.hp.hpl.jena.shared.JenaException
+import Query.{QueryTypeSelect => SELECT, QueryTypeAsk => ASK,
+              QueryTypeConstruct => CONSTRUCT, QueryTypeDescribe => DESCRIBE}
 
 import org.w3.readwriteweb.util._
 
-class ReadWriteWeb(base:File) {
+class ReadWriteWeb(implicit rm:ResourceManager) {
   
   val logger:Logger = LoggerFactory.getLogger(this.getClass)
 
-  val echo = unfiltered.filter.Planify {
-    case Path(Seg("echo" :: p :: Nil)) => ResponseString(p)
-  }
-  
   val read = unfiltered.filter.Planify {
     case req @ Path(path) => {
       val baseURI = req.underlying.getRequestURL.toString
-      val fileOnDisk = new File(base, path)
-      def foo():(OutputStream, Model) = {
-        // get empty model if file not on disk
-        val model = ModelFactory.createDefaultModel()
-        if (fileOnDisk exists) {
-          val fis = new FileInputStream(fileOnDisk)
-          model.read(fis, baseURI)
-          fis.close()
-        }
-        // if file does not exist, create it
-        if (! fileOnDisk.exists) {
-          // create parent directory if needed
-          val parent = fileOnDisk.getParentFile
-          if (! parent.exists) println(parent.mkdirs)
-          val r = fileOnDisk.createNewFile()
-          logger.debug("Create file %s with success: %s" format
-              (fileOnDisk.getAbsolutePath, r.toString))
-        }
-        val fos = new FileOutputStream(fileOnDisk)
-        (fos, model)
-      }
-      def loadModel(file:File):Model = {
-        val fis = new FileInputStream(fileOnDisk)
-        val m = ModelFactory.createDefaultModel()
-        try {
-          m.read(fis, baseURI)
-        } catch {
-          case je:JenaException => logger.error("File %s was either empty or corrupted: considered as empty graph" format fileOnDisk.getAbsolutePath)
-        }
-        fis.close()
-        m
-      }
+      val r:Resource = rm.resource(new URL(baseURI))
       req match {
         case GET(_) => {
-          val model:Model = loadModel(fileOnDisk)
+          val model:Model = r.get()
           val encoding = RDFEncoding(req)
           Ok ~> ViaSPARQL ~> ResponseModel(model, baseURI, encoding)
         }
         case PUT(_) => {
           val bodyModel = modelFromInputStream(Body.stream(req), baseURI)
-          val (fos, _) = foo()
-          val writer = bodyModel.getWriter("RDF/XML-ABBREV")
-          writer.write(bodyModel, fos, baseURI)
-          fos.close()
+          r.save(bodyModel)
           Created
         }
         case POST(_) => {
           /* http://openjena.org/ARQ/javadoc/com/hp/hpl/jena/update/UpdateFactory.html */
           Post.parse(Body.stream(req), baseURI) match {
             case PostUpdate(update) => {
-              val (fos, model) = foo()
+              val model = r.get()
               UpdateAction.execute(update, model)
-              val writer = model.getWriter("RDF/XML-ABBREV")
-              writer.write(model, fos, baseURI)
-              fos.close()
+              r.save(model)
               Ok
             }
             case PostRDF(diffModel) => {
-              val (fos, model) = foo()
+              val model = r.get()
               model.add(diffModel)
-              val writer = model.getWriter("RDF/XML-ABBREV")
-              writer.write(model, fos, baseURI)
-              fos.close()
+              r.save(model)
               Ok
             }
             case PostQuery(query) => {
               lazy val encoding = RDFEncoding(req)
-              import Query.{QueryTypeSelect => SELECT,
-            		        QueryTypeAsk => ASK,
-                            QueryTypeConstruct => CONSTRUCT,
-                            QueryTypeDescribe => DESCRIBE}
-              val model:Model = loadModel(fileOnDisk)
+              val model:Model = r.get()
               val qe:QueryExecution = QueryExecutionFactory.create(query, model)
               query.getQueryType match {
-                case SELECT => {
-                  val resultSet:ResultSet = qe.execSelect()
-                  Ok ~> ResponseResultSet(resultSet)
-                }
-                case ASK => {
-                  val result:Boolean = qe.execAsk()
-                  Ok ~> ResponseResultSet(result)
-                }
+                case SELECT =>
+                  Ok ~> ResponseResultSet(qe.execSelect())
+                case ASK =>
+                  Ok ~> ResponseResultSet(qe.execAsk())
                 case CONSTRUCT => {
                   val result:Model = qe.execConstruct()
                   Ok ~> ResponseModel(model, baseURI, encoding)
@@ -143,7 +96,9 @@ object ReadWriteWebMain {
       case _ => sys.error("wrong arguments")
     }
 
-    val app = new ReadWriteWeb(new File(directory))
+    implicit val filesystem = new Filesystem(new File(directory), "/")
+    
+    val app = new ReadWriteWeb
 
     // configures and launches a Jetty server
     unfiltered.jetty.Http(port).filter {
