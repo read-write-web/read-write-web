@@ -21,7 +21,7 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
 
   val base = new File(new File(System.getProperty("java.io.tmpdir")), "readwriteweb")
   val joe = host / "2007/wiki/people/JoeLambda"
-  val baseURI = "%s%s" format (joe.host, joe.path)
+  val joeBaseURI = baseURI(joe)
   val joeOnDisk = new File(base, "people/JoeLambda")
   
   doBeforeSpec {
@@ -47,7 +47,7 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
 </rdf:RDF>
 """
   
-  val initialModel = modelFromString(joeRDF, baseURI)
+  val initialModel = modelFromString(joeRDF, joeBaseURI)
 
   "PUTing an RDF document on Joe's URI (which does not exist yet)" should {
     "return a 201" in {
@@ -63,7 +63,7 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
     "now exist and be isomorphic with the original document" in {
       val (statusCode, via, model) = Http(joe >++ { req => (req.get_statusCode,
                                                             req.get_header("MS-Author-Via"),
-                                                            req as_model(baseURI))
+                                                            req as_model(joeBaseURI))
                                                   } )
       statusCode must_== 200
       via must_== "SPARQL"
@@ -83,15 +83,15 @@ INSERT DATA { </2007/wiki/people/JoeLambda#JL> foaf:openid </2007/wiki/people/Jo
       httpCode must_== 200
     }
     "produce a graph with one more triple than the original one" in {
-      val model = Http(joe as_model(baseURI))
+      val model = Http(joe as_model(joeBaseURI))
       model.size must_== (initialModel.size + 1)
     }
   }
 
   "a GET on Joe's URI" should {
     "deliver TURTLE and RDF/XML graphs that are isomorphic to each other" in {
-      val rdfxml = Http(joe as_model(baseURI))
-      val turtle = Http(joe <:< Map("Content-type" -> "text/turtle") as_model(baseURI, lang="TURTLE"))
+      val rdfxml = Http(joe as_model(joeBaseURI))
+      val turtle = Http(joe <:< Map("Content-type" -> "text/turtle") as_model(joeBaseURI, lang="TURTLE"))
       rdfxml must beIsomorphicWith(turtle)
     }
   }
@@ -105,7 +105,7 @@ INSERT DATA { </2007/wiki/people/JoeLambda#JL> foaf:openid </2007/wiki/people/Jo
 </rdf:RDF>
 """
 
-  val expectedFinalModel = modelFromString(
+  val finalRDF =
 """
 <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"> 
   <foaf:Person rdf:about="#JL" xmlns:foaf="http://xmlns.com/foaf/0.1/">
@@ -115,7 +115,9 @@ INSERT DATA { </2007/wiki/people/JoeLambda#JL> foaf:openid </2007/wiki/people/Jo
     <foaf:img rdf:resource="/2007/wiki/people/JoeLambda/images/me.jpg" />
   </foaf:Person>
 </rdf:RDF>
-""", baseURI)
+"""  
+    
+  val expectedFinalModel = modelFromString(finalRDF, joeBaseURI)
 
   "POSTing an RDF document to Joe's URI" should {
     "succeed" in {
@@ -123,8 +125,21 @@ INSERT DATA { </2007/wiki/people/JoeLambda#JL> foaf:openid </2007/wiki/people/Jo
       httpCode must_== 200
     }
     "append the diff graph to the initial graph" in {
-      val model = Http(joe as_model(baseURI))
+      val model = Http(joe as_model(joeBaseURI))
       model must beIsomorphicWith (expectedFinalModel)
+    }
+  }
+
+  "POSTing an RDF document to a resource that does not exist" should {
+    val uri = host / "2007/wiki/somewhereelse"
+    "succeed" in {
+      val httpCode:Int = Http(uri.post(finalRDF) get_statusCode)
+      // TODO is it a 201?
+      httpCode must_== 200
+    }
+    "create the graph" in {
+      val model = Http(uri as_model(baseURI(uri)))
+      model must beIsomorphicWith (modelFromString(finalRDF, baseURI(uri)))
     }
   }
   
@@ -164,7 +179,7 @@ CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }
   
   """POSTing "CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }" to Joe's URI""" should {
     "return an isomorphic RDF graph" in {
-      val model = Http(joe as_model(baseURI))
+      val model = Http(joe as_model(joeBaseURI))
       model must beIsomorphicWith (expectedFinalModel)
     }
   }

@@ -27,6 +27,8 @@ import org.w3.readwriteweb.util._
 
 package object utiltest {
   
+  def baseURI(req:Request):String = "%s%s" format (req.host, req.path)
+  
   def beIsomorphicWith(that:Model):Matcher[Model] =
     new Matcher[Model] {
       def apply(otherModel: => Model) =

@@ -38,14 +38,16 @@ class Filesystem(baseDirectory:File, basePath:String, val lang:String = "RDF/XML
     }
     
     def get():Model = {
-      val fis = new FileInputStream(fileOnDisk)
       val m = ModelFactory.createDefaultModel()
-      try {
-        m.read(fis, url.toString)
-      } catch {
-        case je:JenaException => logger.error("File %s was either empty or corrupted: considered as empty graph" format fileOnDisk.getAbsolutePath)
+      if (fileOnDisk.exists()) {
+        val fis = new FileInputStream(fileOnDisk)
+        try {
+          m.read(fis, url.toString)
+        } catch {
+          case je:JenaException => logger.error("File %s was either empty or corrupted: considered as empty graph" format fileOnDisk.getAbsolutePath)
+        }
+        fis.close()
       }
-      fis.close()
       m
     }
     
