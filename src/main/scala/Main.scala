@@ -68,21 +68,26 @@ class ReadWriteWeb(rm:ResourceManager) {
         case POST(_) =>
           try {
             Post.parse(Body.stream(req), baseURI) match {
-              case PostUnknown =>
+              case PostUnknown => {
+                logger.info("Couldn't parse the request")
                 BadRequest ~> ResponseString("You MUST provide valid content for either: SPARQL UPDATE, SPARQL Query, RDF/XML, TURTLE")
+              }
               case PostUpdate(update) => {
+                logger.info("SPARQL UPDATE:\n" + update.toString())
                 val model = r.get()
                 UpdateAction.execute(update, model)
                 r.save(model)
                 Ok
               }
               case PostRDF(diffModel) => {
+                logger.info("RDF content:\n" + diffModel.toString())
                 val model = r.get()
                 model.add(diffModel)
                 r.save(model)
                 Ok
               }
               case PostQuery(query) => {
+                logger.info("SPARQL Query:\n" + query.toString())
                 lazy val encoding = RDFEncoding(req)
                 val model:Model = r.get()
                 val qe:QueryExecution = QueryExecutionFactory.create(query, model)
