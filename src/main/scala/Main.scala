@@ -25,18 +25,28 @@ class ReadWriteWeb(rm:ResourceManager) {
   
   val logger:Logger = LoggerFactory.getLogger(this.getClass)
 
+  def isHTML(accepts:List[String]):Boolean = {
+    val accept = accepts.headOption
+    accept == Some("text/html") || accept == Some("application/xhtml+xml")
+  }
+  
   val read = unfiltered.filter.Planify {
     case req @ Path(path) if path startsWith (rm.basePath) => {
       val baseURI = req.underlying.getRequestURL.toString
       val r:Resource = rm.resource(new URL(baseURI))
       req match {
+        case GET(_) & Accept(accepts) if isHTML(accepts) => {
+          val source = Source.fromFile("src/main/resources/skin.html")("UTF-8")
+          val body = source.getLines.mkString("\n")
+          Ok ~> ViaSPARQL ~> ContentType("text/html") ~> ResponseString(body)
+        }
         case GET(_) | HEAD(_) =>
           try {
             val model:Model = r.get()
             val encoding = RDFEncoding(req)
             req match {
-              case GET(_) => Ok ~> ViaSPARQL ~> ResponseModel(model, baseURI, encoding)
-              case HEAD(_) => Ok ~> ViaSPARQL
+              case GET(_) => Ok ~> ViaSPARQL ~> ContentType(encoding.toContentType) ~> ResponseModel(model, baseURI, encoding)
+              case HEAD(_) => Ok ~> ViaSPARQL ~> ContentType(encoding.toContentType)
             }
           } catch {
             case fnfe:FileNotFoundException => NotFound
@@ -78,16 +88,16 @@ class ReadWriteWeb(rm:ResourceManager) {
                 val qe:QueryExecution = QueryExecutionFactory.create(query, model)
                 query.getQueryType match {
                   case SELECT =>
-                    Ok ~> ResponseResultSet(qe.execSelect())
+                    Ok ~> ContentType("application/sparql-results+xml") ~> ResponseResultSet(qe.execSelect())
                   case ASK =>
-                    Ok ~> ResponseResultSet(qe.execAsk())
+                    Ok ~> ContentType("application/sparql-results+xml") ~> ResponseResultSet(qe.execAsk())
                   case CONSTRUCT => {
                     val result:Model = qe.execConstruct()
-                    Ok ~> ResponseModel(model, baseURI, encoding)
+                    Ok ~> ContentType(encoding.toContentType) ~> ResponseModel(model, baseURI, encoding)
                   }
                   case DESCRIBE => {
                     val result:Model = qe.execDescribe()
-                    Ok ~> ResponseModel(model, baseURI, encoding)
+                    Ok ~> ContentType(encoding.toContentType) ~> ResponseModel(model, baseURI, encoding)
                   }
                 }
               }
@@ -162,8 +172,11 @@ Options:
         def init(filterConfig:FilterConfig):Unit = ()
       }
     // Unfiltered filters
+    }.context("/public"){ ctx:ContextBuilder =>
+      ctx.resources(MyResourceManager.fromClasspath("public/").toURI.toURL)
     }.filter(app.read).run()
     
   }
 
 }
+

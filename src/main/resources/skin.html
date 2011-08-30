@@ -1,0 +1,27 @@
+<html id="docHTML">
+<head>
+<title>Data Skin test</title>
+<link rel="stylesheet" href="/public/tabbedtab.css">
+<!-- http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js  -->
+<script src="/public/jquery.min.js"></script>
+<script src="/public/mashlib.js"></script>
+<script>
+jQuery(document).ready(function() {
+    var uri = window.location.href
+    var kb = tabulator.kb;
+    var subject = kb.sym(uri);
+    tabulator.outline.GotoSubject  (subject, true, undefined, true, undefined);
+});
+</script>
+</head>
+<body>
+<!-- below to make outline code to put stuff -->
+<div class="TabulatorOutline" id="DummyUUID">
+            <table id="outline"></table>
+</div>
+<hr />
+<!-- dummy button for making query -->
+<p id="queryButton"></p> 
+
+</body>
+</html>
