@@ -1,7 +1,18 @@
 The ReadWriteWeb app
 --------------------
 
-It depends on:
+To get this:
+
+    hg clone http://dvcs.w3.org/read-write-web
+    cd read-write-web
+    less README.txt
+    ./sbt
+    
+See http://mercurial.selenic.com/ for hg
+See https://github.com/harrah/xsbt/wiki for sbt
+
+
+This projectdepends on:
 * Java 6
 * that's all :-)
 
@@ -53,4 +64,10 @@ or
 Using the stand-alone jar
 -------------------------
 
-java -jar target/read-write-web.jar 8080 ~/WWW/2011/09 /2011/09
+java -jar target/read-write-web.jar 8080 ~/WWW/2011/09 /2011/09  [options]
+
+Options:
+    --relax   All documents exist as empty RDF files (like a wiki).
+    --strict  Documents must be created using PUT else they return 404
+    
+    
