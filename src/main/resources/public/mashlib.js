@@ -1150,7 +1150,7 @@ $rdf.Formula.prototype.whether = function(s,p,o,w) {
  *  and industry standards where appropriate (DOM, ECMAScript, &c.)
  *
  *  Author: David Sheets <dsheets@mit.edu>
- *  SVN ID: $Id: mashlib.js,v 1.4 2011/08/30 18:40:18 timbl Exp $
+ *  SVN ID: $Id$
  *
  * W3C® SOFTWARE NOTICE AND LICENSE
  * http://www.w3.org/Consortium/Legal/2002/copyright-software-20021231
@@ -2620,7 +2620,7 @@ function __SyntaxError(details) {
 
 /*
 
-$Id: mashlib.js,v 1.4 2011/08/30 18:40:18 timbl Exp $
+$Id: n3parser.js 14561 2008-02-23 06:37:26Z kennyluck $
 
 HAND EDITED FOR CONVERSION TO JAVASCRIPT
 
@@ -4664,7 +4664,7 @@ $rdf.Formula.prototype.bottomTypeURIs = function(types) {
 //
 // Here we introduce for the first time a subclass of term: variable.
 //
-// SVN ID: $Id: mashlib.js,v 1.4 2011/08/30 18:40:18 timbl Exp $
+// SVN ID: $Id: query.js 25116 2008-11-15 16:13:48Z timbl $
 
 //  Variable
 //
@@ -7659,7 +7659,7 @@ $rdf.Fetcher = function(store, timeout, async) {
         kb.the(req, ns.link('status')).append(kb.literal(status))
     }
 
-    // Record errors in the system omn failure
+    // Record errors in the system on failure
     // Returns xhr so can just do return this.failfetch(...)
     this.failFetch = function(xhr, status) {
         this.addStatus(xhr.req, status)
@@ -8003,7 +8003,11 @@ $rdf.Fetcher = function(store, timeout, async) {
         }
 
         // Setup the request
-        xhr.open('GET', uri2, this.async)
+        try {
+            xhr.open('GET', uri2, this.async)
+        } catch (er) {
+            return this.failFetch(xhr, "XHR open for GET failed for <"+uri2+">:\n\t" + er);
+        }
         
         // Set redirect callback and request headers -- alas Firefox Only
         
@@ -8120,8 +8124,7 @@ $rdf.Fetcher = function(store, timeout, async) {
         try {
             xhr.send(null)
         } catch (er) {
-            this.failFetch(xhr, "sendFailed:" + er)
-            return xhr
+            return this.failFetch(xhr, "XHR send failed:" + er);
         }
         this.addStatus(xhr.req, "HTTP Request sent.");
 
@@ -20771,88 +20774,41 @@ tabulator.OutlineObject = function(doc) {
      
      {
      
-        display = window.open(" ",'NewWin','menubar=0,location=no,status=no,directories=no,toolbar=no,scrollbars=yes,height=200,width=200')
+        display = window.open(" ",'NewWin',
+            'menubar=0,location=no,status=no,directories=no,toolbar=no,scrollbars=yes,height=200,width=200')
      
         display.tabulator = tabulator;
+        tabulator.options.names = [ 'BY-NC-ND', 'BY-NC-SA', 'BY-NC', 'BY-ND', 'BY-SA', 'BY'];
                                   
         var message="<font face='arial' size='2'><form name ='checkboxes'>";
-                 
-        if(tabulator.options.checkedLicenses[0]){    
-            message+="<input type='checkbox' name = 'one' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-NC-ND<br />";        
-        }
-        
-        else{
-            message+="<input type='checkbox' name = 'one' onClick = 'tabulator.options.submit()' />CC: BY-NC-ND<br />";
-        }
-        
-        if(tabulator.options.checkedLicenses[1]){    
-            message+="<input type='checkbox' name = 'two' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-NC-SA<br />";        
-        }
-                
-        else{
-            message+="<input type='checkbox' name = 'two' onClick = 'tabulator.options.submit()' />CC: BY-NC-SA<br />";
-        }
-        if(tabulator.options.checkedLicenses[2]){    
-            message+="<input type='checkbox' name = 'three' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-NC<br />";        
-        }
-                
-                else{
-                    message+="<input type='checkbox' name = 'three' onClick = 'tabulator.options.submit()' />CC: BY-NC<br />";
-        }
-         if(tabulator.options.checkedLicenses[3]){    
-                    message+="<input type='checkbox' name = 'four' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-ND<br />";        
-                }
-                
-                else{
-                    message+="<input type='checkbox' name = 'four' onClick = 'tabulator.options.submit()' />CC: BY-ND<br />";
-        }
-         if(tabulator.options.checkedLicenses[4]){    
-                    message+="<input type='checkbox' name = 'five' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-SA<br />";        
-                }
-                
-                else{
-                    message+="<input type='checkbox' name = 'five' onClick = 'tabulator.options.submit()' />CC: BY-SA<br />";
-        }
-         if(tabulator.options.checkedLicenses[5]){    
-                    message+="<input type='checkbox' name = 'six' onClick = 'tabulator.options.submit()' CHECKED />CC: BY<br />";        
-                }
-                
-         else{
-             message+="<input type='checkbox' name = 'six' onClick = 'tabulator.options.submit()' />CC: BY<br />";
-        }
+        var lics = tabulator.options.checkedLicenses;
+        for (var kk =0; kk< lics.length; kk++)
+            message += "<input type='checkbox' name = 'n"+kk+
+                "' onClick = 'tabulator.options.submit()'"
+                + (lics[kk] ? "CHECKED" : "") + " />CC: "+tabulator.options.names[kk]+"<br />";
                  
         message+="<br /> <a onclick='tabulator.options.selectAll()'>[Select All] </a>";
-                 
         message+="<a onclick='tabulator.options.deselectAll()'> [Deselect All]</a>";
-     
         message+="</form></font>";
                  
         display.document.write(message);
                  
         display.document.close(); 
         
-        tabulator.options.references[0] = display.document.checkboxes.one;
-        tabulator.options.references[1] = display.document.checkboxes.two;
-        tabulator.options.references[2] = display.document.checkboxes.three;
-        tabulator.options.references[3] = display.document.checkboxes.four;
-        tabulator.options.references[4] = display.document.checkboxes.five;
-        tabulator.options.references[5] = display.document.checkboxes.six;
-     
-            }
+        var i;
+        for(i=0; i<6; i++){
+            tabulator.options.references[i] = display.document.checkboxes.elements[i];
+        }     
+    }
     
     
     tabulator.options.checkedLicenses = [];
    
     tabulator.options.selectAll = function()
     {
-        display.document.checkboxes.one.checked = true;
-        display.document.checkboxes.two.checked = true;
-        display.document.checkboxes.three.checked = true;
-        display.document.checkboxes.four.checked = true;
-        display.document.checkboxes.five.checked = true;
-        display.document.checkboxes.six.checked = true;
-        
+        var i;
         for(i=0; i<6; i++){
+            display.document.checkboxes.elements[i].checked = true;
             tabulator.options.references[i].checked = true;
             tabulator.options.checkedLicenses[i] = true;
         }
@@ -20861,16 +20817,11 @@ tabulator.OutlineObject = function(doc) {
     
     tabulator.options.deselectAll = function()
     {
-        display.document.checkboxes.one.checked = false;
-        display.document.checkboxes.two.checked = false;
-        display.document.checkboxes.three.checked = false;
-        display.document.checkboxes.four.checked = false;
-        display.document.checkboxes.five.checked = false;
-        display.document.checkboxes.six.checked = false;
-        
+        var i;
         for(i=0; i<6; i++){
-                    tabulator.options.references[i].checked = false;
-                    tabulator.options.checkedLicenses[i] = false;
+            display.document.checkboxes.elements[i].checked = false;
+            tabulator.options.references[i].checked = false;
+            tabulator.options.checkedLicenses[i] = false;
         }
     
     }
@@ -20878,19 +20829,10 @@ tabulator.OutlineObject = function(doc) {
     
     tabulator.options.submit = function()
     {   
-    
         alert('tabulator.options.submit: checked='+tabulator.options.references[0].checked);
-        
         for(i=0; i<6; i++)
-        {
-            if(tabulator.options.references[i].checked)
-            {
-                tabulator.options.checkedLicenses[i] = true;
-            }
-            else
-            {
-                tabulator.options.checkedLicenses[i] = false;
-            }
+        {   tabulator.options.checkedLicenses[i] = !!
+                    tabulator.options.references[i].checked;
         }
     }
         
@@ -20931,7 +20873,7 @@ tabulator.OutlineObject = function(doc) {
         // tabulator.log.info('class on '+td)
         var check = td.getAttribute('class')
         // tabulator.log.info('td has class:' + check)
-        tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", "));             
+        // tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", "));             
          
         if (kb.whether(obj, tabulator.ns.rdf('type'), tabulator.ns.link('Request')))
             td.className='undetermined'; //@@? why-timbl
@@ -21594,8 +21536,8 @@ tabulator.OutlineObject = function(doc) {
     this.showSource = function showSource(){
         //deselect all before going on, this is necessary because you would switch tab,
         //close tab or so on...
-        for (var sourceRow in sourceWidget.sources)
-            sourceRow.setAttribute('class', ''); //.class doesn't work. Be careful!
+        for (var uri in sourceWidget.sources)
+            sourceWidget.sources[uri].setAttribute('class', ''); //.class doesn't work. Be careful!
         for (var i=0;i<selection.length;i++){
             if (!selection[i].parentNode) {
                 dump("showSource: EH? no parentNode? "+selection[i]+"\n");
@@ -25530,8 +25472,8 @@ tabulator.registerViewType(TimelineViewFactory);
 
 
     tabulator.requestUUIDs = {};
-
-    // This has an empty id attribute instead of uuid string, beware.
+/*
+    // This has an empty id attribute instead of uuid string, beware. Not used
     tabulator.outlineTemplate = //    ###    This needs its link URIs adjusting! @@@
             // "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n"+
             "<html id='docHTML'>\n"+
@@ -25546,7 +25488,7 @@ tabulator.registerViewType(TimelineViewFactory);
             "        </div>\n"+
             "    </body>\n"+
             "</html>\n";
-
+*/
     // complain("@@ init.js test 118 )");
 
 
