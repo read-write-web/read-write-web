@@ -7974,7 +7974,10 @@ $rdf.Fetcher = function(store, timeout, async) {
                     xhr.handle(function() {
                         sf.doneFetch(xhr, args)
                     })
-                }
+                } else {
+                    sf.failFetch(xhr, "HTTP failed unusually. (Skipped readyState3?) (cross-site violation?) for <"+
+                        docuri+">");
+                }    
                 break
             }
         }
