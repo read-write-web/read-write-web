@@ -33,8 +33,30 @@ class ReadWriteWeb(rm:ResourceManager) {
     accept == Some("text/html") || accept == Some("application/xhtml+xml")
   }
   
+  /** I believe some documentation is needed here, as many different tricks
+   *  are used to make this code easy to read and still type-safe
+   *  
+   *  Planify.apply takes an Intent, which is defined in Cycle by
+   *  type Intent [-A, -B] = PartialFunction[HttpRequest[A], ResponseFunction[B]]
+   *  the corresponding syntax is: case ... => ...
+   *  
+   *  this code makes use of the Validation monad. For example of how to use it, see
+   *  http://scalaz.googlecode.com/svn/continuous/latest/browse.sxr/scalaz/example/ExampleValidation.scala.html
+   *  
+   *  the Resource abstraction returns Validation[Throwable, ?something]
+   *  we use the for monadic constructs.
+   *  Everything construct are mapped to Validation[ResponseFunction, ResponseFuntion],
+   *  the left value always denoting the failure. Hence, the rest of the for-construct
+   *  is not evaluated, but let the reader of the code understand clearly what's happening.
+   *  
+   *  This mapping is made possible with the failMap method. I couldn't find an equivalent
+   *  in the ScalaZ API so I made my own through an implicit.
+   *  
+   *  At last, Validation[ResponseFunction, ResponseFuntion] is exposed as a ResponseFunction
+   *  through another implicit conversion. It saves us the call to the Validation.lift() method
+   */
   val read = unfiltered.filter.Planify {
-    case req @ Path(path) if path startsWith (rm.basePath) => {
+    case req @ Path(path) if path startsWith rm.basePath => {
       val baseURI = req.underlying.getRequestURL.toString
       val r:Resource = rm.resource(new URL(baseURI))
       req match {
@@ -43,8 +65,8 @@ class ReadWriteWeb(rm:ResourceManager) {
           val body = source.getLines.mkString("\n")
           Ok ~> ViaSPARQL ~> ContentType("text/html") ~> ResponseString(body)
         }
-        case GET(_) | HEAD(_) => {
-          val response = for {
+        case GET(_) | HEAD(_) =>
+          for {
             model <- r.get() failMap { x => NotFound }
             encoding = RDFEncoding(req)
           } yield {
@@ -53,15 +75,11 @@ class ReadWriteWeb(rm:ResourceManager) {
               case HEAD(_) => Ok ~> ViaSPARQL ~> ContentType(encoding.toContentType)
             }
           }
-          response.fold(f => f, s => s)
-        }
-        case PUT(_) => {
-          val response = for {
+        case PUT(_) =>
+          for {
             bodyModel <- modelFromInputStream(Body.stream(req), baseURI) failMap { t => BadRequest ~> ResponseString(t.getStackTraceString) }
             _ <- r.save(bodyModel) failMap { t => InternalServerError ~> ResponseString(t.getStackTraceString) }
           } yield Created
-          response.fold(f => f, s => s)
-        }
         case POST(_) => {
           Post.parse(Body.stream(req), baseURI) match {
             case PostUnknown => {
@@ -70,48 +88,44 @@ class ReadWriteWeb(rm:ResourceManager) {
             }
             case PostUpdate(update) => {
               logger.info("SPARQL UPDATE:\n" + update.toString())
-              val response =
-                for {
-                  model <- r.get() failMap { t => NotFound }
-                  _ <- UpdateAction.execute(update, model).success
-                  _ <- r.save(model) failMap { t =>  InternalServerError ~> ResponseString(t.getStackTraceString)}
-                } yield Ok
-              response.fold(f => f, s => s)
+              for {
+                model <- r.get() failMap { t => NotFound }
+                // TODO: we should handle an error here
+                _ = UpdateAction.execute(update, model)
+                _ <- r.save(model) failMap { t =>  InternalServerError ~> ResponseString(t.getStackTraceString)}
+              } yield Ok
             }
             case PostRDF(diffModel) => {
               logger.info("RDF content:\n" + diffModel.toString())
-              val response =
-                for {
-                  model <- r.get() failMap { t => NotFound }
-                  _ <- model.add(diffModel).success
-                  _ <- r.save(model) failMap { t =>  InternalServerError ~> ResponseString(t.getStackTraceString)}
-                } yield Ok
-              response.fold(f => f, s => s)
+              for {
+                model <- r.get() failMap { t => NotFound }
+                // TODO: we should handle an error here
+                _ = model.add(diffModel)
+                _ <- r.save(model) failMap { t =>  InternalServerError ~> ResponseString(t.getStackTraceString)}
+              } yield Ok
             }
             case PostQuery(query) => {
               logger.info("SPARQL Query:\n" + query.toString())
               lazy val encoding = RDFEncoding(req)
-              val response =
-                for {
-                  model <- r.get() failMap { t => NotFound }
-                } yield {
-                  val qe:QueryExecution = QueryExecutionFactory.create(query, model)
-                  query.getQueryType match {
-                    case SELECT =>
-                      Ok ~> ContentType("application/sparql-results+xml") ~> ResponseResultSet(qe.execSelect())
-                    case ASK =>
-                      Ok ~> ContentType("application/sparql-results+xml") ~> ResponseResultSet(qe.execAsk())
-                    case CONSTRUCT => {
-                      val result:Model = qe.execConstruct()
-                      Ok ~> ContentType(encoding.toContentType) ~> ResponseModel(model, baseURI, encoding)
-                    }
-                    case DESCRIBE => {
-                      val result:Model = qe.execDescribe()
-                      Ok ~> ContentType(encoding.toContentType) ~> ResponseModel(model, baseURI, encoding)
-                    }
+              for {
+                model <- r.get() failMap { t => NotFound }
+              } yield {
+                val qe:QueryExecution = QueryExecutionFactory.create(query, model)
+                query.getQueryType match {
+                  case SELECT =>
+                    Ok ~> ContentType("application/sparql-results+xml") ~> ResponseResultSet(qe.execSelect())
+                  case ASK =>
+                    Ok ~> ContentType("application/sparql-results+xml") ~> ResponseResultSet(qe.execAsk())
+                  case CONSTRUCT => {
+                    val result:Model = qe.execConstruct()
+                    Ok ~> ContentType(encoding.toContentType) ~> ResponseModel(model, baseURI, encoding)
+                  }
+                  case DESCRIBE => {
+                    val result:Model = qe.execDescribe()
+                    Ok ~> ContentType(encoding.toContentType) ~> ResponseModel(model, baseURI, encoding)
                   }
                 }
-              response.fold(f => f, s => s)
+              }
             }
           }
         }

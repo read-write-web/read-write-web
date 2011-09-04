@@ -32,7 +32,6 @@ object Post {
   }
   
   def parse(s:String, baseURI:String):Post = {
-    logger.debug("~~~\n" + s + "\n~~~")
     val reader = new StringReader(s)
     def postUpdate =
       try {
