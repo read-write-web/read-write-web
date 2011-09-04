@@ -19,6 +19,9 @@ import com.hp.hpl.jena.shared.JenaException
 import Query.{QueryTypeSelect => SELECT, QueryTypeAsk => ASK,
               QueryTypeConstruct => CONSTRUCT, QueryTypeDescribe => DESCRIBE}
 
+import scalaz._
+import Scalaz._
+
 import org.w3.readwriteweb.util._
 
 class ReadWriteWeb(rm:ResourceManager) {
@@ -40,77 +43,80 @@ class ReadWriteWeb(rm:ResourceManager) {
           val body = source.getLines.mkString("\n")
           Ok ~> ViaSPARQL ~> ContentType("text/html") ~> ResponseString(body)
         }
-        case GET(_) | HEAD(_) =>
-          try {
-            val model:Model = r.get()
-            val encoding = RDFEncoding(req)
+        case GET(_) | HEAD(_) => {
+          val result = for {
+            model <- r.get() failMap { x => NotFound }
+            encoding = RDFEncoding(req)
+          } yield {
             req match {
               case GET(_) => Ok ~> ViaSPARQL ~> ContentType(encoding.toContentType) ~> ResponseModel(model, baseURI, encoding)
               case HEAD(_) => Ok ~> ViaSPARQL ~> ContentType(encoding.toContentType)
             }
-          } catch {
-            case fnfe:FileNotFoundException => NotFound
-            case t:Throwable => {
-              req match {
-                case GET(_) => InternalServerError ~> ViaSPARQL
-                case HEAD(_) => InternalServerError ~> ViaSPARQL ~> ResponseString(t.getStackTraceString)
-              }
+          }
+          result.fold(f => f, s => s)
+        }
+        case PUT(_) => {
+          val response = for {
+            bodyModel <- modelFromInputStream(Body.stream(req), baseURI)
+            _ <- r.save(bodyModel)
+          } yield Created
+          response.fold(
+              t => InternalServerError ~> ResponseString(t.getStackTraceString),
+              s => s)
+        }
+        case POST(_) => {
+          Post.parse(Body.stream(req), baseURI) match {
+            case PostUnknown => {
+              logger.info("Couldn't parse the request")
+              BadRequest ~> ResponseString("You MUST provide valid content for either: SPARQL UPDATE, SPARQL Query, RDF/XML, TURTLE")
             }
-          }
-        case PUT(_) =>
-          try {
-            val bodyModel = modelFromInputStream(Body.stream(req), baseURI)
-            r.save(bodyModel)
-            Created
-          } catch {
-            case t:Throwable => InternalServerError ~> ResponseString(t.getStackTraceString)
-          }
-        case POST(_) =>
-          try {
-            Post.parse(Body.stream(req), baseURI) match {
-              case PostUnknown => {
-                logger.info("Couldn't parse the request")
-                BadRequest ~> ResponseString("You MUST provide valid content for either: SPARQL UPDATE, SPARQL Query, RDF/XML, TURTLE")
-              }
-              case PostUpdate(update) => {
-                logger.info("SPARQL UPDATE:\n" + update.toString())
-                val model = r.get()
-                UpdateAction.execute(update, model)
-                r.save(model)
-                Ok
-              }
-              case PostRDF(diffModel) => {
-                logger.info("RDF content:\n" + diffModel.toString())
-                val model = r.get()
-                model.add(diffModel)
-                r.save(model)
-                Ok
-              }
-              case PostQuery(query) => {
-                logger.info("SPARQL Query:\n" + query.toString())
-                lazy val encoding = RDFEncoding(req)
-                val model:Model = r.get()
-                val qe:QueryExecution = QueryExecutionFactory.create(query, model)
-                query.getQueryType match {
-                  case SELECT =>
-                    Ok ~> ContentType("application/sparql-results+xml") ~> ResponseResultSet(qe.execSelect())
-                  case ASK =>
-                    Ok ~> ContentType("application/sparql-results+xml") ~> ResponseResultSet(qe.execAsk())
-                  case CONSTRUCT => {
-                    val result:Model = qe.execConstruct()
-                    Ok ~> ContentType(encoding.toContentType) ~> ResponseModel(model, baseURI, encoding)
-                  }
-                  case DESCRIBE => {
-                    val result:Model = qe.execDescribe()
-                    Ok ~> ContentType(encoding.toContentType) ~> ResponseModel(model, baseURI, encoding)
+            case PostUpdate(update) => {
+              logger.info("SPARQL UPDATE:\n" + update.toString())
+              val response =
+                for {
+                  model <- r.get() failMap { t => NotFound }
+                  _ <- UpdateAction.execute(update, model).success
+                  _ <- r.save(model) failMap { t =>  InternalServerError ~> ResponseString(t.getStackTraceString)}
+                } yield Ok
+              response.fold(f => f, s => s)
+            }
+            case PostRDF(diffModel) => {
+              logger.info("RDF content:\n" + diffModel.toString())
+              val response =
+                for {
+                  model <- r.get() failMap { t => NotFound }
+                  _ <- model.add(diffModel).success
+                  _ <- r.save(model) failMap { t =>  InternalServerError ~> ResponseString(t.getStackTraceString)}
+                } yield Ok
+              response.fold(f => f, s => s)
+            }
+            case PostQuery(query) => {
+              logger.info("SPARQL Query:\n" + query.toString())
+              lazy val encoding = RDFEncoding(req)
+              val response =
+                for {
+                  model <- r.get() failMap { t => NotFound }
+                } yield {
+                  val qe:QueryExecution = QueryExecutionFactory.create(query, model)
+                  query.getQueryType match {
+                    case SELECT =>
+                      Ok ~> ContentType("application/sparql-results+xml") ~> ResponseResultSet(qe.execSelect())
+                    case ASK =>
+                      Ok ~> ContentType("application/sparql-results+xml") ~> ResponseResultSet(qe.execAsk())
+                    case CONSTRUCT => {
+                      val result:Model = qe.execConstruct()
+                      Ok ~> ContentType(encoding.toContentType) ~> ResponseModel(model, baseURI, encoding)
+                    }
+                    case DESCRIBE => {
+                      val result:Model = qe.execDescribe()
+                      Ok ~> ContentType(encoding.toContentType) ~> ResponseModel(model, baseURI, encoding)
+                    }
                   }
                 }
-              }
+              response.fold(f => f, s => s)
             }
-          } catch {
-            case fnfe:FileNotFoundException => NotFound
-            case t:Throwable => InternalServerError ~> ResponseString(t.getStackTraceString)
           }
+        }
         case _ => MethodNotAllowed ~> Allow("GET", "PUT", "POST")
       }
     }

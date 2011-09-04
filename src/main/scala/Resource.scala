@@ -10,14 +10,19 @@ import com.hp.hpl.jena.shared.JenaException
 
 import org.w3.readwriteweb.util._
 
+import scalaz._
+import Scalaz._
+
+import _root_.scala.sys.error
+
 trait ResourceManager {
   def basePath:String
   def sanityCheck():Boolean
   def resource(url:URL):Resource
 }
 trait Resource {
-  def get():Model
-  def save(model:Model):Unit
+  def get():Validation[Throwable, Model]
+  def save(model:Model):Validation[Throwable, Unit]
 }
 
 class Filesystem(baseDirectory:File, val basePath:String, val lang:String = "RDF/XML-ABBREV")(implicit mode:RWWMode) extends ResourceManager {
@@ -38,33 +43,36 @@ class Filesystem(baseDirectory:File, val basePath:String, val lang:String = "RDF
       logger.debug("Create file %s with success: %s" format (fileOnDisk.getAbsolutePath, r.toString))
     }
     
-    def get():Model = {
+    def get():Validation[Throwable, Model] = {
       val m = ModelFactory.createDefaultModel()
       if (fileOnDisk.exists()) {
         val fis = new FileInputStream(fileOnDisk)
         try {
           m.read(fis, url.toString)
         } catch {
-          case je:JenaException => sys.error("File %s was either empty or corrupted: considered as empty graph" format fileOnDisk.getAbsolutePath)
+          case je:JenaException => error("File %s was either empty or corrupted: considered as empty graph" format fileOnDisk.getAbsolutePath)
         }
         fis.close()
-        m
+        m.success
       } else {
         mode match {
-          case AllResourcesAlreadyExist => m
-          case ResourcesDontExistByDefault => throw new FileNotFoundException
+          case AllResourcesAlreadyExist => m.success
+          case ResourcesDontExistByDefault => new FileNotFoundException().fail
       }
       }
     }
     
-    def save(model:Model):Unit = {
-      createFileOnDisk()
-      val fos = new FileOutputStream(fileOnDisk)
-      val writer = model.getWriter("RDF/XML-ABBREV")
-      writer.write(model, fos, url.toString)
-      fos.close()
-    }
-    
+    def save(model:Model):Validation[Throwable, Unit] =
+      try {
+        createFileOnDisk()
+        val fos = new FileOutputStream(fileOnDisk)
+        val writer = model.getWriter("RDF/XML-ABBREV")
+        writer.write(model, fos, url.toString)
+        fos.close().success
+      } catch {
+        case t => t.fail
+      }
+
   }
   
 }

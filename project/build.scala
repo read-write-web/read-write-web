@@ -15,6 +15,7 @@ object Dependencies {
   val jena = "com.hp.hpl.jena" % "jena" % "2.6.4"
   val arq = "com.hp.hpl.jena" % "arq" % "2.8.8"
   val grizzled = "org.clapper" %% "grizzled-scala" % "1.0.7" % "test"
+  val scalaz = "org.scalaz" %% "scalaz-core" % "6.0.2"
 }
 
 // some usefull repositories
@@ -74,6 +75,7 @@ object YourProjectBuild extends Build {
       libraryDependencies += arq,
       libraryDependencies += antiXML,
       libraryDependencies += grizzled,
+      libraryDependencies += scalaz,
       jarName in Assembly := "read-write-web.jar"
     )
 
