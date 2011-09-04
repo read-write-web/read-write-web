@@ -44,7 +44,7 @@ class ReadWriteWeb(rm:ResourceManager) {
           Ok ~> ViaSPARQL ~> ContentType("text/html") ~> ResponseString(body)
         }
         case GET(_) | HEAD(_) => {
-          val result = for {
+          val response = for {
             model <- r.get() failMap { x => NotFound }
             encoding = RDFEncoding(req)
           } yield {
@@ -53,16 +53,14 @@ class ReadWriteWeb(rm:ResourceManager) {
               case HEAD(_) => Ok ~> ViaSPARQL ~> ContentType(encoding.toContentType)
             }
           }
-          result.fold(f => f, s => s)
+          response.fold(f => f, s => s)
         }
         case PUT(_) => {
           val response = for {
-            bodyModel <- modelFromInputStream(Body.stream(req), baseURI)
-            _ <- r.save(bodyModel)
+            bodyModel <- modelFromInputStream(Body.stream(req), baseURI) failMap { t => BadRequest ~> ResponseString(t.getStackTraceString) }
+            _ <- r.save(bodyModel) failMap { t => InternalServerError ~> ResponseString(t.getStackTraceString) }
           } yield Created
-          response.fold(
-              t => InternalServerError ~> ResponseString(t.getStackTraceString),
-              s => s)
+          response.fold(f => f, s => s)
         }
         case POST(_) => {
           Post.parse(Body.stream(req), baseURI) match {

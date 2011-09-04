@@ -195,6 +195,13 @@ CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }
       statusCode must_== 400
     }
   }
+  
+  """PUTting not-valid RDF to Joe's URI""" should {
+    "return a 400 Bad Request" in {
+      val statusCode = Http.when(_ == 400)(joe.put("that's bouleshit") get_statusCode)
+      statusCode must_== 400
+    }
+  }
 
   """a DELETE request""" should {
     "not be supported yet" in {
