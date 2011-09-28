@@ -18,8 +18,13 @@ case class PostRDF(model:Model) extends Post
 case class PostQuery(query:Query) extends Post
 case object PostUnknown extends Post
 
+import scalaz._
+import Scalaz._
+
 object Post {
   
+  val logger:Logger = LoggerFactory.getLogger(this.getClass)
+
   def parse(is:InputStream, baseURI:String):Post = {
     val source = Source.fromInputStream(is, "UTF-8")
     val s = source.getLines.mkString("\n")
@@ -28,25 +33,23 @@ object Post {
   
   def parse(s:String, baseURI:String):Post = {
     val reader = new StringReader(s)
-    try {
+    def postUpdate =
       try {
         val update:UpdateRequest = UpdateFactory.create(s, baseURI)
-        PostUpdate(update)      
+        PostUpdate(update).success
       } catch {
-        case qpe:QueryParseException =>
-          try {
-            val model = modelFromString(s, baseURI)
-            PostRDF(model)
-          } catch {
-            case je:JenaException => {
-              val query = QueryFactory.create(s)
-              PostQuery(query)
-            }
-          }
+        case qpe:QueryParseException => qpe.fail
       }
-    } catch {
-      case _ => PostUnknown
-    }
+    def postRDF =
+      modelFromString(s, baseURI) flatMap { model => PostRDF(model).success }
+    def postQuery =
+      try {
+        val query = QueryFactory.create(s)
+        PostQuery(query).success
+      } catch {
+        case qe:QueryException => qe.fail
+      }
+    postUpdate | (postRDF | (postQuery | PostUnknown))
   }
   
 }

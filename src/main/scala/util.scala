@@ -9,6 +9,11 @@ import unfiltered.jetty._
 import java.io._
 import scala.io.Source
 
+import scalaz._
+import Scalaz._
+
+import _root_.scala.sys.error
+
 import org.slf4j.{Logger, LoggerFactory}
 
 import com.hp.hpl.jena.rdf.model._
@@ -49,6 +54,11 @@ object RDFEncoding {
   
 }
 
+trait ValidationW[E, S] {
+  val validation:Validation[E, S]
+  def failMap[EE](f:E => EE):Validation[EE, S] = validation.fail map f validation
+}
+
 package object util {
   
   val defaultLang = "RDF/XML-ABBREV"
@@ -78,20 +88,37 @@ package object util {
       }
   }
 
-  def modelFromInputStream(is:InputStream, base:String, lang:String = "RDF/XML-ABBREV"):Model = {
-    val m = ModelFactory.createDefaultModel()
-    m.read(is, base, lang)
-    m
-  }
+  def modelFromInputStream(
+      is:InputStream,
+      base:String,
+      lang:String = "RDF/XML-ABBREV"):Validation[Throwable, Model] =
+    try {
+      val m = ModelFactory.createDefaultModel()
+      m.read(is, base, lang)
+      m.success
+    } catch {
+      case t => t.fail
+    }
   
-  def modelFromString(s:String, base:String, lang:String = "RDF/XML-ABBREV"):Model = {
-    val reader = new StringReader(s)
-    val m = ModelFactory.createDefaultModel()
-    m.read(reader, base, lang)
-    m
-  }
+  def modelFromString(s:String,
+      base:String,
+      lang:String = "RDF/XML-ABBREV"):Validation[Throwable, Model] =
+    try {
+      val reader = new StringReader(s)
+      val m = ModelFactory.createDefaultModel()
+      m.read(reader, base, lang)
+      m.success
+    } catch {
+      case t => t.fail
+    }
 
+  implicit def wrapValidation[E, S](v:Validation[E,S]):ValidationW[E, S] =
+    new ValidationW[E, S] { val validation = v }
+  
+  implicit def unwrap[E, F <: E, S <: E](v:Validation[F,S]):E = v.fold(e => e, s => s)
+  
 }
+
 
 import java.io.{File, FileWriter}
 import java.util.jar._
@@ -99,7 +126,6 @@ import scala.collection.JavaConversions._
 import scala.io.Source
 import java.net.{URL, URLDecoder}
 import org.slf4j.{Logger, LoggerFactory}
-
 
 /** useful stuff to read resources from the classpath */
 object MyResourceManager {
@@ -132,7 +158,7 @@ object MyResourceManager {
         } }
         entries filterNot { _.isEmpty } toList
       } else
-        sys.error("Cannot list files for URL "+dirURL);
+        error("Cannot list files for URL "+dirURL);
     }
   }
   

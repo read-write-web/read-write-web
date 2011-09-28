@@ -50,7 +50,7 @@ object ReadWriteWebSpec extends Specification with unfiltered.spec.jetty.Served 
 </rdf:RDF>
 """
   
-  val initialModel = modelFromString(joeRDF, joeBaseURI)
+  val initialModel = modelFromString(joeRDF, joeBaseURI).toOption.get
 
   "a GET on a URL that does not exist" should {
     "return a 404" in {
@@ -127,7 +127,7 @@ INSERT DATA { </2007/wiki/people/JoeLambda#JL> foaf:openid </2007/wiki/people/Jo
 </rdf:RDF>
 """  
     
-  val expectedFinalModel = modelFromString(finalRDF, joeBaseURI)
+  val expectedFinalModel = modelFromString(finalRDF, joeBaseURI).toOption.get
 
   "POSTing an RDF document to Joe's URI" should {
     "succeed" in {
@@ -192,6 +192,13 @@ CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }
   """POSTing something that does not make sense to Joe's URI""" should {
     "return a 400 Bad Request" in {
       val statusCode = Http.when(_ == 400)(joe.post("that's bouleshit") get_statusCode)
+      statusCode must_== 400
+    }
+  }
+  
+  """PUTting not-valid RDF to Joe's URI""" should {
+    "return a 400 Bad Request" in {
+      val statusCode = Http.when(_ == 400)(joe.put("that's bouleshit") get_statusCode)
       statusCode must_== 400
     }
   }

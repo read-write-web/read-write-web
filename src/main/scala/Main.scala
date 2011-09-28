@@ -19,6 +19,9 @@ import com.hp.hpl.jena.shared.JenaException
 import Query.{QueryTypeSelect => SELECT, QueryTypeAsk => ASK,
               QueryTypeConstruct => CONSTRUCT, QueryTypeDescribe => DESCRIBE}
 
+import scalaz._
+import Scalaz._
+
 import org.w3.readwriteweb.util._
 
 class ReadWriteWeb(rm:ResourceManager) {
@@ -30,8 +33,30 @@ class ReadWriteWeb(rm:ResourceManager) {
     accept == Some("text/html") || accept == Some("application/xhtml+xml")
   }
   
+  /** I believe some documentation is needed here, as many different tricks
+   *  are used to make this code easy to read and still type-safe
+   *  
+   *  Planify.apply takes an Intent, which is defined in Cycle by
+   *  type Intent [-A, -B] = PartialFunction[HttpRequest[A], ResponseFunction[B]]
+   *  the corresponding syntax is: case ... => ...
+   *  
+   *  this code makes use of the Validation monad. For example of how to use it, see
+   *  http://scalaz.googlecode.com/svn/continuous/latest/browse.sxr/scalaz/example/ExampleValidation.scala.html
+   *  
+   *  the Resource abstraction returns Validation[Throwable, ?something]
+   *  we use the for monadic constructs.
+   *  Everything construct are mapped to Validation[ResponseFunction, ResponseFuntion],
+   *  the left value always denoting the failure. Hence, the rest of the for-construct
+   *  is not evaluated, but let the reader of the code understand clearly what's happening.
+   *  
+   *  This mapping is made possible with the failMap method. I couldn't find an equivalent
+   *  in the ScalaZ API so I made my own through an implicit.
+   *  
+   *  At last, Validation[ResponseFunction, ResponseFuntion] is exposed as a ResponseFunction
+   *  through another implicit conversion. It saves us the call to the Validation.lift() method
+   */
   val read = unfiltered.filter.Planify {
-    case req @ Path(path) if path startsWith (rm.basePath) => {
+    case req @ Path(path) if path startsWith rm.basePath => {
       val baseURI = req.underlying.getRequestURL.toString
       val r:Resource = rm.resource(new URL(baseURI))
       req match {
@@ -41,55 +66,50 @@ class ReadWriteWeb(rm:ResourceManager) {
           Ok ~> ViaSPARQL ~> ContentType("text/html") ~> ResponseString(body)
         }
         case GET(_) | HEAD(_) =>
-          try {
-            val model:Model = r.get()
-            val encoding = RDFEncoding(req)
+          for {
+            model <- r.get() failMap { x => NotFound }
+            encoding = RDFEncoding(req)
+          } yield {
             req match {
               case GET(_) => Ok ~> ViaSPARQL ~> ContentType(encoding.toContentType) ~> ResponseModel(model, baseURI, encoding)
               case HEAD(_) => Ok ~> ViaSPARQL ~> ContentType(encoding.toContentType)
             }
-          } catch {
-            case fnfe:FileNotFoundException => NotFound
-            case t:Throwable => {
-              req match {
-                case GET(_) => InternalServerError ~> ViaSPARQL
-                case HEAD(_) => InternalServerError ~> ViaSPARQL ~> ResponseString(t.getStackTraceString)
-              }
-            }
           }
         case PUT(_) =>
-          try {
-            val bodyModel = modelFromInputStream(Body.stream(req), baseURI)
-            r.save(bodyModel)
-            Created
-          } catch {
-            case t:Throwable => InternalServerError ~> ResponseString(t.getStackTraceString)
-          }
-        case POST(_) =>
-          try {
-            Post.parse(Body.stream(req), baseURI) match {
-              case PostUnknown => {
-                logger.info("Couldn't parse the request")
-                BadRequest ~> ResponseString("You MUST provide valid content for either: SPARQL UPDATE, SPARQL Query, RDF/XML, TURTLE")
-              }
-              case PostUpdate(update) => {
-                logger.info("SPARQL UPDATE:\n" + update.toString())
-                val model = r.get()
-                UpdateAction.execute(update, model)
-                r.save(model)
-                Ok
-              }
-              case PostRDF(diffModel) => {
-                logger.info("RDF content:\n" + diffModel.toString())
-                val model = r.get()
-                model.add(diffModel)
-                r.save(model)
-                Ok
-              }
-              case PostQuery(query) => {
-                logger.info("SPARQL Query:\n" + query.toString())
-                lazy val encoding = RDFEncoding(req)
-                val model:Model = r.get()
+          for {
+            bodyModel <- modelFromInputStream(Body.stream(req), baseURI) failMap { t => BadRequest ~> ResponseString(t.getStackTraceString) }
+            _ <- r.save(bodyModel) failMap { t => InternalServerError ~> ResponseString(t.getStackTraceString) }
+          } yield Created
+        case POST(_) => {
+          Post.parse(Body.stream(req), baseURI) match {
+            case PostUnknown => {
+              logger.info("Couldn't parse the request")
+              BadRequest ~> ResponseString("You MUST provide valid content for either: SPARQL UPDATE, SPARQL Query, RDF/XML, TURTLE")
+            }
+            case PostUpdate(update) => {
+              logger.info("SPARQL UPDATE:\n" + update.toString())
+              for {
+                model <- r.get() failMap { t => NotFound }
+                // TODO: we should handle an error here
+                _ = UpdateAction.execute(update, model)
+                _ <- r.save(model) failMap { t =>  InternalServerError ~> ResponseString(t.getStackTraceString)}
+              } yield Ok
+            }
+            case PostRDF(diffModel) => {
+              logger.info("RDF content:\n" + diffModel.toString())
+              for {
+                model <- r.get() failMap { t => NotFound }
+                // TODO: we should handle an error here
+                _ = model.add(diffModel)
+                _ <- r.save(model) failMap { t =>  InternalServerError ~> ResponseString(t.getStackTraceString)}
+              } yield Ok
+            }
+            case PostQuery(query) => {
+              logger.info("SPARQL Query:\n" + query.toString())
+              lazy val encoding = RDFEncoding(req)
+              for {
+                model <- r.get() failMap { t => NotFound }
+              } yield {
                 val qe:QueryExecution = QueryExecutionFactory.create(query, model)
                 query.getQueryType match {
                   case SELECT =>
@@ -107,10 +127,8 @@ class ReadWriteWeb(rm:ResourceManager) {
                 }
               }
             }
-          } catch {
-            case fnfe:FileNotFoundException => NotFound
-            case t:Throwable => InternalServerError ~> ResponseString(t.getStackTraceString)
           }
+        }
         case _ => MethodNotAllowed ~> Allow("GET", "PUT", "POST")
       }
     }
