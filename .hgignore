@@ -13,5 +13,6 @@ project/boot/
 *\#
 src/main/scala.egp
 src/test/scala.egp
-sbt-launch.jar
+sbt-launch*.jar
 .scala_dependencies
+*.orig
