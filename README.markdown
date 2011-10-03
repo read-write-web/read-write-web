@@ -3,13 +3,13 @@ The ReadWriteWeb app
 
 To get this:
 
-    hg clone http://dvcs.w3.org/read-write-web
+    hg clone https://dvcs.w3.org/read-write-web
     cd read-write-web
     less README.markdown
     ./sbt
     
-See http://mercurial.selenic.com/ for hg
-See https://github.com/harrah/xsbt/wiki for sbt
+* see [http://mercurial.selenic.com/](http://mercurial.selenic.com/) for hg
+* see [https://github.com/harrah/xsbt/wiki](https://github.com/harrah/xsbt/wiki) for sbt
 
 This project depends on:
 
