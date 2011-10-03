@@ -2,10 +2,12 @@ The ReadWriteWeb app
 --------------------
 
 It depends on:
+
 * Java 6
 * that's all :-)
 
 It comes with
+
 * sbt project
 * generic sbt launcher
 * jar packager (assembly)
