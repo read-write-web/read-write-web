@@ -5,13 +5,13 @@ To get this:
 
     hg clone http://dvcs.w3.org/read-write-web
     cd read-write-web
-    less README.txt
+    less README.markdown
     ./sbt
     
 See http://mercurial.selenic.com/ for hg
 See https://github.com/harrah/xsbt/wiki for sbt
 
-This projectdepends on:
+This project depends on:
 
 * Java 6
 * that's all :-)
@@ -34,41 +34,42 @@ How to start geeking
 BE PATIENT: the first time, some operations take some time because it downloads
             all the dependencies...
 
-* to launch sbt
+### to launch sbt
 
-$ ./sbt
+    $ ./sbt
 
-* to auto-compile the source
+### to auto-compile the source
 
-> ~ compile
+    > ~ compile
 
-* to launch tests under sbt (will cache all the dependencies the first time, can take a while)
+### to launch tests under sbt (will cache all the dependencies the first time, can take a while)
 
-> test
+    > test
 
-* to run the Web App
+### to run the Web App
 
-> run
+    > run
 
 or
 
-> run 8080
+    > run 8080
 
-* to generate the eclipse configuration
+### to generate the eclipse configuration
 
-> eclipse same-targets
+    > eclipse same-targets
 
-* to package the application as a stand-alone jar (creates target/read-write-web.jar)
+### to package the application as a stand-alone jar (creates target/read-write-web.jar)
 
-> assembly
+    > assembly
 
 Using the stand-alone jar
 -------------------------
 
-java -jar target/read-write-web.jar 8080 ~/WWW/2011/09 /2011/09  [options]
+    java -jar target/read-write-web.jar 8080 ~/WWW/2011/09 /2011/09  [options]
 
 Options:
-    --relax   All documents exist as empty RDF files (like a wiki).
-    --strict  Documents must be created using PUT else they return 404
+
+ *   --relax   All documents exist as empty RDF files (like a wiki).
+ *   --strict  Documents must be created using PUT else they return 404
     
     
