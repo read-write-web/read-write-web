@@ -11,12 +11,13 @@ To get this:
 See http://mercurial.selenic.com/ for hg
 See https://github.com/harrah/xsbt/wiki for sbt
 
-
 This projectdepends on:
+
 * Java 6
 * that's all :-)
 
 It comes with
+
 * sbt project
 * generic sbt launcher
 * jar packager (assembly)
