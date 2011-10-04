@@ -3,7 +3,7 @@ The ReadWriteWeb app
 
 To get this:
 
-    hg clone https://dvcs.w3.org/read-write-web
+    hg clone https://dvcs.w3.org/hg/read-write-web
     cd read-write-web
     less README.markdown
     ./sbt
