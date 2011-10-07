@@ -8,13 +8,22 @@ object Dependencies {
   val dispatch = "net.databinder" %% "dispatch-http" % "0.8.5" % "test"
   val unfiltered_filter = "net.databinder" %% "unfiltered-filter" % "0.4.1"
   val unfiltered_jetty = "net.databinder" %% "unfiltered-jetty" % "0.4.1"
-  val unfiltered_spec = "net.databinder" %% "unfiltered-spec" % "0.4.1" % "test"
+  // val unfiltered_spec = "net.databinder" %% "unfiltered-spec" % "0.4.1" % "test"
+  val ivyUnfilteredSpec =
+    <dependencies>
+      <dependency org="net.databinder" name="unfiltered-spec_2.9.1" rev="0.4.1">
+        <exclude org="net.databinder" module="dispatch-mime_2.9.0-1"/>
+      </dependency>
+    </dependencies>
   val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.5.8"
   val antiXML = "com.codecommit" %% "anti-xml" % "0.4-SNAPSHOT" % "test"
   val jena = "com.hp.hpl.jena" % "jena" % "2.6.4"
   val arq = "com.hp.hpl.jena" % "arq" % "2.8.8"
   val grizzled = "org.clapper" %% "grizzled-scala" % "1.0.8" % "test"
   val scalaz = "org.scalaz" %% "scalaz-core" % "6.0.2"
+
+
+
 }
 
 // some usefull repositories
@@ -67,7 +76,8 @@ object YourProjectBuild extends Build {
       resolvers += ScalaToolsReleases,
       resolvers += ScalaToolsSnapshots,
       libraryDependencies += specs,
-      libraryDependencies += unfiltered_spec,
+//      libraryDependencies += unfiltered_spec,
+      ivyXML := ivyUnfilteredSpec,
       libraryDependencies += dispatch,
       libraryDependencies += unfiltered_filter,
       libraryDependencies += unfiltered_jetty,
