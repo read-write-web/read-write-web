@@ -21,9 +21,7 @@ object Dependencies {
   val arq = "com.hp.hpl.jena" % "arq" % "2.8.8"
   val grizzled = "org.clapper" %% "grizzled-scala" % "1.0.8" % "test"
   val scalaz = "org.scalaz" %% "scalaz-core" % "6.0.2"
-
-
-
+  val argot =  "org.clapper" %% "argot" % "0.3.5"
 }
 
 // some usefull repositories
@@ -87,7 +85,8 @@ object YourProjectBuild extends Build {
       libraryDependencies += antiXML,
       libraryDependencies += grizzled,
       libraryDependencies += scalaz,
-      jarName in assembly := "read-write-web.jar"
+      jarName in assembly := "read-write-web.jar",
+      libraryDependencies += argot
     )
 
   lazy val project = Project(

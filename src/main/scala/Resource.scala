@@ -20,12 +20,16 @@ trait ResourceManager {
   def sanityCheck():Boolean
   def resource(url:URL):Resource
 }
+
 trait Resource {
   def get():Validation[Throwable, Model]
   def save(model:Model):Validation[Throwable, Unit]
 }
 
-class Filesystem(baseDirectory:File, val basePath:String, val lang:String = "RDF/XML-ABBREV")(implicit mode:RWWMode) extends ResourceManager {
+class Filesystem(
+  baseDirectory: File,
+  val basePath: String,
+  val lang: String = "RDF/XML-ABBREV")(mode: RWWMode) extends ResourceManager {
   
   val logger:Logger = LoggerFactory.getLogger(this.getClass)
   
@@ -43,22 +47,23 @@ class Filesystem(baseDirectory:File, val basePath:String, val lang:String = "RDF
       logger.debug("Create file %s with success: %s" format (fileOnDisk.getAbsolutePath, r.toString))
     }
     
-    def get():Validation[Throwable, Model] = {
-      val m = ModelFactory.createDefaultModel()
+    def get(): Validation[Throwable, Model] = {
+      val model = ModelFactory.createDefaultModel()
       if (fileOnDisk.exists()) {
         val fis = new FileInputStream(fileOnDisk)
         try {
-          m.read(fis, url.toString)
+          val reader = model.getReader(lang)
+          reader.read(model, fis, url.toString)
         } catch {
-          case je:JenaException => error("File %s was either empty or corrupted: considered as empty graph" format fileOnDisk.getAbsolutePath)
+          case je:JenaException => error("@@@")
         }
         fis.close()
-        m.success
+        model.success
       } else {
         mode match {
-          case AllResourcesAlreadyExist => m.success
+          case AllResourcesAlreadyExist => model.success
           case ResourcesDontExistByDefault => new FileNotFoundException().fail
-      }
+        }
       }
     }
     
@@ -66,7 +71,7 @@ class Filesystem(baseDirectory:File, val basePath:String, val lang:String = "RDF
       try {
         createFileOnDisk()
         val fos = new FileOutputStream(fileOnDisk)
-        val writer = model.getWriter("RDF/XML-ABBREV")
+        val writer = model.getWriter(lang)
         writer.write(model, fos, url.toString)
         fos.close().success
       } catch {
