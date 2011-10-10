@@ -24,7 +24,7 @@ import Scalaz._
 
 import org.w3.readwriteweb.util._
 
-class ReadWriteWeb(rm:ResourceManager) {
+class ReadWriteWeb(rm: ResourceManager) {
   
   val logger:Logger = LoggerFactory.getLogger(this.getClass)
 

@@ -59,6 +59,14 @@ package object utiltest {
           (a.block(code, res, opt_ent), b.block(code,res,opt_ent), c.block(code,res,opt_ent))
       } )
     }
+    
+    def >+ [A, B] (block: Request => (Handler[A], Handler[B])) = {
+      Handler(req, { (code, res, opt_ent) =>
+        val (a, b) = block( /\ )
+        (a.block(code, res, opt_ent), b.block(code,res,opt_ent))
+      } )
+    }
+    
   }
   
   implicit def wrapRequest(req:Request):RequestW = new RequestW(req)
