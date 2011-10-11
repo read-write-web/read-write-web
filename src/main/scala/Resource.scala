@@ -12,7 +12,7 @@ import org.w3.readwriteweb.util._
 
 import scalaz._
 import Scalaz._
-
+import java.io.StringWriter   // tbl
 import _root_.scala.sys.error
 
 trait ResourceManager {
@@ -55,7 +55,7 @@ class Filesystem(
           val reader = model.getReader(lang)
           reader.read(model, fis, url.toString)
         } catch {
-          case je:JenaException => error("@@@")
+          case je:JenaException => error("Fail to parse <"+ url.toString +"> : "+ je)
         }
         fis.close()
         model.success
@@ -72,7 +72,17 @@ class Filesystem(
         createFileOnDisk()
         val fos = new FileOutputStream(fileOnDisk)
         val writer = model.getWriter(lang)
-        writer.write(model, fos, url.toString)
+        
+        val temp = new StringWriter();  // tbl  kludge until Jena fixed @@@
+        writer.write(model, temp, url.toString); //tbl 
+        def baseBit(u:String) = u.slice(0, u.lastIndexOf('/')+1);  //tbl
+        // We remove any base URIs on same server different port as well, for proxying.
+        def generalize(u:String) = u.replaceAll("//localhost[:0-9]*/", "//localhost[:0-9]*/");
+        // fos.write(("# Resource.scala 80: "+generalize(baseBit(url.toString))+"\n").getBytes) 
+        fos.write(temp.toString().replaceAll(generalize(baseBit(url.toString)), "").getBytes); // tbl
+        
+//        writer.write(model, fos, url.toString)
+
         fos.close().success
       } catch {
         case t => t.fail
