@@ -23,7 +23,6 @@ import com.hp.hpl.jena.update._
 import unfiltered.request._
 import unfiltered.response._
 import unfiltered.jetty._
-
 sealed trait RWWMode
 case object AllResourcesAlreadyExist extends RWWMode
 case object ResourcesDontExistByDefault extends RWWMode
@@ -40,12 +39,21 @@ case object TURTLE extends RDFEncoding {
 
 object RDFEncoding {
   
-  def apply(contentType:String):RDFEncoding =
-    contentType match {
+  def apply(contentType:String):RDFEncoding = {
+    val i = contentType.indexOf(';')
+    (if (i<0) contentType
+    else contentType.substring(0,i).trim()).toLowerCase match {
       case "text/turtle" => TURTLE
       case "application/rdf+xml" => RDFXML
-      case _ => RDFXML
+      case _ => RDFXML       
     }
+  }
+
+  def jena(encoding: RDFEncoding) = encoding match {
+    case RDFXML => "RDF/XML-ABBREV"
+    case TURTLE => "TURTLE"
+    case _      => "RDF/XML-ABBREV" //don't like this default
+  }
     
   def apply(req:HttpRequest[_]):RDFEncoding = {
     val contentType = Accept(req).headOption
@@ -60,7 +68,7 @@ trait ValidationW[E, S] {
 }
 
 package object util {
-  
+
   val defaultLang = "RDF/XML-ABBREV"
 
   class MSAuthorVia(value:String) extends ResponseHeader("MS-Author-Via", List(value))
@@ -88,6 +96,9 @@ package object util {
       }
   }
 
+  def modelFromInputStream(is:InputStream, base: String,  lang: RDFEncoding): Validation[Throwable, Model]=
+    modelFromInputStream(is, base, RDFEncoding.jena(lang))
+  
   def modelFromInputStream(
       is:InputStream,
       base:String,

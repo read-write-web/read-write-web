@@ -8,8 +8,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import com.hp.hpl.jena.rdf.model._
 import com.hp.hpl.jena.shared.JenaException
 
-import org.w3.readwriteweb.util._
-
 import scalaz._
 import Scalaz._
 
@@ -20,6 +18,7 @@ trait ResourceManager {
   def sanityCheck():Boolean
   def resource(url:URL):Resource
 }
+
 trait Resource {
   def get():Validation[Throwable, Model]
   def save(model:Model):Validation[Throwable, Unit]
@@ -76,3 +75,4 @@ class Filesystem(baseDirectory:File, val basePath:String, val lang:String = "RDF
   }
   
 }
+
