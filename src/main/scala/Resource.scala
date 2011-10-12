@@ -47,7 +47,7 @@ class Filesystem(
       logger.debug("Create file %s with success: %s" format (fileOnDisk.getAbsolutePath, r.toString))
     }
     
-    def get():Validation[Throwable, Model] = {
+    def get(): Validation[Throwable, Model] = {
       val model = ModelFactory.createDefaultModel()
       if (fileOnDisk.exists()) {
         val fis = new FileInputStream(fileOnDisk)
@@ -63,7 +63,7 @@ class Filesystem(
         mode match {
           case AllResourcesAlreadyExist => model.success
           case ResourcesDontExistByDefault => new FileNotFoundException().fail
-      }
+        }
       }
     }
     

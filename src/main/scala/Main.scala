@@ -25,7 +25,7 @@ import Scalaz._
 import org.w3.readwriteweb.util._
 import collection.mutable
 import webid.AuthFilter
-class ReadWriteWeb(rm:ResourceManager) {
+class ReadWriteWeb(rm: ResourceManager) {
   
   val logger:Logger = LoggerFactory.getLogger(this.getClass)
 
@@ -177,8 +177,8 @@ object ReadWriteWebMain {
           case "turtle" => "N3"
           case "rdfxml" => "RDF/XML-ABBREV"
           case _ => throw new ArgotConversionException("Option %s: must be either n3, turtle or rdfxml" format (opt.name, sValue))
-        }
-    }
+      }
+  }
 
     val httpPort = parser.option[Int]("http", "Port","start the http server on port")
     val httpsPort = parser.option[Int]("https","port","start the https server on port")
@@ -190,7 +190,7 @@ object ReadWriteWebMain {
           throw new ArgotConversionException("Option %s: %s must be a valid path" format (opt.name, sValue))
         else
           file
-      }
+    }
     }
 
    implicit val webCache = new WebCache()
@@ -206,7 +206,7 @@ object ReadWriteWebMain {
        parser.parse(args)
      } catch {
        case e: ArgotUsageException => println(e.message); System.exit(1)
-     }
+    }
 
     val filesystem =
         new Filesystem(
