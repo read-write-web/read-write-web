@@ -37,11 +37,11 @@ class ReadWriteWeb(rm: ResourceManager) {
    *  type Intent [-A, -B] = PartialFunction[HttpRequest[A], ResponseFunction[B]]
    *  the corresponding syntax is: case ... => ...
    *  
-   *  this code makes use of the Validation monad. For example of how to use it, see
+   *  this code makes use of ScalaZ Validation. For example of how to use it, see
    *  http://scalaz.googlecode.com/svn/continuous/latest/browse.sxr/scalaz/example/ExampleValidation.scala.html
    *  
    *  the Resource abstraction returns Validation[Throwable, ?something]
-   *  we use the for monadic constructs.
+   *  we use the for monadic constructs (although it's *not* a monad).
    *  Everything construct are mapped to Validation[ResponseFunction, ResponseFuntion],
    *  the left value always denoting the failure. Hence, the rest of the for-construct
    *  is not evaluated, but let the reader of the code understand clearly what's happening.
