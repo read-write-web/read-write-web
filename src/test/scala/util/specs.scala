@@ -23,7 +23,7 @@ trait ResourceManaged extends Specification with unfiltered.spec.jetty.Served {
   
   def resourceManager: ResourceManager
   
-  def setup = { _.filter(new ReadWriteWeb(resourceManager).read) }
+  def setup = { _.filter(new ReadWriteWeb(resourceManager).plan) }
  
 }
 
