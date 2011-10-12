@@ -15,8 +15,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import com.hp.hpl.jena.rdf.model._
 import com.hp.hpl.jena.query._
 import com.hp.hpl.jena.update._
-import com.hp.hpl.jena.shared.JenaException
-import org.w3.readwriteweb.{Resource}
+import org.w3.readwriteweb.Resource
 import Query.{QueryTypeSelect => SELECT, QueryTypeAsk => ASK,
               QueryTypeConstruct => CONSTRUCT, QueryTypeDescribe => DESCRIBE}
 
@@ -24,17 +23,8 @@ import scalaz._
 import Scalaz._
 
 import org.w3.readwriteweb.util._
-import java.security.KeyStore
-import org.jsslutils.keystores.KeyStoreLoader
-import org.jsslutils.sslcontext.{X509TrustManagerWrapper, X509SSLContextFactory}
-import javax.net.ssl.{X509TrustManager, SSLContext}
-import org.jsslutils.sslcontext.trustmanagers.TrustAllClientsWrappingTrustManager
-import java.security.cert.X509Certificate
-import scala.sys.SystemProperties
-import collection.{mutable,immutable}
+import collection.mutable
 import webid.AuthFilter
-import org.clapper.argot.ArgotParser
-
 class ReadWriteWeb(rm:ResourceManager) {
   
   val logger:Logger = LoggerFactory.getLogger(this.getClass)
@@ -148,22 +138,6 @@ class ReadWriteWeb(rm:ResourceManager) {
 
 }
 
-object Lookup {
-  // a place to register services that can be looked up from anywhere.
-  // this is very naive registration, compared to tools like Clerezza that use Apaches Felix's OSGI implementation
-
-  private val db = new mutable.HashMap[Class[_],AnyRef]
-
-  def get[T<:AnyRef](clzz :Class[T]) :Option[T] = db.get(clzz).map(e=>e.asInstanceOf[T])
-
-  //http://stackoverflow.com/questions/3587286/how-does-scalas-2-8-manifest-work
-  def put[T<:AnyRef : Manifest](obj: T): T = {
-    def zref = manifest[T].erasure
-    val ref: AnyRef = obj
-    db.put(zref,ref).asInstanceOf[T]
-  }
-
-}
 
 object ReadWriteWebMain {
   import org.clapper.argot._
@@ -219,8 +193,10 @@ object ReadWriteWebMain {
       }
     }
 
+   implicit val webCache = new WebCache()
 
-    val baseURL = parser.parameter[String]("baseURL", "base URL", false)
+
+   val baseURL = parser.parameter[String]("baseURL", "base URL", false)
 
 
   // regular Java main
@@ -244,9 +220,6 @@ object ReadWriteWebMain {
       case Some(port) => HttpsTrustAll(port,"0.0.0.0")
       case None => Http(httpPort.value.get)
     }
-
-    val webCache = new WebCache()
-    Lookup.put(webCache)
 
     // configures and launches a Jetty server
     service.filter {

@@ -56,7 +56,7 @@ case class Anonymous() extends Principal {
       //well we don't know when two anonymous people are the same or different.
 }
 
-class AuthFilter extends Filter {
+class AuthFilter(implicit webCache: WebCache) extends Filter {
   def init(filterConfig: FilterConfig) {}
 
   def doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain) {
@@ -124,7 +124,7 @@ object X509Claim {
  * @author bblfish
  * @created: 30/03/2011
  */
-class X509Claim(val cert: X509Certificate) extends Refreshable {
+class X509Claim(val cert: X509Certificate)(implicit webCache: WebCache) extends Refreshable {
 
   import X509Claim._
   val claimReceivedDate = new Date();
@@ -277,7 +277,7 @@ object WebIDClaim {
  * @author bblfish
  * @created 30/03/2011
  */
-class WebIDClaim(val webId: String, val key: PublicKey) {
+class WebIDClaim(val webId: String, val key: PublicKey)(implicit cache: WebCache) {
 
 	val errors = new LinkedList[java.lang.Throwable]()
 
@@ -302,7 +302,6 @@ class WebIDClaim(val webId: String, val key: PublicKey) {
     } else if (!key.isInstanceOf[RSAPublicKey]) {
       certificateKeyTypeNotSupported::Nil
     } else {
-      val cache = Lookup.get(classOf[WebCache]).head
       val res = for {
         model <- cache.resource(new URL(webId)).get() failMap {
           t => new ProfileError("error fetching profile", t)

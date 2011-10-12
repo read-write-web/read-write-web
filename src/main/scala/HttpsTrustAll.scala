@@ -26,8 +26,6 @@ import sys.SystemProperties
 import unfiltered.jetty.{Ssl, Https}
 
 
-
-
 /**
  * @author Henry Story
  * @created: 12/10/2011
