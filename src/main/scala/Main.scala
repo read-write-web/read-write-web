@@ -33,6 +33,7 @@ import java.security.cert.X509Certificate
 import scala.sys.SystemProperties
 import collection.{mutable,immutable}
 import webid.AuthFilter
+import org.clapper.argot.ArgotParser
 
 class ReadWriteWeb(rm:ResourceManager) {
   
@@ -165,107 +166,83 @@ object Lookup {
 }
 
 object ReadWriteWebMain {
+  import org.clapper.argot._
+  import ArgotConverters._
 
   val logger:Logger = LoggerFactory.getLogger(this.getClass)
+
+  val postUsageMsg= Some("""
+  |PROPERTIES
+  |
+  | * Keystore properties that need to be set if https is started
+  |  -Djetty.ssl.keyStoreType=type : the type of the keystore, JKS by default usually
+  |  -Djetty.ssl.keyStore=path : specify path to key store (for https server certificate)
+  |  -Djetty.ssl.keyStorePassword=password : specify password for keystore store (optional)
+  |
+  |NOTES
+  |
+  |  - Trust stores are not needed because we use the WebID protocol, and client certs are nearly never signed by CAs
+  |  - one of --http or --https must be selected
+     """.stripMargin);
+
+  val parser = new ArgotParser("read-write-web",postUsage=postUsageMsg)
+
+  val mode = parser.option[RWWMode](List("mode"), "m", "wiki mode: wiki or strict") {
+      (sValue, opt) =>
+        sValue match {
+          case "wiki" => AllResourcesAlreadyExist
+          case "strict" => ResourcesDontExistByDefault
+          case _ => throw new ArgotConversionException("Option %s: must be either wiki or strict" format (opt.name, sValue))
+        }
+      }
+
+    val rdfLanguage = parser.option[String](List("language"), "l", "RDF language: n3, turtle, or rdfxml") {
+      (sValue, opt) =>
+        sValue match {
+          case "n3" => "N3"
+          case "turtle" => "N3"
+          case "rdfxml" => "RDF/XML-ABBREV"
+          case _ => throw new ArgotConversionException("Option %s: must be either n3, turtle or rdfxml" format (opt.name, sValue))
+        }
+    }
+
+    val httpPort = parser.option[Int]("http", "Port","start the http server on port")
+    val httpsPort = parser.option[Int]("https","port","start the https server on port")
+
+    val rootDirectory = parser.parameter[File]("rootDirectory", "root directory", false) {
+      (sValue, opt) => {
+        val file = new File(sValue)
+        if (! file.exists)
+          throw new ArgotConversionException("Option %s: %s must be a valid path" format (opt.name, sValue))
+        else
+          file
+      }
+    }
+
+
+    val baseURL = parser.parameter[String]("baseURL", "base URL", false)
 
 
   // regular Java main
   def main(args: Array[String]) {
-   
-    val argsList = args.toList
-    var httpPort: Int = 8080
-    var httpsPort: Option[Int] = None
-    var baseDir = new File(".")
-    var baseUrl: String = "/"
-    var relax = false
-    
- 
-     def msg(err: String, exitCode: Int=1) = {
-        println("ERROR:")
-        println(err)
-        println("""
 
-example usage:
-java -jar read-write-web.jar [-http 8080] [-https 8443] -dir ~/WWW/2011/09 -base /2011/09 [-strict|-relax]
+    try {
+       parser.parse(args)
+     } catch {
+       case e: ArgotUsageException => println(e.message); System.exit(1)
+     }
 
-Required:
-  -dir $localpath :  the directory where the files are located
-  -base $urlpath : the base url-path for those files
-
-Options:
- -http $port  : set the http port to the port number, by default this will be port 8080
- -https $port : start the https server on the given port number
- -relax all resources potentially exist, meaning you get an empty RDF graph instead of a 404 (still experimental)
- -strict a GET on a resource will fail with a 404 (default mode if you omit it)
-
-Properties:  (can be passed with -Dprop=value)
-
- * Keystore properties.
-  jetty.ssl.keyStoreType : the type of the keystore, JKS by default usually
-  jetty.ssl.keyStore=path : specify path to key store (for https server certificate)
-  jetty.ssl.keyStorePassword=password : specify password for keystore store
-
- * Trust store
-   Trust stores are not needed because we use the WebID protocol, and client certs are nearly never signed by CAs
- """)
-        System.exit(exitCode)
-        null
-    }
-    
-
-    def parse(args: List[String]): Unit = {
-      val res = args match {
-        case "-https"::num::rest =>  { 
-          httpsPort = Some(Integer.parseInt(num))
-          rest
-        }
-        case "-http"::num::rest => {
-          httpPort = num.toInt
-          rest
-        }
-        case "-dir"::dir::rest => {
-          baseDir = new File(dir)
-          rest
-        }
-        case "-base"::path::rest=> {
-          baseUrl=path
-          rest
-        }
-        case "-strict"::rest=> {
-          relax = false
-          rest
-        }
-        case "-relax"::rest=> {
-          relax = true
-          rest
-        }
-        case something::other => msg("could not parse command: `"+something+"`",1)
-        case Nil => return
-      }
-      parse(res)
-    }
-    
-    parse(argsList)
-
-    val mode =
-      if (relax) {
-        logger.info("info: using experimental relax mode")
-        AllResourcesAlreadyExist
-      } else {
-        ResourcesDontExistByDefault
-      }
-    
-    if (! baseDir.exists) {
-      msg("%s does not exist" format (baseDir.getAbsolutePath),2)
-    }
-
-    val filesystem = new Filesystem(baseDir, baseUrl, lang="TURTLE")(mode)
-    
+    val filesystem =
+        new Filesystem(
+          rootDirectory.value.get,
+          baseURL.value.get,
+          lang=rdfLanguage.value getOrElse "N3")(mode.value getOrElse ResourcesDontExistByDefault)
     val app = new ReadWriteWeb(filesystem)
 
-    val service = httpsPort match {
+    //this is wrong: we should be able to start both ports.... not sure how to do this yet.
+    val service = httpsPort.value match {
       case Some(port) => HttpsTrustAll(port,"0.0.0.0")
-      case None => Http(httpPort)
+      case None => Http(httpPort.value.get)
     }
 
     val webCache = new WebCache()

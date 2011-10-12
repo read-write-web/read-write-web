@@ -22,7 +22,7 @@ object Dependencies {
   val grizzled = "org.clapper" %% "grizzled-scala" % "1.0.8" % "test"
   val scalaz = "org.scalaz" %% "scalaz-core" % "6.0.2"
   val jsslutils = "org.jsslutils" % "jsslutils" % "1.0.7"
-
+  val argot =  "org.clapper" %% "argot" % "0.3.5"
 }
 
 // some usefull repositories
@@ -87,6 +87,7 @@ object YourProjectBuild extends Build {
       libraryDependencies += grizzled,
       libraryDependencies += scalaz,
       libraryDependencies += jsslutils,
+      libraryDependencies += argot,
 
       jarName in assembly := "read-write-web.jar"
     )
