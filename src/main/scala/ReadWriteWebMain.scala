@@ -14,69 +14,93 @@ import ArgotConverters._
 
 object ReadWriteWebMain {
 
-  val logger: Logger = LoggerFactory.getLogger(this.getClass)
+  val logger:Logger = LoggerFactory.getLogger(this.getClass)
 
-  val parser = new ArgotParser("read-write-web")
+  val postUsageMsg= Some("""
+  |PROPERTIES
+  |
+  | * Keystore properties that need to be set if https is started
+  |  -Djetty.ssl.keyStoreType=type : the type of the keystore, JKS by default usually
+  |  -Djetty.ssl.keyStore=path : specify path to key store (for https server certificate)
+  |  -Djetty.ssl.keyStorePassword=password : specify password for keystore store (optional)
+  |
+  |NOTES
+  |
+  |  - Trust stores are not needed because we use the WebID protocol, and client certs are nearly never signed by CAs
+  |  - one of --http or --https must be selected
+     """.stripMargin);
 
-  val mode = parser.option[RWWMode](List("mode"), "m", "wiki mode") {
-    (sValue, opt) =>
-      sValue match {
-        case "wiki" => AllResourcesAlreadyExist
-        case "strict" => ResourcesDontExistByDefault
-        case _ => throw new ArgotConversionException("Option %s: must be either wiki or strict" format (opt.name, sValue))
+  val parser = new ArgotParser("read-write-web",postUsage=postUsageMsg)
+
+  val mode = parser.option[RWWMode](List("mode"), "m", "wiki mode: wiki or strict") {
+      (sValue, opt) =>
+        sValue match {
+          case "wiki" => AllResourcesAlreadyExist
+          case "strict" => ResourcesDontExistByDefault
+          case _ => throw new ArgotConversionException("Option %s: must be either wiki or strict" format (opt.name, sValue))
+        }
       }
-    }
 
-  val rdfLanguage = parser.option[String](List("language"), "l", "RDF language") {
-    (sValue, opt) =>
-      sValue match {
-        case "n3" => "N3"
-        case "turtle" => "N3"
-        case "rdfxml" => "RDF/XML-ABBREV"
-        case _ => throw new ArgotConversionException("Option %s: must be either n3, turtle or rdfxml" format (opt.name, sValue))
+    val rdfLanguage = parser.option[String](List("language"), "l", "RDF language: n3, turtle, or rdfxml") {
+      (sValue, opt) =>
+        sValue match {
+          case "n3" => "N3"
+          case "turtle" => "N3"
+          case "rdfxml" => "RDF/XML-ABBREV"
+          case _ => throw new ArgotConversionException("Option %s: must be either n3, turtle or rdfxml" format (opt.name, sValue))
       }
   }
 
-  val port = parser.parameter[Int]("port", "Port to use", false)
+    val httpPort = parser.option[Int]("http", "Port","start the http server on port")
+    val httpsPort = parser.option[Int]("https","port","start the https server on port")
 
-  val rootDirectory = parser.parameter[File]("rootDirectory", "root directory", false) {
-    (sValue, opt) => {
-      val file = new File(sValue)
-      if (! file.exists)
-        throw new ArgotConversionException("Option %s: %s must be a valid path" format (opt.name, sValue))
-      else
-        file
+    val rootDirectory = parser.parameter[File]("rootDirectory", "root directory", false) {
+      (sValue, opt) => {
+        val file = new File(sValue)
+        if (! file.exists)
+          throw new ArgotConversionException("Option %s: %s must be a valid path" format (opt.name, sValue))
+        else
+          file
     }
-  }
+    }
 
-  val baseURL = parser.parameter[String]("baseURL", "base URL", false)
+   implicit val webCache = new WebCache()
+
+
+   val baseURL = parser.parameter[String]("baseURL", "base URL", false)
 
   // regular Java main
   def main(args: Array[String]) {
 
     try {
-      parser.parse(args)
-    } catch {
+       parser.parse(args)
+     } catch {
       case e: ArgotUsageException => err.println(e.message); sys.exit(1)
     }
 
     val filesystem =
-      new Filesystem(
-        rootDirectory.value.get,
-        baseURL.value.get,
-        lang=rdfLanguage.value getOrElse "N3")(mode.value getOrElse ResourcesDontExistByDefault)
-    
+        new Filesystem(
+          rootDirectory.value.get,
+          baseURL.value.get,
+          lang=rdfLanguage.value getOrElse "N3")(mode.value getOrElse ResourcesDontExistByDefault)
+
     val app = new ReadWriteWeb(filesystem)
 
+    //this is incomplete: we should be able to start both ports.... not sure how to do this yet.
+    val service = httpsPort.value match {
+      case Some(port) => HttpsTrustAll(port,"0.0.0.0")
+      case None => Http(httpPort.value.get)
+    }
+
     // configures and launches a Jetty server
-    unfiltered.jetty.Http(port.value.get)
-    .filter(new FilterLogger(logger))
-    .context("/public") {
-      ctx: ContextBuilder =>
-        ctx.resources(ClasspathUtils.fromClasspath("public/").toURI.toURL)
+    service.filter(new FilterLogger(logger)).
+      filter(new webid.AuthFilter).
+      context("/public"){ ctx:ContextBuilder =>
+      ctx.resources(ClasspathUtils.fromClasspath("public/").toURI.toURL)
     }.filter(app.plan).run()
-    
+
   }
 
 }
+
 

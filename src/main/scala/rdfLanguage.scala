@@ -22,7 +22,13 @@ object RDFEncoding {
       case "application/rdf+xml" => RDFXML
       case _ => RDFXML
     }
-    
+
+  def jena(encoding: RDFEncoding) = encoding match {
+     case RDFXML => "RDF/XML-ABBREV"
+     case TURTLE => "TURTLE"
+     case _      => "RDF/XML-ABBREV" //don't like this default
+   }
+
   def apply(req:HttpRequest[_]):RDFEncoding = {
     val contentType = Accept(req).headOption
     contentType map { RDFEncoding(_) } getOrElse RDFXML

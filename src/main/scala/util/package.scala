@@ -37,6 +37,11 @@ package object util {
       }
   }
 
+  //Passing strings into mathod arguments, especially as these differ completely between rdf stacks is not so good
+  //passing objects is better
+  def modelFromInputStream(is:InputStream, base: String,  lang: RDFEncoding): Validation[Throwable, Model]=
+      modelFromInputStream(is, base, RDFEncoding.jena(lang))
+
   def modelFromInputStream(
       is: InputStream,
       base: String,

@@ -1,48 +1,35 @@
-/*
- * Copyright (c) 2011 Henry Story (bblfish.net)
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms are permitted
- * provided that the above copyright notice and this paragraph are
- * duplicated in all such forms and that any documentation,
- * advertising materials, and other materials related to such
- * distribution and use acknowledge that the software was developed
- * by Henry Story.  The name of bblfish.net may not be used to endorse
- * or promote products derived
- * from this software without specific prior written permission.
- * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- */
-
 package org.w3.readwriteweb
 
-import org.w3.readwriteweb.util._
-
+import javax.servlet._
+import javax.servlet.http._
 import unfiltered.request._
 import unfiltered.response._
+import unfiltered.jetty._
 
+import java.io._
 import scala.io.Source
 import java.net.URL
 
 import org.slf4j.{Logger, LoggerFactory}
 
-import com.hp.hpl.jena.rdf.model.Model
-import com.hp.hpl.jena.query.{Query, QueryExecution, QueryExecutionFactory}
-import com.hp.hpl.jena.update.UpdateAction
-import Query.{QueryTypeSelect => SELECT,
-              QueryTypeAsk => ASK,
-              QueryTypeConstruct => CONSTRUCT,
-              QueryTypeDescribe => DESCRIBE}
+import com.hp.hpl.jena.rdf.model._
+import com.hp.hpl.jena.query._
+import com.hp.hpl.jena.update._
+import org.w3.readwriteweb.Resource
+import Query.{QueryTypeSelect => SELECT, QueryTypeAsk => ASK,
+              QueryTypeConstruct => CONSTRUCT, QueryTypeDescribe => DESCRIBE}
 
 import scalaz._
 import Scalaz._
 
+import org.w3.readwriteweb.util._
+import collection.mutable
+import webid.AuthFilter
 class ReadWriteWeb(rm: ResourceManager) {
   
-  val logger: Logger = LoggerFactory.getLogger(this.getClass)
+  val logger:Logger = LoggerFactory.getLogger(this.getClass)
 
-  def isHTML(accepts: List[String]): Boolean = {
+  def isHTML(accepts:List[String]):Boolean = {
     val accept = accepts.headOption
     accept == Some("text/html") || accept == Some("application/xhtml+xml")
   }
@@ -54,11 +41,11 @@ class ReadWriteWeb(rm: ResourceManager) {
    *  type Intent [-A, -B] = PartialFunction[HttpRequest[A], ResponseFunction[B]]
    *  the corresponding syntax is: case ... => ...
    *  
-   *  this code makes use of ScalaZ Validation. For example of how to use it, see
+   *  this code makes use of the Validation monad. For example of how to use it, see
    *  http://scalaz.googlecode.com/svn/continuous/latest/browse.sxr/scalaz/example/ExampleValidation.scala.html
    *  
    *  the Resource abstraction returns Validation[Throwable, ?something]
-   *  we use the for monadic constructs (although it's *not* a monad).
+   *  we use the for monadic constructs.
    *  Everything construct are mapped to Validation[ResponseFunction, ResponseFuntion],
    *  the left value always denoting the failure. Hence, the rest of the for-construct
    *  is not evaluated, but let the reader of the code understand clearly what's happening.
@@ -69,10 +56,10 @@ class ReadWriteWeb(rm: ResourceManager) {
    *  At last, Validation[ResponseFunction, ResponseFuntion] is exposed as a ResponseFunction
    *  through another implicit conversion. It saves us the call to the Validation.lift() method
    */
-  val plan = unfiltered.filter.Planify {
+  val read = unfiltered.filter.Planify {
     case req @ Path(path) if path startsWith rm.basePath => {
       val baseURI = req.underlying.getRequestURL.toString
-      val r: Resource = rm.resource(new URL(baseURI))
+      val r:Resource = rm.resource(new URL(baseURI))
       req match {
         case GET(_) & Accept(accepts) if isHTML(accepts) => {
           val source = Source.fromFile("src/main/resources/skin.html")("UTF-8")
@@ -124,18 +111,18 @@ class ReadWriteWeb(rm: ResourceManager) {
               for {
                 model <- r.get() failMap { t => NotFound }
               } yield {
-                val qe: QueryExecution = QueryExecutionFactory.create(query, model)
+                val qe:QueryExecution = QueryExecutionFactory.create(query, model)
                 query.getQueryType match {
                   case SELECT =>
                     Ok ~> ContentType("application/sparql-results+xml") ~> ResponseResultSet(qe.execSelect())
                   case ASK =>
                     Ok ~> ContentType("application/sparql-results+xml") ~> ResponseResultSet(qe.execAsk())
                   case CONSTRUCT => {
-                    val result: Model = qe.execConstruct()
+                    val result:Model = qe.execConstruct()
                     Ok ~> ContentType(encoding.toContentType) ~> ResponseModel(model, baseURI, encoding)
                   }
                   case DESCRIBE => {
-                    val result: Model = qe.execDescribe()
+                    val result:Model = qe.execDescribe()
                     Ok ~> ContentType(encoding.toContentType) ~> ResponseModel(model, baseURI, encoding)
                   }
                 }
@@ -150,3 +137,111 @@ class ReadWriteWeb(rm: ResourceManager) {
   }
 
 }
+
+
+object ReadWriteWebMain {
+  import org.clapper.argot._
+  import ArgotConverters._
+
+  val logger:Logger = LoggerFactory.getLogger(this.getClass)
+
+  val postUsageMsg= Some("""
+  |PROPERTIES
+  |
+  | * Keystore properties that need to be set if https is started
+  |  -Djetty.ssl.keyStoreType=type : the type of the keystore, JKS by default usually
+  |  -Djetty.ssl.keyStore=path : specify path to key store (for https server certificate)
+  |  -Djetty.ssl.keyStorePassword=password : specify password for keystore store (optional)
+  |
+  |NOTES
+  |
+  |  - Trust stores are not needed because we use the WebID protocol, and client certs are nearly never signed by CAs
+  |  - one of --http or --https must be selected
+     """.stripMargin);
+
+  val parser = new ArgotParser("read-write-web",postUsage=postUsageMsg)
+
+  val mode = parser.option[RWWMode](List("mode"), "m", "wiki mode: wiki or strict") {
+      (sValue, opt) =>
+        sValue match {
+          case "wiki" => AllResourcesAlreadyExist
+          case "strict" => ResourcesDontExistByDefault
+          case _ => throw new ArgotConversionException("Option %s: must be either wiki or strict" format (opt.name, sValue))
+        }
+      }
+
+    val rdfLanguage = parser.option[String](List("language"), "l", "RDF language: n3, turtle, or rdfxml") {
+      (sValue, opt) =>
+        sValue match {
+          case "n3" => "N3"
+          case "turtle" => "N3"
+          case "rdfxml" => "RDF/XML-ABBREV"
+          case _ => throw new ArgotConversionException("Option %s: must be either n3, turtle or rdfxml" format (opt.name, sValue))
+      }
+  }
+
+    val httpPort = parser.option[Int]("http", "Port","start the http server on port")
+    val httpsPort = parser.option[Int]("https","port","start the https server on port")
+
+    val rootDirectory = parser.parameter[File]("rootDirectory", "root directory", false) {
+      (sValue, opt) => {
+        val file = new File(sValue)
+        if (! file.exists)
+          throw new ArgotConversionException("Option %s: %s must be a valid path" format (opt.name, sValue))
+        else
+          file
+    }
+    }
+
+   implicit val webCache = new WebCache()
+
+
+   val baseURL = parser.parameter[String]("baseURL", "base URL", false)
+
+
+  // regular Java main
+  def main(args: Array[String]) {
+
+    try {
+       parser.parse(args)
+     } catch {
+       case e: ArgotUsageException => println(e.message); System.exit(1)
+    }
+
+    val filesystem =
+        new Filesystem(
+          rootDirectory.value.get,
+          baseURL.value.get,
+          lang=rdfLanguage.value getOrElse "N3")(mode.value getOrElse ResourcesDontExistByDefault)
+    val app = new ReadWriteWeb(filesystem)
+
+    //this is incomplete: we should be able to start both ports.... not sure how to do this yet.
+    val service = httpsPort.value match {
+      case Some(port) => HttpsTrustAll(port,"0.0.0.0")
+      case None => Http(httpPort.value.get)
+    }
+
+    // configures and launches a Jetty server
+    service.filter {
+      // a jee Servlet filter that logs HTTP requests
+      new Filter {
+        def destroy():Unit = ()
+        def doFilter(request:ServletRequest, response:ServletResponse, chain:FilterChain):Unit = {
+          val r:HttpServletRequest = request.asInstanceOf[HttpServletRequest]
+          val method = r.getMethod
+          val uri = r.getRequestURI 
+          logger.info("%s %s" format (method, uri))
+          chain.doFilter(request, response)
+        }
+        def init(filterConfig:FilterConfig):Unit = ()
+      }
+    // Unfiltered filters
+    }.filter(new AuthFilter)
+     .context("/public"){ ctx:ContextBuilder =>
+      ctx.resources(MyResourceManager.fromClasspath("public/").toURI.toURL)
+    }.filter(app.read).run()
+    
+  }
+
+}
+
