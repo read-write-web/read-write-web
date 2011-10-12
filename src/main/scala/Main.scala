@@ -239,7 +239,7 @@ object ReadWriteWebMain {
           lang=rdfLanguage.value getOrElse "N3")(mode.value getOrElse ResourcesDontExistByDefault)
     val app = new ReadWriteWeb(filesystem)
 
-    //this is wrong: we should be able to start both ports.... not sure how to do this yet.
+    //this is incomplete: we should be able to start both ports.... not sure how to do this yet.
     val service = httpsPort.value match {
       case Some(port) => HttpsTrustAll(port,"0.0.0.0")
       case None => Http(httpPort.value.get)
@@ -269,41 +269,6 @@ object ReadWriteWebMain {
     }.filter(app.read).run()
     
   }
-
-}
-
-case class HttpsTrustAll(override val port: Int, override val host: String) extends Https(port, host) with TrustAll
-
-trait TrustAll { self: Ssl =>
-   import scala.sys.SystemProperties._
-
-   lazy val sslContextFactory = new X509SSLContextFactory(
-               serverCertKeyStore,
-               tryProperty("jetty.ssl.keyStorePassword"),
-               serverCertKeyStore); //this one is not needed since our wrapper ignores all trust managers
-
-   lazy val trustWrapper = new X509TrustManagerWrapper {
-     def wrapTrustManager(trustManager: X509TrustManager) = new TrustAllClientsWrappingTrustManager(trustManager)
-   }
-
-   lazy val serverCertKeyStore = {
-      val keyStoreLoader = new KeyStoreLoader
-   		keyStoreLoader.setKeyStoreType(System.getProperty("jetty.ssl.keyStoreType","JKS"))
-   		keyStoreLoader.setKeyStorePath(trustStorePath)
-   		keyStoreLoader.setKeyStorePassword(System.getProperty("jetty.ssl.keyStorePassword","password"))
-      keyStoreLoader.loadKeyStore();
-   }
-
-   sslContextFactory.setTrustManagerWrapper(trustWrapper);
-
-
- 	 lazy val trustStorePath =  new SystemProperties().get("jetty.ssl.keyStore") match {
-       case Some(path) => path
-       case None => new File(new File(tryProperty("user.home")), ".keystore").getAbsolutePath
-   }
-
-   sslConn.setSslContext(sslContextFactory.buildSSLContext())
-   sslConn.setWantClientAuth(true)
 
 }
 
