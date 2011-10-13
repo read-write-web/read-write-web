@@ -4,6 +4,8 @@ import Keys._
 // some usefull libraries
 // they are pulled only if used
 object Dependencies {
+  val shiro_core = "org.apache.shiro" % "shiro-core" % "1.1.0"
+  val shiro_web = "org.apache.shiro" % "shiro-web" % "1.1.0"
   val specs = "org.scala-tools.testing" %% "specs" % "1.6.9" % "test"
   val dispatch_http = "net.databinder" %% "dispatch-http" % "0.8.5" 
   val unfiltered_filter = "net.databinder" %% "unfiltered-filter" % "0.5.0"
@@ -88,6 +90,8 @@ object YourProjectBuild extends Build {
       libraryDependencies += scalaz,
       libraryDependencies += jsslutils,
       libraryDependencies += argot,
+      libraryDependencies += shiro_core,
+      libraryDependencies += shiro_web,
 
       jarName in assembly := "read-write-web.jar"
     )

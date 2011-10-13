@@ -15,9 +15,7 @@
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-package org.w3.readwriteweb.webid
-
-
+package org.w3.readwriteweb.auth
 
 import java.security.cert.X509Certificate
 import javax.servlet._
@@ -33,6 +31,7 @@ import com.hp.hpl.jena.rdf.model.RDFNode
 import collection.JavaConversions._
 import javax.security.auth.{Subject, Refreshable}
 import com.hp.hpl.jena.query._
+import org.apache.shiro.authc.AuthenticationToken
 
 /**
  * @author Henry Story from http://bblfish.net/
@@ -124,7 +123,7 @@ object X509Claim {
  * @author bblfish
  * @created: 30/03/2011
  */
-class X509Claim(val cert: X509Certificate)(implicit webCache: WebCache) extends Refreshable {
+class X509Claim(val cert: X509Certificate)(implicit webCache: WebCache) extends Refreshable with AuthenticationToken {
 
   import X509Claim._
   val claimReceivedDate = new Date();
@@ -169,7 +168,10 @@ class X509Claim(val cert: X509Certificate)(implicit webCache: WebCache) extends 
   lazy val hashCode: Int = 41 * (41 +
     (if (cert != null) cert.hashCode else 0))
 
+  //for Shiro, we'll think of the cert as a principal as well as a credential
+  def getPrincipal = cert
 
+  def getCredentials = cert
 }
 
 object WebIDClaim {
@@ -277,7 +279,7 @@ object WebIDClaim {
  * @author bblfish
  * @created 30/03/2011
  */
-class WebIDClaim(val webId: String, val key: PublicKey)(implicit cache: WebCache) {
+class WebIDClaim(val webId: String, val key: PublicKey)(implicit cache: WebCache) extends AuthenticationToken {
 
 	val errors = new LinkedList[java.lang.Throwable]()
 
@@ -357,6 +359,10 @@ class WebIDClaim(val webId: String, val key: PublicKey)(implicit cache: WebCache
 			41 + (if (webId != null) webId.hashCode else 0)
 			) + (if (key != null) key.hashCode else 0)
 		)
+
+  def getPrincipal = webId
+
+  def getCredentials = key
 }
 
 

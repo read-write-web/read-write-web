@@ -94,7 +94,7 @@ object ReadWriteWebMain {
 
     // configures and launches a Jetty server
     service.filter(new FilterLogger(logger)).
-      filter(new webid.AuthFilter).
+      filter(new auth.AuthFilter).
       context("/public"){ ctx:ContextBuilder =>
       ctx.resources(ClasspathUtils.fromClasspath("public/").toURI.toURL)
     }.filter(app.plan).run()
