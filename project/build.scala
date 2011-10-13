@@ -15,7 +15,7 @@ object Dependencies {
         <exclude org="net.databinder" module="dispatch-mime_2.9.0-1"/>
       </dependency>
     </dependencies>
-  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.5.8"
+  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.6"
   val antiXML = "com.codecommit" %% "anti-xml" % "0.4-SNAPSHOT" % "test"
   val jena = "com.hp.hpl.jena" % "jena" % "2.6.4"
   val arq = "com.hp.hpl.jena" % "arq" % "2.8.8"
@@ -23,6 +23,7 @@ object Dependencies {
   val scalaz = "org.scalaz" %% "scalaz-core" % "6.0.2"
   val jsslutils = "org.jsslutils" % "jsslutils" % "1.0.7"
   val argot =  "org.clapper" %% "argot" % "0.3.5"
+  val guava =  "com.google.guava" % "guava" % "10.0.1"
 }
 
 // some usefull repositories
@@ -88,6 +89,7 @@ object YourProjectBuild extends Build {
       libraryDependencies += scalaz,
       libraryDependencies += jsslutils,
       libraryDependencies += argot,
+      libraryDependencies += guava,
 
       jarName in assembly := "read-write-web.jar"
     )
