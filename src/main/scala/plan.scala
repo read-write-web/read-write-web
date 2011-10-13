@@ -65,11 +65,11 @@ class ReadWriteWeb(rm: ResourceManager) {
         case GET(_) | HEAD(_) =>
           for {
             model <- r.get() failMap { x => NotFound }
-            encoding = RDFEncoding(req)
+            lang = Lang.fromRequest(req)
           } yield {
             req match {
-              case GET(_) => Ok ~> ViaSPARQL ~> ContentType(encoding.toContentType) ~> ResponseModel(model, baseURI, encoding)
-              case HEAD(_) => Ok ~> ViaSPARQL ~> ContentType(encoding.toContentType)
+              case GET(_) => Ok ~> ViaSPARQL ~> ContentType(lang.contentType) ~> ResponseModel(model, baseURI, lang)
+              case HEAD(_) => Ok ~> ViaSPARQL ~> ContentType(lang.contentType)
             }
           }
         case PUT(_) =>
@@ -103,7 +103,7 @@ class ReadWriteWeb(rm: ResourceManager) {
             }
             case PostQuery(query) => {
               logger.info("SPARQL Query:\n" + query.toString())
-              lazy val encoding = RDFEncoding(req)
+              lazy val lang = Lang.fromRequest(req)
               for {
                 model <- r.get() failMap { t => NotFound }
               } yield {
@@ -115,11 +115,11 @@ class ReadWriteWeb(rm: ResourceManager) {
                     Ok ~> ContentType("application/sparql-results+xml") ~> ResponseResultSet(qe.execAsk())
                   case CONSTRUCT => {
                     val result: Model = qe.execConstruct()
-                    Ok ~> ContentType(encoding.toContentType) ~> ResponseModel(model, baseURI, encoding)
+                    Ok ~> ContentType(lang.contentType) ~> ResponseModel(model, baseURI, lang)
                   }
                   case DESCRIBE => {
                     val result: Model = qe.execDescribe()
-                    Ok ~> ContentType(encoding.toContentType) ~> ResponseModel(model, baseURI, encoding)
+                    Ok ~> ContentType(lang.contentType) ~> ResponseModel(model, baseURI, lang)
                   }
                 }
               }
