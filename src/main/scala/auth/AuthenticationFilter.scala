@@ -27,7 +27,15 @@ import java.security.PrivilegedExceptionAction
 import java.util.concurrent.TimeUnit
 import com.google.common.cache.{CacheBuilder, Cache, CacheLoader}
 
-class Authn(implicit webCache: WebCache) extends Filter {
+/**
+ * This filter places the all the principals into a Subject,
+ * which can then be accessed later on in by the code.
+ *
+ * note: It would be better if this were only called at the point when authentication
+ * is needed. That is in fact possible with TLS renegotiation, but requires a server that allows
+ * access to the TLS layer. This is an intermediary solution.
+ */
+class AuthenticationFilter(implicit webCache: WebCache) extends Filter {
   def init(filterConfig: FilterConfig) {}
 
   val idCache: Cache[X509Certificate, X509Claim] =

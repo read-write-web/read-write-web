@@ -1,9 +1,8 @@
 package org.w3.readwriteweb
 
+import auth.X509view
 import org.w3.readwriteweb.util._
 
-import javax.servlet._
-import javax.servlet.http._
 import unfiltered.jetty._
 import java.io.File
 import Console.err
@@ -11,7 +10,6 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import org.clapper.argot._
 import ArgotConverters._
-
 object ReadWriteWebMain {
 
   val logger:Logger = LoggerFactory.getLogger(this.getClass)
@@ -94,10 +92,12 @@ object ReadWriteWebMain {
 
     // configures and launches a Jetty server
     service.filter(new FilterLogger(logger)).
-      filter(new auth.Authn).
+      filter(new auth.AuthenticationFilter).
       context("/public"){ ctx:ContextBuilder =>
       ctx.resources(ClasspathUtils.fromClasspath("public/").toURI.toURL)
-    }.filter(app.plan).run()
+    }.
+      filter(X509view.plan).
+      filter(app.plan).run()
 
   }
 
