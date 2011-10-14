@@ -153,7 +153,7 @@ class WebIDClaim(val webId: String, val key: PublicKey) {
   private var valid = false
 
   def verified(implicit cache: WebCache): Boolean = {
-    if (!valid) verify(cache)
+    if (!valid) tests = verify(cache)
     tests.exists(v => v.isInstanceOf[Verified])
   }
   
@@ -163,7 +163,7 @@ class WebIDClaim(val webId: String, val key: PublicKey) {
     import collection.JavaConversions._
     import WebIDClaim._
     try {
-      if (!webId.startsWith("http:") && !webId.startsWith("https:")) {
+      return if (!webId.startsWith("http:") && !webId.startsWith("https:")) {
         //todo: ftp, and ftps should also be doable, though content negotiations is then lacking
         unsupportedProtocol::Nil
       } else if (!key.isInstanceOf[RSAPublicKey]) {

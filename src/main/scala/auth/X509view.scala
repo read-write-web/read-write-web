@@ -45,7 +45,7 @@ class X509view(implicit val webCache: WebCache) {
           case X509Claim(xclaim: X509Claim) => <body>
             <h1>Authentication Info received</h1>
             <p>You were identified with the following WebIDs</p>
-             <ul>{xclaim.webidclaims.filter(cl=>cl.verified).map(p=> <li>{p}</li>)}</ul>
+             <ul>{xclaim.webidclaims.filter(cl=>cl.verified).map(p=> <li>{p.webId}</li>)}</ul>
             <p>You sent the following certificate</p>
             <pre>{xclaim.cert.toString}</pre>
           </body>
