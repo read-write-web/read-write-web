@@ -24,8 +24,10 @@
 package org.w3.readwriteweb.auth
 
 import javax.servlet.http.HttpServletRequest
-import javax.security.cert.X509Certificate
+import java.security.cert.X509Certificate
 import unfiltered.request.HttpRequest
+import java.util.concurrent.TimeUnit
+import com.google.common.cache.{CacheLoader, CacheBuilder, Cache}
 
 /**
  * @author Henry Story, with help from Doug Tangren on unfiltered mailing list
@@ -33,12 +35,10 @@ import unfiltered.request.HttpRequest
  */
 
 object X509Cert {
-  def unapply[T <: HttpServletRequest](r: HttpRequest[T]): Option[(X509Certificate)] =
+  def unapply[T <: HttpServletRequest](r: HttpRequest[T]): Option[Array[X509Certificate]] =
     r.underlying.getAttribute("javax.servlet.request.X509Certificate") match {
-      case certs: Array[X509Certificate] =>
-        Some(certs(0))
+      case certs: Array[X509Certificate] => Some(certs)
       case _ => None
     }
 
-  def apply[T <: HttpServletRequest](r: HttpRequest[T]) = unapply(r)
 }

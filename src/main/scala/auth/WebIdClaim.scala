@@ -142,65 +142,69 @@ object WebIDClaim {
  * @author bblfish
  * @created 30/03/2011
  */
-class WebIDClaim(val webId: String, val key: PublicKey)(implicit cache: WebCache)  {
+class WebIDClaim(val webId: String, val key: PublicKey) {
 
-	val errors = new LinkedList[java.lang.Throwable]()
+	var errors = new LinkedList[java.lang.Throwable]()
 
 	lazy val principal = new WebIdPrincipal(webId)
-	lazy val tests: List[Verification] = verify()  //I need to try to keep more verification state
 
+	var tests: List[Verification] = List()
 
-	/**
-	 * verify this claim
-	 * @param authSrvc: the authentication service contains information about where to get graphs
-	 */
-	//todo: make this asynchronous
-	lazy val verified: Boolean =  tests.exists(v => v.isInstanceOf[Verified])
+  private var valid = false
 
-  private def verify(): List[Verification] = {
+  def verified(implicit cache: WebCache): Boolean = {
+    if (!valid) verify(cache)
+    tests.exists(v => v.isInstanceOf[Verified])
+  }
+  
+  private def verify(implicit cache: WebCache): List[Verification] = {
     import org.w3.readwriteweb.util.wrapValidation
 
     import collection.JavaConversions._
     import WebIDClaim._
-    if (!webId.startsWith("http:") && !webId.startsWith("https:")) {
-      //todo: ftp, and ftps should also be doable, though content negotiations is then lacking
-      unsupportedProtocol::Nil
-    } else if (!key.isInstanceOf[RSAPublicKey]) {
-      certificateKeyTypeNotSupported::Nil
-    } else {
-      val res = for {
-        model <- cache.resource(new URL(webId)).get() failMap {
-          t => new ProfileError("error fetching profile", t)
-        }
-      } yield {
-        val initialBinding = new QuerySolutionMap();
-        initialBinding.add("webid",model.createResource(webId))
-        val qe: QueryExecution = QueryExecutionFactory.create(WebIDClaim.selectQuery, model,initialBinding)
-        try {
-          qe.execSelect().map( qs => {
-            val modulus = toInteger(qs.get("m"), cert + "hex", qs.get("mod"))
-            val exponent = toInteger(qs.get("e"), cert + "decimal", qs.get("exp"))
+    try {
+      if (!webId.startsWith("http:") && !webId.startsWith("https:")) {
+        //todo: ftp, and ftps should also be doable, though content negotiations is then lacking
+        unsupportedProtocol::Nil
+      } else if (!key.isInstanceOf[RSAPublicKey]) {
+        certificateKeyTypeNotSupported::Nil
+      } else {
+        val res = for {
+          model <- cache.resource(new URL(webId)).get() failMap {
+            t => new ProfileError("error fetching profile", t)
+          }
+        } yield {
+          val initialBinding = new QuerySolutionMap();
+          initialBinding.add("webid",model.createResource(webId))
+          val qe: QueryExecution = QueryExecutionFactory.create(WebIDClaim.selectQuery, model,initialBinding)
+          try {
+            qe.execSelect().map( qs => {
+              val modulus = toInteger(qs.get("m"), cert + "hex", qs.get("mod"))
+              val exponent = toInteger(qs.get("e"), cert + "decimal", qs.get("exp"))
 
-            (modulus, exponent) match {
-              case (Some(mod), Some(exp)) => {
-                val rsakey = key.asInstanceOf[RSAPublicKey]
-                if (rsakey.getPublicExponent == exp && rsakey.getModulus == mod) verifiedWebID
-                else keyDoesNotMatch
+              (modulus, exponent) match {
+                case (Some(mod), Some(exp)) => {
+                  val rsakey = key.asInstanceOf[RSAPublicKey]
+                  if (rsakey.getPublicExponent == exp && rsakey.getModulus == mod) verifiedWebID
+                  else keyDoesNotMatch
+                }
+                case _ => new KeyProblem("profile contains key that cannot be analysed:" +
+                  qs.varNames().map(nm => nm + "=" + qs.get(nm).toString) + "; ")
               }
-              case _ => new KeyProblem("profile contains key that cannot be analysed:" +
-                qs.varNames().map(nm => nm + "=" + qs.get(nm).toString) + "; ")
-            }
-          }).toList
-          //it would be nice if we could keep a lot more state of what was verified and how
-          //will do that when implementing tests, so that these tests can then be used directly as much as possible
-        } finally {
-          qe.close()
+            }).toList
+            //it would be nice if we could keep a lot more state of what was verified and how
+            //will do that when implementing tests, so that these tests can then be used directly as much as possible
+          } finally {
+            qe.close()
+          }
+        }
+        res.either match {
+          case Right(tests) => tests
+          case Left(profileErr) => profileErr::Nil
         }
       }
-      res.either match {
-        case Right(tests) => tests
-        case Left(profileErr) => profileErr::Nil
-      }
+    } finally {
+      valid = true
     }
 
 

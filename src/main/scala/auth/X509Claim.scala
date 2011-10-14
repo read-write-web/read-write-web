@@ -31,7 +31,10 @@ import org.w3.readwriteweb.WebCache
 import javax.security.auth.Refreshable
 import java.util.Date
 import collection.JavaConversions._
-
+import java.util.concurrent.TimeUnit
+import com.google.common.cache.{CacheLoader, CacheBuilder, Cache}
+import javax.servlet.http.HttpServletRequest
+import unfiltered.request.HttpRequest
 
 /**
  * @author hjs
@@ -40,6 +43,20 @@ import collection.JavaConversions._
 
 object X509Claim {
   final val logger = LoggerFactory.getLogger(classOf[X509Claim])
+
+  val idCache: Cache[X509Certificate, X509Claim] =
+     CacheBuilder.newBuilder().expireAfterWrite(30, TimeUnit.MINUTES).
+       build(new CacheLoader[X509Certificate, X509Claim]() {
+         def load(x509: X509Certificate) = new X509Claim(x509)
+     })
+
+  def unapply[T <: HttpServletRequest](r: HttpRequest[T])(implicit webCache: WebCache): Option[X509Claim] =
+    r match {
+      case X509Cert(certs) => Some(idCache.get(certs(0)))
+      case _ => None
+    }
+
+
 
   /**
    * Extracts the URIs in the subject alternative name extension of an X.509
@@ -72,7 +89,7 @@ object X509Claim {
  * @author bblfish
  * @created: 30/03/2011
  */
-class X509Claim(val cert: X509Certificate)(implicit webCache: WebCache) extends Refreshable  {
+class X509Claim(val cert: X509Certificate) extends Refreshable  {
 
   import X509Claim._
   val claimReceivedDate = new Date();
@@ -83,6 +100,7 @@ class X509Claim(val cert: X509Certificate)(implicit webCache: WebCache) extends 
   lazy val webidclaims = getClaimedWebIds(cert).map {
     webid =>new WebIDClaim(webid, cert.getPublicKey)
   }.toSet
+
 
 
   //note could also implement Destroyable
