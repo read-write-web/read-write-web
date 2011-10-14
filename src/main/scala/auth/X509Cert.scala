@@ -23,31 +23,22 @@
 
 package org.w3.readwriteweb.auth
 
-import java.security.Principal
+import javax.servlet.http.HttpServletRequest
+import javax.security.cert.X509Certificate
+import unfiltered.request.HttpRequest
 
 /**
- * @author hjs
- * @created: 13/10/2011
+ * @author Henry Story, with help from Doug Tangren on unfiltered mailing list
+ * @created: 14/10/2011
  */
 
-/**
- * @author Henry Story from http://bblfish.net/
- * @created: 09/10/2011
- */
+object X509Cert {
+  def unapply[T <: HttpServletRequest](r: HttpRequest[T]): Option[(X509Certificate)] =
+    r.underlying.getAttribute("javax.servlet.request.X509Certificate") match {
+      case certs: Array[X509Certificate] =>
+        Some(certs(0))
+      case _ => None
+    }
 
-case class WebIdPrincipal(webid: String) extends Principal {
-  def getName = webid
-  override def equals(that: Any) = that match {
-    case other: WebIdPrincipal => other.webid == webid
-    case _ => false
-  }
-}
-
-case class Anonymous() extends Principal {
-  def getName = "anonymous"
-  override def equals(that: Any) =  that match {
-      case other: WebIdPrincipal => other eq this 
-      case _ => false
-    } //anonymous principals are equal only when they are identical. is this wise?
-      //well we don't know when two anonymous people are the same or different.
+  def apply[T <: HttpServletRequest](r: HttpRequest[T]) = unapply(r)
 }
