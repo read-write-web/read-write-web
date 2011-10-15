@@ -28,7 +28,7 @@ import unfiltered.response.{Html, ContentType, Ok}
 import org.w3.readwriteweb.WebCache
 
 /**
- * This plan just described the authentication information.
+ * This plan just described the X509 WebID authentication information.
  * This is a simple version. A future version will show EARL output, and so be useful for debugging the endpoint.
  *
  * @author hjs

@@ -40,7 +40,7 @@ class Filesystem(
           val reader = model.getReader(lang)
           reader.read(model, fis, url.toString)
         } catch {
-          case je:JenaException => error("@@@")
+          case je:JenaException => error(je.toString)
         }
         fis.close()
         model.success

@@ -1,6 +1,6 @@
 package org.w3.readwriteweb
 
-import auth.X509view
+import auth.{SimpleAuthZ, X509view}
 import org.w3.readwriteweb.util._
 
 import unfiltered.jetty._
@@ -64,7 +64,6 @@ object ReadWriteWebMain {
 
    implicit val webCache = new WebCache()
 
-
    val baseURL = parser.parameter[String]("baseURL", "base URL", false)
 
   // regular Java main
@@ -82,7 +81,7 @@ object ReadWriteWebMain {
           baseURL.value.get,
           lang=rdfLanguage.value getOrElse "N3")(mode.value getOrElse ResourcesDontExistByDefault)
 
-    val app = new ReadWriteWeb(filesystem)
+    val app = new ReadWriteWeb(filesystem, new SimpleAuthZ())
 
     //this is incomplete: we should be able to start both ports.... not sure how to do this yet.
     val service = httpsPort.value match {
@@ -95,8 +94,8 @@ object ReadWriteWebMain {
       context("/public"){ ctx:ContextBuilder =>
       ctx.resources(ClasspathUtils.fromClasspath("public/").toURI.toURL)
     }.
-      filter(new X509view().plan).
-      filter(app.plan).run()
+      filter(app.plan).
+      filter(new X509view().plan).run()
 
   }
 

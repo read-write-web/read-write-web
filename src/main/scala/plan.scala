@@ -1,5 +1,6 @@
 package org.w3.readwriteweb
 
+import auth.{NoAuthZ, Authz}
 import org.w3.readwriteweb.util._
 
 import unfiltered.request._
@@ -19,9 +20,8 @@ import Query.{QueryTypeSelect => SELECT,
               QueryTypeDescribe => DESCRIBE}
 
 import scalaz._
-import Scalaz._
 
-class ReadWriteWeb(rm: ResourceManager) {
+class ReadWriteWeb(rm: ResourceManager, implicit val auth: Authz = new NoAuthZ()) {
   
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
@@ -53,6 +53,7 @@ class ReadWriteWeb(rm: ResourceManager) {
    *  through another implicit conversion. It saves us the call to the Validation.lift() method
    */
   val plan = unfiltered.filter.Planify {
+    auth {
     case req @ Path(path) if path startsWith rm.basePath => {
       val baseURI = req.underlying.getRequestURL.toString
       val r: Resource = rm.resource(new URL(baseURI))
@@ -129,6 +130,7 @@ class ReadWriteWeb(rm: ResourceManager) {
         case _ => MethodNotAllowed ~> Allow("GET", "PUT", "POST")
       }
     }
+  }
 
   }
 

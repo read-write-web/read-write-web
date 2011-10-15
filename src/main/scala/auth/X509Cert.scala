@@ -26,8 +26,6 @@ package org.w3.readwriteweb.auth
 import javax.servlet.http.HttpServletRequest
 import java.security.cert.X509Certificate
 import unfiltered.request.HttpRequest
-import java.util.concurrent.TimeUnit
-import com.google.common.cache.{CacheLoader, CacheBuilder, Cache}
 
 /**
  * @author Henry Story, with help from Doug Tangren on unfiltered mailing list
