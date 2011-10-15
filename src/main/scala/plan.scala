@@ -65,19 +65,28 @@ class ReadWriteWeb(rm: ResourceManager) {
         case GET(_) | HEAD(_) =>
           for {
             model <- r.get() failMap { x => NotFound }
-            lang = Lang.fromRequest(req)
+            lang = AcceptLang(req) getOrElse Lang.default
           } yield {
             req match {
               case GET(_) => Ok ~> ViaSPARQL ~> ContentType(lang.contentType) ~> ResponseModel(model, baseURI, lang)
               case HEAD(_) => Ok ~> ViaSPARQL ~> ContentType(lang.contentType)
             }
           }
-        case PUT(_) =>
+        case PUT(_) & Lang(lang) =>
           for {
             bodyModel <- modelFromInputStream(Body.stream(req), baseURI) failMap { t => BadRequest ~> ResponseString(t.getStackTraceString) }
             _ <- r.save(bodyModel) failMap { t => InternalServerError ~> ResponseString(t.getStackTraceString) }
           } yield Created
-        case POST(_) => {
+        case PUT(_) =>
+          BadRequest ~> ResponseString("Content-Type MUST be one of: " + Lang.supportedAsString)
+        case POST(_) =>
+          req match {
+            case RequestContentType("application/sparql-query") => null
+            case RequestContentType(ct) if Lang.supportContentTypes contains ct => null
+            case _ => BadRequest ~> ResponseString("Content-Type MUST be one of: " + Post.supportedAsString)
+          }
+          
+          {
           Post.parse(Body.stream(req), baseURI) match {
             case PostUnknown => {
               logger.info("Couldn't parse the request")
@@ -103,7 +112,7 @@ class ReadWriteWeb(rm: ResourceManager) {
             }
             case PostQuery(query) => {
               logger.info("SPARQL Query:\n" + query.toString())
-              lazy val lang = Lang.fromRequest(req)
+              lazy val lang = Lang(req) getOrElse Lang.default
               for {
                 model <- r.get() failMap { t => NotFound }
               } yield {

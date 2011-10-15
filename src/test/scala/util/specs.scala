@@ -81,7 +81,7 @@ trait SomeURI extends FilesystemBased {
 trait SomeDataInStore extends FilesystemBased with SomeRDF with SomeURI {
   
   doBeforeSpec {
-    val httpCode = Http(uri.put(rdfxml) get_statusCode)
+    val httpCode = Http(uri.put(RDFXML, rdfxml) get_statusCode)
     httpCode must_== 201
   }
   

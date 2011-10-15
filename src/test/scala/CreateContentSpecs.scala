@@ -9,7 +9,7 @@ object PutRDFXMLSpec extends FilesystemBased with SomeRDF with SomeURI {
 
   "PUTing an RDF document on Joe's URI (which does not exist yet)" should {
     "return a 201" in {
-      val httpCode = Http(uri.put(rdfxml) get_statusCode)
+      val httpCode = Http(uri.put(RDFXML, rdfxml) get_statusCode)
       httpCode must_== 201
     }
     "create a document on disk" in {
@@ -76,7 +76,7 @@ object PutInvalidRDFXMLSpec extends SomeDataInStore {
 
   """PUTting not-valid RDF to Joe's URI""" should {
     "return a 400 Bad Request" in {
-      val statusCode = Http.when(_ == 400)(uri.put("that's bouleshit") get_statusCode)
+      val statusCode = Http.when(_ == 400)(uri.put(RDFXML, "that's bouleshit") get_statusCode)
       statusCode must_== 400
     }
   }

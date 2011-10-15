@@ -11,20 +11,20 @@ import com.hp.hpl.jena.update._
 import com.hp.hpl.jena.shared.JenaException
 
 sealed trait Post
-
 case class PostUpdate(update: UpdateRequest) extends Post
-
 case class PostRDF(model: Model) extends Post
-
 case class PostQuery(query: Query) extends Post
-
 case object PostUnknown extends Post
-
 
 import scalaz._
 import Scalaz._
 
 object Post {
+  
+  val SparqlContentType = "application/sparql-query"
+  val supportContentTypes = SparqlContentType + Lang.supportContentTypes
+  val supportedAsString = supportContentTypes mkString ", "
+
   
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
