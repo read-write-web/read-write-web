@@ -3,6 +3,7 @@ package org.w3.readwriteweb
 import org.w3.readwriteweb.util.modelFromString
 
 import java.io.{InputStream, StringReader}
+import java.net.URL
 import scala.io.Source
 import org.slf4j.{Logger, LoggerFactory}
 import com.hp.hpl.jena.rdf.model._
@@ -30,17 +31,17 @@ object Post {
 
   def parse(
       is: InputStream,
-      baseURI: String,
+      base: URL,
       contentType: String): Post = {
     assert(supportContentTypes contains contentType)
     val source = Source.fromInputStream(is, "UTF-8")
     val s = source.getLines.mkString("\n")
-    parse(s, baseURI, contentType)
+    parse(s, base, contentType)
   }
   
   def parse(
       s: String,
-      baseURI: String,
+      base: URL,
       contentType: String): Post = {
     assert(supportContentTypes contains contentType)
     
@@ -48,14 +49,14 @@ object Post {
     
     def postUpdate =
       try {
-        val update: UpdateRequest = UpdateFactory.create(s, baseURI)
+        val update: UpdateRequest = UpdateFactory.create(s, base.toString)
         PostUpdate(update).success
       } catch {
         case qpe: QueryParseException => qpe.fail
       }
       
     def postRDF(lang: Lang) =
-      modelFromString(s, baseURI, lang) flatMap { model => PostRDF(model).success }
+      modelFromString(s, base, lang) flatMap { model => PostRDF(model).success }
     
     def postQuery =
       try {

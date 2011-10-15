@@ -54,8 +54,8 @@ class ReadWriteWeb(rm: ResourceManager) {
    */
   val plan = unfiltered.filter.Planify {
     case req @ Path(path) if path startsWith rm.basePath => {
-      val baseURI = req.underlying.getRequestURL.toString
-      val r: Resource = rm.resource(new URL(baseURI))
+      val Authoritative(baseURI, _) = req
+      val r: Resource = rm.resource(baseURI)
       req match {
         case GET(_) & Accept(accepts) if isHTML(accepts) => {
           val source = Source.fromFile("src/main/resources/skin.html")("UTF-8")
