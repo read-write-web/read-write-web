@@ -34,14 +34,8 @@ object Lang {
       case _ => None
   }
   
-  def unapply(contentType: String): Option[Lang] =
-    apply(contentType)
-
-  def apply(req: HttpRequest[_]): Option[Lang] =
-    RequestContentType(req) flatMap Lang.apply
-    
-  def unapply(req: HttpRequest[_]): Option[Lang] =
-    apply(req)
+  def apply(cts: Iterable[String]): Option[Lang] =
+    cts map Lang.apply collectFirst { case Some(lang) => lang }
     
 }
 
