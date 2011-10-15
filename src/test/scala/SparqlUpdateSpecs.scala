@@ -19,7 +19,7 @@ INSERT DATA { </2007/wiki/people/JoeLambda#JL> foaf:openid </2007/wiki/people/Jo
       httpCode must_== 200
     }
     "produce a graph with one more triple than the original one" in {
-      val model = Http(uri as_model(uriBase))
+      val model = Http(uri as_model(uriBase, RDFXML))
       model.size must_== (referenceModel.size + 1)
     }
   }

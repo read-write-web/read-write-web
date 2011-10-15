@@ -74,7 +74,7 @@ class ReadWriteWeb(rm: ResourceManager) {
           }
         case PUT(_) & Lang(lang) =>
           for {
-            bodyModel <- modelFromInputStream(Body.stream(req), baseURI) failMap { t => BadRequest ~> ResponseString(t.getStackTraceString) }
+            bodyModel <- modelFromInputStream(Body.stream(req), baseURI, lang) failMap { t => BadRequest ~> ResponseString(t.getStackTraceString) }
             _ <- r.save(bodyModel) failMap { t => InternalServerError ~> ResponseString(t.getStackTraceString) }
           } yield Created
         case PUT(_) =>

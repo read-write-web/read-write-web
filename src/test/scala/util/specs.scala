@@ -62,7 +62,7 @@ trait SomeRDF extends SomeURI {
 """
 """
     
-  val referenceModel = modelFromString(rdfxml, uriBase).toOption.get
+  val referenceModel = modelFromString(rdfxml, uriBase, RDFXML).toOption.get
 
 }
 

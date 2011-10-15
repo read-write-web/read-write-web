@@ -24,7 +24,7 @@ object GetWikiModeSpec extends FilesystemBased with SomeRDF with SomeURI {
     "return a 200 and an empty model" in {
       val (statusCode, model) = Http(uri >+ {
         req => (req.get_statusCode,
-                req as_model(uriBase))
+                req as_model(uriBase, RDFXML))
       } )
       statusCode must_== 200
       model must beIsomorphicWith (emptyModel)
@@ -37,8 +37,8 @@ object ContentNegociationSpec extends SomeDataInStore {
 
   "a GET on Joe's URI" should {
     "deliver TURTLE and RDF/XML graphs that are isomorphic to each other" in {
-      val rdfxml = Http(uri as_model(uriBase))
-      val turtle = Http(uri <:< Map("Accept" -> "text/turtle") as_model(uriBase, lang="TURTLE"))
+      val rdfxml = Http(uri as_model(uriBase, RDFXML))
+      val turtle = Http(uri <:< Map("Accept" -> "text/turtle") as_model(uriBase, TURTLE))
       rdfxml must beIsomorphicWith(turtle)
     }
   }

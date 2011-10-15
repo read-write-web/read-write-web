@@ -57,7 +57,7 @@ CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }
   
   """POSTing "CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }" to Joe's URI""" should {
     "return an isomorphic RDF graph" in {
-      val model = Http(uri as_model(uriBase))
+      val model = Http(uri as_model(uriBase, RDFXML))
       model must beIsomorphicWith (referenceModel)
     }
   }

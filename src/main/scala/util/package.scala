@@ -37,10 +37,10 @@ package object util {
   def modelFromInputStream(
       is: InputStream,
       base: String,
-      lang: String = "RDF/XML-ABBREV"): Validation[Throwable, Model] =
+      lang: Lang): Validation[Throwable, Model] =
     try {
       val m = ModelFactory.createDefaultModel()
-      m.read(is, base, lang)
+      m.getReader(lang.jenaLang).read(m, is, base)
       m.success
     } catch {
       case t => t.fail
@@ -49,11 +49,11 @@ package object util {
   def modelFromString(
       s: String,
       base: String,
-      lang: String = "RDF/XML-ABBREV"): Validation[Throwable, Model] =
+      lang: Lang): Validation[Throwable, Model] =
     try {
       val reader = new StringReader(s)
       val m = ModelFactory.createDefaultModel()
-      m.read(reader, base, lang)
+      m.getReader(lang.jenaLang).read(m, reader, base)
       m.success
     } catch {
       case t => t.fail

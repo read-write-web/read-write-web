@@ -45,8 +45,9 @@ object Post {
         case qpe: QueryParseException => qpe.fail
       }
       
+    // TODO
     def postRDF =
-      modelFromString(s, baseURI) flatMap { model => PostRDF(model).success }
+      modelFromString(s, baseURI, RDFXML) flatMap { model => PostRDF(model).success }
     
     def postQuery =
       try {
