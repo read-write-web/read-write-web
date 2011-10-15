@@ -21,20 +21,29 @@ import Scalaz._
 
 object Post {
   
-  val SparqlContentType = "application/sparql-query"
-  val supportContentTypes = SparqlContentType + Lang.supportContentTypes
+  val SPARQL = "application/sparql-query"
+  val supportContentTypes = Lang.supportContentTypes + SPARQL
   val supportedAsString = supportContentTypes mkString ", "
 
   
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  def parse(is: InputStream, baseURI:String): Post = {
+  def parse(
+      is: InputStream,
+      baseURI: String,
+      contentType: String): Post = {
+    assert(supportContentTypes contains contentType)
     val source = Source.fromInputStream(is, "UTF-8")
     val s = source.getLines.mkString("\n")
-    parse(s, baseURI)
+    parse(s, baseURI, contentType)
   }
   
-  def parse(s: String, baseURI: String): Post = {
+  def parse(
+      s: String,
+      baseURI: String,
+      contentType: String): Post = {
+    assert(supportContentTypes contains contentType)
+    
     val reader = new StringReader(s)
     
     def postUpdate =
@@ -45,9 +54,8 @@ object Post {
         case qpe: QueryParseException => qpe.fail
       }
       
-    // TODO
-    def postRDF =
-      modelFromString(s, baseURI, RDFXML) flatMap { model => PostRDF(model).success }
+    def postRDF(lang: Lang) =
+      modelFromString(s, baseURI, lang) flatMap { model => PostRDF(model).success }
     
     def postQuery =
       try {
@@ -57,7 +65,11 @@ object Post {
         case qe: QueryException => qe.fail
       }
     
-    postUpdate | (postRDF | (postQuery | PostUnknown))
+    contentType match {
+      case SPARQL => postUpdate | (postQuery | PostUnknown)
+      case Lang(lang) => postRDF(lang) | PostUnknown
+    }
+
   }
   
 }

@@ -15,7 +15,7 @@ INSERT DATA { </2007/wiki/people/JoeLambda#JL> foaf:openid </2007/wiki/people/Jo
   
   "POSTing an INSERT query on Joe's URI (which does not exist yet)" should {
     "succeed" in {
-      val httpCode = Http(uri.post(insertQuery) get_statusCode)
+      val httpCode = Http(uri.postSPARQL(insertQuery) get_statusCode)
       httpCode must_== 200
     }
     "produce a graph with one more triple than the original one" in {

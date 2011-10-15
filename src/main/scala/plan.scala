@@ -79,18 +79,11 @@ class ReadWriteWeb(rm: ResourceManager) {
           } yield Created
         case PUT(_) =>
           BadRequest ~> ResponseString("Content-Type MUST be one of: " + Lang.supportedAsString)
-        case POST(_) =>
-          req match {
-            case RequestContentType("application/sparql-query") => null
-            case RequestContentType(ct) if Lang.supportContentTypes contains ct => null
-            case _ => BadRequest ~> ResponseString("Content-Type MUST be one of: " + Post.supportedAsString)
-          }
-          
-          {
-          Post.parse(Body.stream(req), baseURI) match {
+        case POST(_) & RequestContentType(ct) if Post.supportContentTypes contains ct => {
+          Post.parse(Body.stream(req), baseURI, ct) match {
             case PostUnknown => {
               logger.info("Couldn't parse the request")
-              BadRequest ~> ResponseString("You MUST provide valid content for either: SPARQL UPDATE, SPARQL Query, RDF/XML, TURTLE")
+              BadRequest ~> ResponseString("You MUST provide valid content for given Content-Type: " + ct)
             }
             case PostUpdate(update) => {
               logger.info("SPARQL UPDATE:\n" + update.toString())
@@ -135,6 +128,8 @@ class ReadWriteWeb(rm: ResourceManager) {
             }
           }
         }
+        case POST(_) =>
+          BadRequest ~> ResponseString("Content-Type MUST be one of: " + Post.supportedAsString)
         case _ => MethodNotAllowed ~> Allow("GET", "PUT", "POST")
       }
     }
