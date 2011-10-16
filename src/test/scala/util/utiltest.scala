@@ -1,5 +1,6 @@
 package org.w3.readwriteweb
 
+import java.net.URL
 import javax.servlet._
 import javax.servlet.http._
 import unfiltered.request._
@@ -27,7 +28,7 @@ import org.w3.readwriteweb.util._
 
 package object utiltest {
   
-  def baseURI(req: Request): String = "%s%s" format (req.host, req.path)
+  def baseURI(req: Request): URL = new URL("%s%s" format (req.host, req.path))
   
   def beIsomorphicWith(that: Model): Matcher[Model] =
     new Matcher[Model] {
@@ -39,7 +40,7 @@ package object utiltest {
   
   class RequestW(req: Request) {
 
-    def as_model(base: String, lang: Lang): Handler[Model] =
+    def as_model(base: URL, lang: Lang): Handler[Model] =
       req >> { is => modelFromInputStream(is, base, lang).toOption.get }
 
     def post(body: String, lang: Lang): Request =
