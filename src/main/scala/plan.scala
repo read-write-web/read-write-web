@@ -55,8 +55,8 @@ class ReadWriteWeb(rm: ResourceManager, implicit val authz: AuthZ = NullAuthZ) {
   val plan = unfiltered.filter.Planify {
     authz.protect {
     case req @ Path(path) if path startsWith rm.basePath => {
-      val Authoritative(baseURI, _) = req
-      val r: Resource = rm.resource(baseURI)
+      val Authoritative(uri, representation) = req
+      val r: Resource = rm.resource(uri)
       req match {
         case GET(_) & Accept(accepts) if isHTML(accepts) => {
           val source = Source.fromFile("src/main/resources/skin.html")("UTF-8")
@@ -66,22 +66,25 @@ class ReadWriteWeb(rm: ResourceManager, implicit val authz: AuthZ = NullAuthZ) {
         case GET(_) | HEAD(_) =>
           for {
             model <- r.get() failMap { x => NotFound }
-            lang = AcceptLang(req) getOrElse Lang.default
+            lang = representation match {
+              case RDFRepr(l) => l
+              case _ => Lang.default
+            }
           } yield {
             req match {
-              case GET(_) => Ok ~> ViaSPARQL ~> ContentType(lang.contentType) ~> ResponseModel(model, baseURI, lang)
+              case GET(_) => Ok ~> ViaSPARQL ~> ContentType(lang.contentType) ~> ResponseModel(model, uri, lang)
               case HEAD(_) => Ok ~> ViaSPARQL ~> ContentType(lang.contentType)
             }
           }
-        case PUT(_) & Lang(lang) =>
+        case PUT(_) & RequestLang(lang) =>
           for {
-            bodyModel <- modelFromInputStream(Body.stream(req), baseURI, lang) failMap { t => BadRequest ~> ResponseString(t.getStackTraceString) }
+            bodyModel <- modelFromInputStream(Body.stream(req), uri, lang) failMap { t => BadRequest ~> ResponseString(t.getStackTraceString) }
             _ <- r.save(bodyModel) failMap { t => InternalServerError ~> ResponseString(t.getStackTraceString) }
           } yield Created
         case PUT(_) =>
           BadRequest ~> ResponseString("Content-Type MUST be one of: " + Lang.supportedAsString)
         case POST(_) & RequestContentType(ct) if Post.supportContentTypes contains ct => {
-          Post.parse(Body.stream(req), baseURI, ct) match {
+          Post.parse(Body.stream(req), uri, ct) match {
             case PostUnknown => {
               logger.info("Couldn't parse the request")
               BadRequest ~> ResponseString("You MUST provide valid content for given Content-Type: " + ct)
@@ -106,7 +109,7 @@ class ReadWriteWeb(rm: ResourceManager, implicit val authz: AuthZ = NullAuthZ) {
             }
             case PostQuery(query) => {
               logger.info("SPARQL Query:\n" + query.toString())
-              lazy val lang = Lang(req) getOrElse Lang.default
+              lazy val lang = RequestLang(req) getOrElse Lang.default
               for {
                 model <- r.get() failMap { t => NotFound }
               } yield {
@@ -118,11 +121,11 @@ class ReadWriteWeb(rm: ResourceManager, implicit val authz: AuthZ = NullAuthZ) {
                     Ok ~> ContentType("application/sparql-results+xml") ~> ResponseResultSet(qe.execAsk())
                   case CONSTRUCT => {
                     val result: Model = qe.execConstruct()
-                    Ok ~> ContentType(lang.contentType) ~> ResponseModel(model, baseURI, lang)
+                    Ok ~> ContentType(lang.contentType) ~> ResponseModel(model, uri, lang)
                   }
                   case DESCRIBE => {
                     val result: Model = qe.execDescribe()
-                    Ok ~> ContentType(lang.contentType) ~> ResponseModel(model, baseURI, lang)
+                    Ok ~> ContentType(lang.contentType) ~> ResponseModel(model, uri, lang)
                   }
                 }
               }

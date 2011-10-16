@@ -68,7 +68,7 @@ object Post {
     
     contentType match {
       case SPARQL => postUpdate | (postQuery | PostUnknown)
-      case Lang(lang) => postRDF(lang) | PostUnknown
+      case RequestLang(lang) => postRDF(lang) | PostUnknown
     }
 
   }

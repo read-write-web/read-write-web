@@ -66,7 +66,7 @@ class WebCache extends ResourceManager {
             case Some(loc) => new URL(u,loc)
             case None => new URL(u.getProtocol,u.getAuthority,u.getPort,u.getPath)
           }
-          res>>{ in=>modelFromInputStream(in,loc.toString,encoding) }
+          res>>{ in=>modelFromInputStream(in,loc,encoding) }
 
         }
       })

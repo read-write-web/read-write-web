@@ -2,46 +2,21 @@ package org.w3.readwriteweb
 
 import java.io._
 import com.hp.hpl.jena.rdf.model._
-import com.hp.hpl.jena.query._
-import unfiltered.response._
 import scalaz._
 import Scalaz._
+import java.net.URL
 
 package object util {
   
-  val defaultLang = "RDF/XML-ABBREV"
-
-  class MSAuthorVia(value: String) extends ResponseHeader("MS-Author-Via", List(value))
-  
-  object ViaSPARQL extends MSAuthorVia("SPARQL")
-  
-  object ResponseModel {
-    def apply(model: Model, base: String, lang: Lang): ResponseStreamer =
-      new ResponseStreamer {
-        def stream(os: OutputStream): Unit =
-          model.getWriter(lang.jenaLang).write(model, os, base)
-      }
-  }
-
-  object ResponseResultSet {
-    def apply(rs: ResultSet): ResponseStreamer =
-      new ResponseStreamer {
-        def stream(os: OutputStream): Unit = ResultSetFormatter.outputAsXML(os, rs) 
-      }
-    def apply(result: Boolean): ResponseStreamer =
-      new ResponseStreamer {
-        def stream(os: OutputStream):Unit = ResultSetFormatter.outputAsXML(os, result) 
-      }
-  }
 
 
   def modelFromInputStream(
       is: InputStream,
-      base: String,
+      base: URL,
       lang: Lang): Validation[Throwable, Model] =
     try {
       val m = ModelFactory.createDefaultModel()
-      m.getReader(lang.jenaLang).read(m, is, base)
+      m.getReader(lang.jenaLang).read(m, is, base.toString)
       m.success
     } catch {
       case t => t.fail
@@ -49,12 +24,12 @@ package object util {
   
   def modelFromString(
       s: String,
-      base: String,
+      base: URL,
       lang: Lang): Validation[Throwable, Model] =
     try {
       val reader = new StringReader(s)
       val m = ModelFactory.createDefaultModel()
-      m.getReader(lang.jenaLang).read(m, reader, base)
+      m.getReader(lang.jenaLang).read(m, reader, base.toString)
       m.success
     } catch {
       case t => t.fail
