@@ -21,52 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.w3.readwriteweb
+package org.w3.readwriteweb.auth
 
-import unfiltered.request._
+import javax.servlet.http.HttpServletRequest
+import java.security.cert.X509Certificate
+import unfiltered.request.HttpRequest
 
-sealed trait Lang {
-  
-  def contentType = this match {
-    case RDFXML => "application/rdf+xml"
-    case TURTLE => "text/turtle"
-    case N3 => "text/n3"
-  }
-  
-  def jenaLang = this match {
-    case RDFXML => "RDF/XML-ABBREV"
-    case TURTLE => "TURTLE"
-    case N3 => "N3"
-  }
-  
-}
+/**
+ * @author Henry Story, with help from Doug Tangren on unfiltered mailing list
+ * @created: 14/10/2011
+ */
 
-object Lang {
-  
-  val supportedLanguages = Seq(RDFXML, TURTLE, N3)
-  val supportContentTypes = supportedLanguages map (_.contentType)
-  val supportedAsString = supportContentTypes mkString ", "
-  
-  val default = RDFXML
-  
-  def apply(contentType: String): Option[Lang] =
-    contentType match {
-      case "text/n3" => Some(N3)
-      case "text/turtle" => Some(TURTLE)
-      case "application/rdf+xml" => Some(RDFXML)
+object X509Cert {
+  def unapply[T <: HttpServletRequest](r: HttpRequest[T]): Option[Array[X509Certificate]] =
+    r.underlying.getAttribute("javax.servlet.request.X509Certificate") match {
+      case certs: Array[X509Certificate] => Some(certs)
       case _ => None
-  }
-
-  def apply(req: HttpRequest[_]): Option[Lang] =
-    RequestContentType(req) flatMap Lang.apply
-    
-  def unapply(req: HttpRequest[_]): Option[Lang] =
-    apply(req)
+    }
 
 }
-
-case object RDFXML extends Lang
-
-case object TURTLE extends Lang
-
-case object N3 extends Lang

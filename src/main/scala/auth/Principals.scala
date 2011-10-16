@@ -21,52 +21,33 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.w3.readwriteweb
+package org.w3.readwriteweb.auth
 
-import unfiltered.request._
+import java.security.Principal
 
-sealed trait Lang {
-  
-  def contentType = this match {
-    case RDFXML => "application/rdf+xml"
-    case TURTLE => "text/turtle"
-    case N3 => "text/n3"
+/**
+ * @author hjs
+ * @created: 13/10/2011
+ */
+
+/**
+ * @author Henry Story from http://bblfish.net/
+ * @created: 09/10/2011
+ */
+
+case class WebIdPrincipal(webid: String) extends Principal {
+  def getName = webid
+  override def equals(that: Any) = that match {
+    case other: WebIdPrincipal => other.webid == webid
+    case _ => false
   }
-  
-  def jenaLang = this match {
-    case RDFXML => "RDF/XML-ABBREV"
-    case TURTLE => "TURTLE"
-    case N3 => "N3"
-  }
-  
 }
 
-object Lang {
-  
-  val supportedLanguages = Seq(RDFXML, TURTLE, N3)
-  val supportContentTypes = supportedLanguages map (_.contentType)
-  val supportedAsString = supportContentTypes mkString ", "
-  
-  val default = RDFXML
-  
-  def apply(contentType: String): Option[Lang] =
-    contentType match {
-      case "text/n3" => Some(N3)
-      case "text/turtle" => Some(TURTLE)
-      case "application/rdf+xml" => Some(RDFXML)
-      case _ => None
-  }
-
-  def apply(req: HttpRequest[_]): Option[Lang] =
-    RequestContentType(req) flatMap Lang.apply
-    
-  def unapply(req: HttpRequest[_]): Option[Lang] =
-    apply(req)
-
+case class Anonymous() extends Principal {
+  def getName = "anonymous"
+  override def equals(that: Any) =  that match {
+      case other: WebIdPrincipal => other eq this 
+      case _ => false
+    } //anonymous principals are equal only when they are identical. is this wise?
+      //well we don't know when two anonymous people are the same or different.
 }
-
-case object RDFXML extends Lang
-
-case object TURTLE extends Lang
-
-case object N3 extends Lang

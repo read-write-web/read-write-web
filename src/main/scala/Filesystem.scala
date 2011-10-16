@@ -16,22 +16,22 @@ class Filesystem(
   val basePath: String,
   val lang: String = "RDF/XML-ABBREV")(mode: RWWMode) extends ResourceManager {
   
-  val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  
-  def sanityCheck(): Boolean = baseDirectory.exists
-  
-  def resource(url: URL): Resource = new Resource {
-    val relativePath: String = url.getPath.replaceAll("^"+basePath.toString+"/?", "")
+  val logger:Logger = LoggerFactory.getLogger(this.getClass)
+
+  def sanityCheck():Boolean = baseDirectory.exists
+
+  def resource(url:URL):Resource = new Resource {
+    val relativePath:String = url.getPath.replaceAll("^"+basePath.toString+"/?", "")
     val fileOnDisk = new File(baseDirectory, relativePath)
-    
-    private def createFileOnDisk(): Unit = {
+
+    private def createFileOnDisk():Unit = {
       // create parent directory if needed
       val parent = fileOnDisk.getParentFile
       if (! parent.exists) println(parent.mkdirs)
       val r = fileOnDisk.createNewFile()
       logger.debug("Create file %s with success: %s" format (fileOnDisk.getAbsolutePath, r.toString))
     }
-    
+
     def get(): Validation[Throwable, Model] = {
       val model = ModelFactory.createDefaultModel()
       if (fileOnDisk.exists()) {
@@ -40,7 +40,7 @@ class Filesystem(
           val reader = model.getReader(lang)
           reader.read(model, fis, url.toString)
         } catch {
-          case je:JenaException => error("@@@")
+          case je:JenaException => error(je.toString)
         }
         fis.close()
         model.success
@@ -51,8 +51,8 @@ class Filesystem(
         }
       }
     }
-    
-    def save(model: Model): Validation[Throwable, Unit] =
+
+    def save(model:Model):Validation[Throwable, Unit] =
       try {
         createFileOnDisk()
         val fos = new FileOutputStream(fileOnDisk)

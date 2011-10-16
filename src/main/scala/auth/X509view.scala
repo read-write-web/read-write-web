@@ -21,52 +21,38 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.w3.readwriteweb
+package org.w3.readwriteweb.auth
 
-import unfiltered.request._
+import unfiltered.request.Path
+import unfiltered.response.{Html, ContentType, Ok}
+import org.w3.readwriteweb.WebCache
 
-sealed trait Lang {
-  
-  def contentType = this match {
-    case RDFXML => "application/rdf+xml"
-    case TURTLE => "text/turtle"
-    case N3 => "text/n3"
-  }
-  
-  def jenaLang = this match {
-    case RDFXML => "RDF/XML-ABBREV"
-    case TURTLE => "TURTLE"
-    case N3 => "N3"
-  }
-  
-}
+/**
+ * This plan just described the X509 WebID authentication information.
+ * This is a simple version. A future version will show EARL output, and so be useful for debugging the endpoint.
+ *
+ * @author hjs
+ * @created: 13/10/2011
+ */
 
-object Lang {
-  
-  val supportedLanguages = Seq(RDFXML, TURTLE, N3)
-  val supportContentTypes = supportedLanguages map (_.contentType)
-  val supportedAsString = supportContentTypes mkString ", "
-  
-  val default = RDFXML
-  
-  def apply(contentType: String): Option[Lang] =
-    contentType match {
-      case "text/n3" => Some(N3)
-      case "text/turtle" => Some(TURTLE)
-      case "application/rdf+xml" => Some(RDFXML)
-      case _ => None
-  }
+class X509view(implicit val webCache: WebCache) {
 
-  def apply(req: HttpRequest[_]): Option[Lang] =
-    RequestContentType(req) flatMap Lang.apply
-    
-  def unapply(req: HttpRequest[_]): Option[Lang] =
-    apply(req)
+    val plan = unfiltered.filter.Planify {
+      case req @ Path(path) if path startsWith "/test/auth/x509" =>
+        Ok ~> ContentType("text/html") ~> Html(
+          <html><head><title>Authentication Page</title></head>
+        { req match {
+          case X509Claim(xclaim: X509Claim) => <body>
+            <h1>Authentication Info received</h1>
+            <p>You were identified with the following WebIDs</p>
+             <ul>{xclaim.webidclaims.filter(cl=>cl.verified).map(p=> <li>{p.webId}</li>)}</ul>
+            <p>You sent the following certificate</p>
+            <pre>{xclaim.cert.toString}</pre>
+          </body>
+          case _ => <body><p>We received no Authentication information</p></body>
+        }
+          }</html>)
+
+      }
 
 }
-
-case object RDFXML extends Lang
-
-case object TURTLE extends Lang
-
-case object N3 extends Lang
