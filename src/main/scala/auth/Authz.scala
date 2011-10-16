@@ -32,6 +32,7 @@ import javax.servlet.http.HttpServletRequest
 import java.net.URL
 import org.w3.readwriteweb.{Resource, ResourceManager, WebCache}
 import com.hp.hpl.jena.query.{QueryExecutionFactory, QueryExecution, QuerySolutionMap, QueryFactory}
+import sun.management.resources.agent
 
 
 /**
@@ -129,13 +130,13 @@ class RDFAuthZ(val webCache: WebCache, rm: ResourceManager) extends AuthZ {
     val Control = acl+"Control"
 
     val selectQuery = QueryFactory.create("""
-    		  PREFIX : <http://www.w3.org/ns/auth/acl#>
-    		  SELECT ?res ?agent ?group ?mode
+    		  PREFIX acl: <http://www.w3.org/ns/auth/acl#>
+    		  SELECT ?mode ?group ?agent
     		  WHERE {
-              ?auth :accessTo ?res ;
-                    :mode ?mode .
-    		    OPTIONAL { ?auth :agentClass ?group . }
-    		    OPTIONAL { ?auth :agent ?agent . }
+              ?auth acl:accessTo ?res ;
+                    acl:mode ?mode .
+          OPTIONAL { ?auth acl:agentClass ?group . }
+	        OPTIONAL { ?auth acl:agent ?agent . }
     		  }""")
   }
 
@@ -153,24 +154,32 @@ class RDFAuthZ(val webCache: WebCache, rm: ResourceManager) extends AuthZ {
       } yield {
         val initialBinding = new QuerySolutionMap();
         initialBinding.add("res", model.createResource("file://local"+path))
-        val qe: QueryExecution = QueryExecutionFactory.create(selectQuery, model, initialBinding)
+        val qe: QueryExecution = QueryExecutionFactory.create(selectQuery, model)//, initialBinding)
         val agentsAllowed = try {
-          qe.execSelect().flatMap(qs => {
+          val exec = qe.execSelect()
+          val res = for (qs <- exec) yield {
             val methods = qs.get("mode").toString match {
               case Read => List(GET)
-              case Write => List(PUT,POST)
+              case Write => List(PUT, POST)
               case Control => List(POST)
-              case _ => List(GET, PUT,  POST,  DELETE) //nothing everything is allowed
+              case _ => List(GET, PUT, POST, DELETE) //nothing everything is allowed
             }
-           if (methods.contains(method)) Some(Pair(qs.get("agent").toString,qs.get("group").toString))
-           else None
-          })
+            if (methods.contains(method)) Some(Pair(qs.get("agent"), qs.get("group")))
+            else None
+          }
+          res.flatten.toList
         } finally {
           qe.close()
         }
-        if (agentsAllowed.hasNext) {
+        if (agentsAllowed.size>0) {
           subj() match {
-            case Some(s) => agentsAllowed.exists( p =>  s.getPrincipals(classOf[WebIdPrincipal]).exists(id=> id.webid == p._1) )
+            case Some(s) => agentsAllowed.exists{ 
+              p =>  s.getPrincipals(classOf[WebIdPrincipal]).
+                exists(id=> {
+                val ps = if (p._1 != null) p._1.toString else null;
+                ps == id.webid
+              })
+            }
             case None => false
           }
           //currently we just check for agent match. Group match would require us to have a store
