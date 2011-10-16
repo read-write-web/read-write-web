@@ -20,7 +20,7 @@ SELECT ?name WHERE { [] foaf:name ?name }
   
   """POSTing "SELECT ?name WHERE { [] foaf:name ?name }" to Joe's URI""" should {
     "return Joe's name" in {
-      val resultSet = Http(uri.post(selectFoafName) >- { body => ResultSetFactory.fromXML(body) } )
+      val resultSet = Http(uri.postSPARQL(selectFoafName) >- { body => ResultSetFactory.fromXML(body) } )
       resultSet.next().getLiteral("name").getString must_== "Joe Lambda"
     }
   }
@@ -39,7 +39,7 @@ ASK { [] foaf:name ?name }
   """POSTing "ASK ?name WHERE { [] foaf:name ?name }" to Joe's URI""" should {
     "return true" in {
       val result: Boolean =
-        Http(uri.post(askFoafName) >~ { s => 
+        Http(uri.postSPARQL(askFoafName) >~ { s => 
           (XML.fromSource(s) \ "boolean" \ text).head.toBoolean
           } )
       result must_== true

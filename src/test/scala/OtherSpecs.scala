@@ -9,7 +9,7 @@ object PostBouleshitSpec extends SomeDataInStore {
 
   """POSTing something that does not make sense to Joe's URI""" should {
     "return a 400 Bad Request" in {
-      val statusCode = Http.when(_ == 400)(uri.post("that's bouleshit") get_statusCode)
+      val statusCode = Http.when(_ == 400)(uri.post("that's bouleshit", RDFXML) get_statusCode)
       statusCode must_== 400
     }
   }

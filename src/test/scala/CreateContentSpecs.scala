@@ -60,7 +60,7 @@ object PostRDFSpec extends SomeDataInStore {
 
   "POSTing an RDF document to Joe's URI" should {
     "succeed" in {
-      val httpCode:Int = Http(uri.post(diffRDF) get_statusCode)
+      val httpCode:Int = Http(uri.post(diffRDF, RDFXML) get_statusCode)
       httpCode must_== 200
     }
     "append the diff graph to the initial graph" in {

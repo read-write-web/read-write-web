@@ -42,8 +42,15 @@ package object utiltest {
     def as_model(base: String, lang: Lang): Handler[Model] =
       req >> { is => modelFromInputStream(is, base, lang).toOption.get }
 
-    def post(body: String): Request =
-      (req <<< body).copy(method="POST")
+    def post(body: String, lang: Lang): Request =
+      post(body, lang.contentType)
+    
+    def postSPARQL(body: String): Request =
+      post(body, Post.SPARQL)
+      
+    private def post(body: String, contentType: String): Request =
+      (req <:< Map("Content-Type" -> contentType) <<< body).copy(method="POST")
+
       
     def put(lang: Lang, body: String): Request =
       req <:< Map("Content-Type" -> lang.contentType) <<< body

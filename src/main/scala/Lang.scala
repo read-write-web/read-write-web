@@ -43,7 +43,7 @@ sealed trait Lang {
 
 object Lang {
   
-  val supportedLanguages = Seq(RDFXML, TURTLE, N3)
+  val supportedLanguages = Set(RDFXML, TURTLE, N3)
   val supportContentTypes = supportedLanguages map (_.contentType)
   val supportedAsString = supportContentTypes mkString ", "
   
@@ -56,13 +56,16 @@ object Lang {
       case "application/rdf+xml" => Some(RDFXML)
       case _ => None
   }
+  
+  def unapply(contentType: String): Option[Lang] =
+    apply(contentType)
 
   def apply(req: HttpRequest[_]): Option[Lang] =
     RequestContentType(req) flatMap Lang.apply
     
   def unapply(req: HttpRequest[_]): Option[Lang] =
     apply(req)
-
+    
 }
 
 case object RDFXML extends Lang
