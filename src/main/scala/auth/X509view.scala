@@ -21,19 +21,38 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.w3.readwriteweb
+package org.w3.readwriteweb.auth
 
-import unfiltered.request._
+import unfiltered.request.Path
+import unfiltered.response.{Html, ContentType, Ok}
+import org.w3.readwriteweb.WebCache
 
-object RequestLang {
-  
-  def apply(req: HttpRequest[_]): Option[Lang] =
-    Lang(RequestContentType(req))
+/**
+ * This plan just described the X509 WebID authentication information.
+ * This is a simple version. A future version will show EARL output, and so be useful for debugging the endpoint.
+ *
+ * @author hjs
+ * @created: 13/10/2011
+ */
 
-  def unapply(req: HttpRequest[_]): Option[Lang] =
-    apply(req)
+class X509view(implicit val webCache: WebCache) {
 
-  def unapply(ct: String): Option[Lang] =
-    Lang(ct)
-    
+    val plan = unfiltered.filter.Planify {
+      case req @ Path(path) if path startsWith "/test/auth/x509" =>
+        Ok ~> ContentType("text/html") ~> Html(
+          <html><head><title>Authentication Page</title></head>
+        { req match {
+          case X509Claim(xclaim: X509Claim) => <body>
+            <h1>Authentication Info received</h1>
+            <p>You were identified with the following WebIDs</p>
+             <ul>{xclaim.webidclaims.filter(cl=>cl.verified).map(p=> <li>{p.webId}</li>)}</ul>
+            <p>You sent the following certificate</p>
+            <pre>{xclaim.cert.toString}</pre>
+          </body>
+          case _ => <body><p>We received no Authentication information</p></body>
+        }
+          }</html>)
+
+      }
+
 }

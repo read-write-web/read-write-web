@@ -73,3 +73,15 @@ Options:
  *   --strict  Documents must be created using PUT else they return 404
     
     
+HTTPS with WebID 
+----------------
+
+### to run on https with WebID
+    1. make a directory called tmp 
+    2. lauch
+    > java -Djetty.ssl.keyStoreType=JKS -Djetty.ssl.keyStore=/Users/hjs/tmp/cert/KEYSTORE.jks -Djetty.ssl.keyStorePassword=secret -jar target/read-write-web.jar --https 8443 tmp /2011/09
+
+### to enable debug add the following parameters after 'java'
+
+     -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005
+

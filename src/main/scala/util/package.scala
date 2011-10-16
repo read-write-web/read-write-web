@@ -1,14 +1,15 @@
 package org.w3.readwriteweb
 
 import java.io._
-import java.net.URL
 import com.hp.hpl.jena.rdf.model._
-
 import scalaz._
 import Scalaz._
+import java.net.URL
 
 package object util {
   
+
+
   def modelFromInputStream(
       is: InputStream,
       base: URL,

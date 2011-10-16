@@ -21,19 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.w3.readwriteweb
+package org.w3.readwriteweb.auth
 
-import unfiltered.request._
+import javax.servlet.http.HttpServletRequest
+import java.security.cert.X509Certificate
+import unfiltered.request.HttpRequest
 
-object RequestLang {
-  
-  def apply(req: HttpRequest[_]): Option[Lang] =
-    Lang(RequestContentType(req))
+/**
+ * @author Henry Story, with help from Doug Tangren on unfiltered mailing list
+ * @created: 14/10/2011
+ */
 
-  def unapply(req: HttpRequest[_]): Option[Lang] =
-    apply(req)
+object X509Cert {
+  def unapply[T <: HttpServletRequest](r: HttpRequest[T]): Option[Array[X509Certificate]] =
+    r.underlying.getAttribute("javax.servlet.request.X509Certificate") match {
+      case certs: Array[X509Certificate] => Some(certs)
+      case _ => None
+    }
 
-  def unapply(ct: String): Option[Lang] =
-    Lang(ct)
-    
 }

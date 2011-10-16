@@ -21,19 +21,33 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.w3.readwriteweb
+package org.w3.readwriteweb.auth
 
-import unfiltered.request._
+import java.security.Principal
 
-object RequestLang {
-  
-  def apply(req: HttpRequest[_]): Option[Lang] =
-    Lang(RequestContentType(req))
+/**
+ * @author hjs
+ * @created: 13/10/2011
+ */
 
-  def unapply(req: HttpRequest[_]): Option[Lang] =
-    apply(req)
+/**
+ * @author Henry Story from http://bblfish.net/
+ * @created: 09/10/2011
+ */
 
-  def unapply(ct: String): Option[Lang] =
-    Lang(ct)
-    
+case class WebIdPrincipal(webid: String) extends Principal {
+  def getName = webid
+  override def equals(that: Any) = that match {
+    case other: WebIdPrincipal => other.webid == webid
+    case _ => false
+  }
+}
+
+case class Anonymous() extends Principal {
+  def getName = "anonymous"
+  override def equals(that: Any) =  that match {
+      case other: WebIdPrincipal => other eq this 
+      case _ => false
+    } //anonymous principals are equal only when they are identical. is this wise?
+      //well we don't know when two anonymous people are the same or different.
 }

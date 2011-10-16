@@ -1,9 +1,8 @@
 package org.w3.readwriteweb
 
+import auth.{RDFAuthZ, AuthZ, X509view}
 import org.w3.readwriteweb.util._
 
-import javax.servlet._
-import javax.servlet.http._
 import unfiltered.jetty._
 import java.io.File
 import Console.err
@@ -11,14 +10,27 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import org.clapper.argot._
 import ArgotConverters._
-
 object ReadWriteWebMain {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  val parser = new ArgotParser("read-write-web")
+  val postUsageMsg= Some("""
+  |PROPERTIES
+  |
+  | * Keystore properties that need to be set if https is started
+  |  -Djetty.ssl.keyStoreType=type : the type of the keystore, JKS by default usually
+  |  -Djetty.ssl.keyStore=path : specify path to key store (for https server certificate)
+  |  -Djetty.ssl.keyStorePassword=password : specify password for keystore store (optional)
+  |
+  |NOTES
+  |
+  |  - Trust stores are not needed because we use the WebID protocol, and client certs are nearly never signed by CAs
+  |  - one of --http or --https must be selected
+     """.stripMargin);
 
-  val mode = parser.option[RWWMode](List("mode"), "m", "wiki mode") {
+  val parser = new ArgotParser("read-write-web",postUsage=postUsageMsg)
+
+  val mode = parser.option[RWWMode](List("mode"), "m", "wiki mode: wiki or strict") {
     (sValue, opt) =>
       sValue match {
         case "wiki" => AllResourcesAlreadyExist
@@ -37,7 +49,8 @@ object ReadWriteWebMain {
       }
   }
 
-  val port = parser.parameter[Int]("port", "Port to use", false)
+    val httpPort = parser.option[Int]("http", "Port","start the http server on port")
+    val httpsPort = parser.option[Int]("https","port","start the https server on port")
 
   val rootDirectory = parser.parameter[File]("rootDirectory", "root directory", false) {
     (sValue, opt) => {
@@ -48,6 +61,8 @@ object ReadWriteWebMain {
         file
     }
   }
+
+   implicit val webCache = new WebCache()
 
   val baseURL = parser.parameter[String]("baseURL", "base URL", false)
 
@@ -66,17 +81,24 @@ object ReadWriteWebMain {
         baseURL.value.get,
         lang=rdfLanguage.value getOrElse RDFXML)(mode.value getOrElse ResourcesDontExistByDefault)
     
-    val app = new ReadWriteWeb(filesystem)
+    val app = new ReadWriteWeb(filesystem, new RDFAuthZ(webCache,filesystem))
+
+    //this is incomplete: we should be able to start both ports.... not sure how to do this yet.
+    val service = httpsPort.value match {
+      case Some(port) => HttpsTrustAll(port,"0.0.0.0")
+      case None => Http(httpPort.value.get)
+    }
 
     // configures and launches a Jetty server
-    unfiltered.jetty.Http(port.value.get)
-    .filter(new FilterLogger(logger))
-    .context("/public") {
-      ctx: ContextBuilder =>
+    service.filter(new FilterLogger(logger)).
+      context("/public"){ ctx:ContextBuilder =>
         ctx.resources(ClasspathUtils.fromClasspath("public/").toURI.toURL)
-    }.filter(app.plan).run()
+    }.
+      filter(app.plan).
+      filter(new X509view().plan).run()
     
   }
 
 }
+
 
