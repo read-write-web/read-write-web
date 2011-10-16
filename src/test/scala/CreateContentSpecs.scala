@@ -21,7 +21,7 @@ object PutRDFXMLSpec extends FilesystemBased with SomeRDF with SomeURI {
     "now exist and be isomorphic with the original document" in {
       val (statusCode, via, model) = Http(uri >++ { req => (req.get_statusCode,
                                                             req.get_header("MS-Author-Via"),
-                                                            req as_model(uriBase))
+                                                            req as_model(uriBase, RDFXML))
                                                   } )
       statusCode must_== 200
       via must_== "SPARQL"
@@ -56,7 +56,7 @@ object PostRDFSpec extends SomeDataInStore {
 </rdf:RDF>
 """  
     
-  val expectedFinalModel = modelFromString(finalRDF, uriBase).toOption.get
+  val expectedFinalModel = modelFromString(finalRDF, uriBase, RDFXML).toOption.get
 
   "POSTing an RDF document to Joe's URI" should {
     "succeed" in {
@@ -64,7 +64,7 @@ object PostRDFSpec extends SomeDataInStore {
       httpCode must_== 200
     }
     "append the diff graph to the initial graph" in {
-      val model = Http(uri as_model(uriBase))
+      val model = Http(uri as_model(uriBase, RDFXML))
       model must beIsomorphicWith (expectedFinalModel)
     }
   }

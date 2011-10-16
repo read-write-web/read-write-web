@@ -39,7 +39,7 @@ package object utiltest {
   
   class RequestW(req: Request) {
 
-    def as_model(base: String, lang: String = "RDF/XML-ABBREV"): Handler[Model] =
+    def as_model(base: String, lang: Lang): Handler[Model] =
       req >> { is => modelFromInputStream(is, base, lang).toOption.get }
 
     def post(body: String): Request =
