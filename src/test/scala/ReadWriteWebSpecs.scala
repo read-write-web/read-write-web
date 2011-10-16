@@ -7,6 +7,8 @@ object ReadWriteWebSpec extends Specification {
       // access content
       GetStrictModeSpec, GetWikiModeSpec,
       ContentNegociationSpec,
+      // create directory
+      CreateDirSpec,
       // create content
       PutRDFXMLSpec, PostRDFSpec,
       PutInvalidRDFXMLSpec, PostOnNonExistingResourceSpec,

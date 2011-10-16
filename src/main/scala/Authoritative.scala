@@ -11,8 +11,10 @@ object Authoritative {
     val uri = req.underlying.getRequestURL.toString
     val suffixOpt = uri match {
       case r(_, suffix) => Some(suffix)
+      case _ if uri endsWith "/" => Some("/")
       case _ => None
     }
     Some((new URL(uri), Representation(suffixOpt, Accept(req))))
   }
+
 }

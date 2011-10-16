@@ -5,7 +5,7 @@ import org.w3.readwriteweb.utiltest._
 
 import dispatch._
 
-object PutRDFXMLSpec extends FilesystemBased with SomeRDF with SomeURI {
+object PutRDFXMLSpec extends SomePeopleDirectory {
 
   "PUTing an RDF document on Joe's URI (which does not exist yet)" should {
     "return a 201" in {

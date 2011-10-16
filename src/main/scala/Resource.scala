@@ -16,5 +16,6 @@ trait ResourceManager {
 trait Resource {
   def get(): Validation[Throwable, Model]
   def save(model: Model): Validation[Throwable, Unit]
+  def createDirectory(model: Model): Validation[Throwable, Unit]
 }
 

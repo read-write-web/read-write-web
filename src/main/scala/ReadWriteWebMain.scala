@@ -27,12 +27,12 @@ object ReadWriteWebMain {
       }
     }
 
-  val rdfLanguage = parser.option[String](List("language"), "l", "RDF language") {
+  val rdfLanguage = parser.option[Lang](List("language"), "l", "RDF language") {
     (sValue, opt) =>
       sValue match {
-        case "n3" => "N3"
-        case "turtle" => "N3"
-        case "rdfxml" => "RDF/XML-ABBREV"
+        case "n3" => N3
+        case "turtle" => TURTLE
+        case "rdfxml" => RDFXML
         case _ => throw new ArgotConversionException("Option %s: must be either n3, turtle or rdfxml" format (opt.name, sValue))
       }
   }
@@ -64,7 +64,7 @@ object ReadWriteWebMain {
       new Filesystem(
         rootDirectory.value.get,
         baseURL.value.get,
-        lang=rdfLanguage.value getOrElse "N3")(mode.value getOrElse ResourcesDontExistByDefault)
+        lang=rdfLanguage.value getOrElse RDFXML)(mode.value getOrElse ResourcesDontExistByDefault)
     
     val app = new ReadWriteWeb(filesystem)
 

@@ -13,14 +13,15 @@ object Representation {
       case "turtle" | "ttl" => RDFRepr(TURTLE)
       case "rdf" => RDFRepr(RDFXML)
       case "htm" | "html" | "xhtml" => HTMLRepr
+      case "/" => DirectoryRepr
       case _ => UnknownRepr
     }
   }
   
-  val htmlCharsets = Set("text/html", "application/xhtml+xml")
+  val htmlContentTypes = Set("text/html", "application/xhtml+xml")
   
   def acceptsHTML(ct: Iterable[String]) =
-    ! (htmlCharsets & ct.toSet).isEmpty
+    ! (htmlContentTypes & ct.toSet).isEmpty
   
   def fromAcceptedContentTypes(ct: Iterable[String]): Representation = {
     Lang(ct) map RDFRepr.apply getOrElse {
@@ -50,5 +51,5 @@ object Representation {
 
 case class RDFRepr(lang: Lang) extends Representation
 case object HTMLRepr extends Representation
+case object DirectoryRepr extends Representation
 case object UnknownRepr extends Representation
-case object NoRepr extends Representation
