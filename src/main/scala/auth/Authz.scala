@@ -24,14 +24,15 @@
 package org.w3.readwriteweb.auth
 
 import unfiltered.filter.Plan
-import unfiltered.Cycle
 import unfiltered.request._
-import unfiltered.response.{Unauthorized, BadRequest}
+import unfiltered.response.Unauthorized
 import collection.JavaConversions._
 import javax.security.auth.Subject
-import org.w3.readwriteweb.WebCache
-import org.w3.readwriteweb.auth.Authz._
-import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
+import javax.servlet.http.HttpServletRequest
+import java.net.URL
+import org.w3.readwriteweb.{Resource, ResourceManager, WebCache}
+import com.hp.hpl.jena.query.{QueryExecutionFactory, QueryExecution, QuerySolutionMap, QueryFactory}
+
 
 /**
  * @author hjs
@@ -39,28 +40,25 @@ import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
  */
 
 object HttpMethod {
-   def unapply(req: HttpRequest[_]): Option[Method] =
-     Some(
-       req.method match {
-         case "GET" => GET
-         case "PUT" => PUT
-         case "HEAD" => HEAD
-         case "POST" => POST
-         case "CONNECT" => CONNECT
-         case "OPTIONS" => OPTIONS
-         case "TRACE" => TRACE
-         case m => new Method(m)
-       })
-     
-   
+  def unapply(req: HttpRequest[_]): Option[Method] =
+    Some(
+      req.method match {
+        case "GET" => GET
+        case "PUT" => PUT
+        case "HEAD" => HEAD
+        case "POST" => POST
+        case "CONNECT" => CONNECT
+        case "OPTIONS" => OPTIONS
+        case "TRACE" => TRACE
+        case m => new Method(m)
+      })
+
+
 }
 
-object Authz {
-
-  def authMethod(s: String, httpMethod: Method) = new AuthzFunc
+object AuthZ {
 
 
-  
   implicit def x509toSubject(x509c: X509Claim)(implicit cache: WebCache): Subject = {
     val subject = new Subject()
     subject.getPublicCredentials.add(x509c)
@@ -73,40 +71,128 @@ object Authz {
   }
 }
 
-class NoAuthZ extends Authz {
-  def apply(in: Plan.Intent) = in
+object NullAuthZ extends AuthZ {
+  def subject(req: NullAuthZ.HSRequest) = null
+
+  def guard(m: Method, path: String) = null
+
+  override def protect(in: Plan.Intent) = in
 }
 
-class SimpleAuthZ(implicit val WebCache: WebCache) extends Authz {
 
-  def apply(in: Plan.Intent): Plan.Intent = {
-    req: HttpRequest[HttpServletRequest] => req match {
-        case Path(path) & HttpMethod(m) =>  { //first get things that cost nothing
-            val autf = authMethod(path,m)
-            if (autf.requiresAuth) {
-               X509Claim.unapply(req) match {
-                 case Some(claim) => {
-                   if (autf.isAuthorized(claim,m,path)) in(req)
-                   else Unauthorized
-                 }
-                 case None => Unauthorized
-               }
-            } else Unauthorized
-        }
-        case _ => BadRequest
-      }
+abstract class AuthZ {
+  type HSRequest = HttpRequest[HttpServletRequest]
+  // I need a guard
+  //   - in order to be able to have different implementations, but subclassing could do to
+  //   - the guard should get the information from the file system or the authdb, so it should know where those are
+
+  // I will need a web cache to get the subject
+
+
+  def protect(in: Plan.Intent): Plan.Intent = {
+    req: HSRequest => req match {
+      case HttpMethod(method) & Path(path) if guard(method, path).allow(() => subject(req)) => in(req)
+      case _ => Unauthorized
+    }
+  }
+
+  def subject(req: HSRequest): Option[Subject]
+
+  /** create the guard defined in subclass */
+  def guard(m: Method, path: String): Guard
+
+  abstract class Guard(m: Method, path: String) {
+
+    /**
+     * verify if the given request is authorized
+     * @param subj function returning the subject to be authorized if the resource needs authorization
+     */
+    def allow(subj: () => Option[Subject]): Boolean
   }
 
 }
 
-trait Authz {
-   def apply(in: Plan.Intent): Plan.Intent // we may want to generalise more later to  Cycle.Intent[A,B]
+
+class RDFAuthZ(val webCache: WebCache, rm: ResourceManager) extends AuthZ {
+  import AuthZ.x509toSubject
+  implicit val cache : WebCache = webCache
+
+  def subject(req: HSRequest) = req match {
+    case X509Claim(claim) => Option(claim)
+    case _ => None
+  }
+
+  object RDFGuard {
+    val acl = "http://www.w3.org/ns/auth/acl#"
+    val Read = acl+"Read"
+    val Write = acl+"Write"
+    val Control = acl+"Control"
+
+    val selectQuery = QueryFactory.create("""
+    		  PREFIX : <http://www.w3.org/ns/auth/acl#>
+    		  SELECT ?res ?agent ?group ?mode
+    		  WHERE {
+              ?auth :accessTo ?res ;
+                    :mode ?mode .
+    		    OPTIONAL { ?auth :agentClass ?group . }
+    		    OPTIONAL { ?auth :agent ?agent . }
+    		  }""")
+  }
+
+  def guard(method: Method, path: String) = new Guard(method, path) {
+    import RDFGuard._
+    import org.w3.readwriteweb.util.wrapValidation
+    import org.w3.readwriteweb.util.ValidationW
+
+
+    def allow(subj: () => Option[Subject]) = {
+      val resurl = "file://local"+path + ".protect.n3"
+      val r: Resource = rm.resource(new URL(resurl))
+      val res: ValidationW[Boolean,Boolean] = for {
+        model <- r.get() failMap { x => true }
+      } yield {
+        val initialBinding = new QuerySolutionMap();
+        initialBinding.add("res", model.createResource("file://local"+path))
+        val qe: QueryExecution = QueryExecutionFactory.create(selectQuery, model, initialBinding)
+        val agentsAllowed = try {
+          qe.execSelect().flatMap(qs => {
+            val methods = qs.get("mode").toString match {
+              case Read => List(GET)
+              case Write => List(PUT,POST)
+              case Control => List(POST)
+              case _ => List(GET, PUT,  POST,  DELETE) //nothing everything is allowed
+            }
+           if (methods.contains(method)) Some(Pair(qs.get("agent").toString,qs.get("group").toString))
+           else None
+          })
+        } finally {
+          qe.close()
+        }
+        if (agentsAllowed.hasNext) {
+          subj() match {
+            case Some(s) => agentsAllowed.exists( p =>  s.getPrincipals(classOf[WebIdPrincipal]).exists(id=> id.webid == p._1) )
+            case None => false
+          }
+          //currently we just check for agent match. Group match would require us to have a store
+          //of trusted information of which groups someone was member of -- one would probably need a reasoning engine there.
+        } else false //
+      }
+      res.validation.fold()
+    } // end allow()
+
+
+  }
 
 }
 
-class AuthzFunc {
-   def requiresAuth(): Boolean = true
-   def isAuthorized(webid: Subject,  m: Method, path: String ): Boolean =
-     webid.getPrincipals().exists(p=>p.getName=="http://bblfish.net/people/henry/card#me")
-   
+
+class ResourceGuard(path: String, reqMethod: Method) {
+
+
+  def allow(subjFunc: () => Option[Subject]) = {
+    subjFunc().isEmpty
+  }
 }
+
+
+

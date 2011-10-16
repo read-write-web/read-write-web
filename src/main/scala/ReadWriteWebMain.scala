@@ -1,6 +1,6 @@
 package org.w3.readwriteweb
 
-import auth.{SimpleAuthZ, X509view}
+import auth.{RDFAuthZ, AuthZ, X509view}
 import org.w3.readwriteweb.util._
 
 import unfiltered.jetty._
@@ -81,7 +81,7 @@ object ReadWriteWebMain {
           baseURL.value.get,
           lang=rdfLanguage.value getOrElse "N3")(mode.value getOrElse ResourcesDontExistByDefault)
 
-    val app = new ReadWriteWeb(filesystem, new SimpleAuthZ())
+    val app = new ReadWriteWeb(filesystem, new RDFAuthZ(webCache,filesystem))
 
     //this is incomplete: we should be able to start both ports.... not sure how to do this yet.
     val service = httpsPort.value match {

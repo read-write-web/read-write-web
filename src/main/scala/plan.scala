@@ -1,6 +1,6 @@
 package org.w3.readwriteweb
 
-import auth.{NoAuthZ, Authz}
+import auth.{AuthZ, NullAuthZ}
 import org.w3.readwriteweb.util._
 
 import unfiltered.request._
@@ -21,7 +21,7 @@ import Query.{QueryTypeSelect => SELECT,
 
 import scalaz._
 
-class ReadWriteWeb(rm: ResourceManager, implicit val auth: Authz = new NoAuthZ()) {
+class ReadWriteWeb(rm: ResourceManager, implicit val authz: AuthZ = NullAuthZ) {
   
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
@@ -50,10 +50,10 @@ class ReadWriteWeb(rm: ResourceManager, implicit val auth: Authz = new NoAuthZ()
    *  in the ScalaZ API so I made my own through an implicit.
    *  
    *  At last, Validation[ResponseFunction, ResponseFuntion] is exposed as a ResponseFunction
-   *  through another implicit conversion. It saves us the call to the Validation.lift() method
+   *  through another implicit conversion. It saves us the call to the Validation.fold() method
    */
   val plan = unfiltered.filter.Planify {
-    auth {
+    authz.protect {
     case req @ Path(path) if path startsWith rm.basePath => {
       val baseURI = req.underlying.getRequestURL.toString
       val r: Resource = rm.resource(new URL(baseURI))
