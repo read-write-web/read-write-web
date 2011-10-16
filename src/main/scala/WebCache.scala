@@ -26,9 +26,7 @@ package org.w3.readwriteweb
 import com.hp.hpl.jena.rdf.model.Model
 import java.net.URL
 import org.apache.http.MethodNotSupportedException
-import org.w3.readwriteweb.RDFEncoding._
 import org.w3.readwriteweb.util._
-import org.w3.readwriteweb.{RDFEncoding, RDFXML}
 import scalaz._
 import Scalaz._
 
@@ -61,7 +59,7 @@ class WebCache extends ResourceManager {
       val handler: Handler[Validation[Throwable, Model]] = request.>+>[Validation[Throwable, Model]](res =>  {
         res >:> { headers =>
           val encoding = headers("Content-Type").headOption match {
-            case Some(mime) => RDFEncoding(mime)
+            case Some(mime) => Lang.apply(mime)
             case None => RDFXML  // it would be better to try to do a bit of guessing in this case by looking at content
           }
           val loc = headers("Content-Location").headOption match {

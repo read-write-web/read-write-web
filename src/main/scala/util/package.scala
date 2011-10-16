@@ -16,13 +16,10 @@ package object util {
   object ViaSPARQL extends MSAuthorVia("SPARQL")
   
   object ResponseModel {
-    def apply(model: Model, base: String, encoding: RDFEncoding): ResponseStreamer =
+    def apply(model: Model, base: String, lang: Lang): ResponseStreamer =
       new ResponseStreamer {
         def stream(os: OutputStream): Unit =
-          encoding match {
-            case RDFXML => model.getWriter("RDF/XML-ABBREV").write(model, os, base)
-            case TURTLE => model.getWriter("TURTLE").write(model, os, base)
-          }
+          model.getWriter(lang.jenaLang).write(model, os, base)
       }
   }
 
@@ -37,10 +34,10 @@ package object util {
       }
   }
 
-  //Passing strings into mathod arguments, especially as these differ completely between rdf stacks is not so good
+  //Passing strings into method arguments, especially as these differ completely between rdf stacks is not so good
   //passing objects is better
-  def modelFromInputStream(is:InputStream, base: String,  lang: RDFEncoding): Validation[Throwable, Model]=
-      modelFromInputStream(is, base, RDFEncoding.jena(lang))
+  def modelFromInputStream(is:InputStream, base: String,  lang: Lang): Validation[Throwable, Model]=
+      modelFromInputStream(is, base, lang.jenaLang)
 
   def modelFromInputStream(
       is: InputStream,

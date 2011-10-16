@@ -2,36 +2,41 @@ package org.w3.readwriteweb
 
 import unfiltered.request._
 
-sealed trait RDFEncoding {
-  def toContentType:String
-}
-
-case object RDFXML extends RDFEncoding {
-  def toContentType = "application/rdf+xml"
-}
-
-case object TURTLE extends RDFEncoding {
-  def toContentType = "text/turtle"
-}
-
-object RDFEncoding {
+sealed trait Lang {
   
-  def apply(contentType:String):RDFEncoding =
-    contentType match {
-      case "text/turtle" => TURTLE
-      case "application/rdf+xml" => RDFXML
-      case _ => RDFXML
-    }
-
-  def jena(encoding: RDFEncoding) = encoding match {
-     case RDFXML => "RDF/XML-ABBREV"
-     case TURTLE => "TURTLE"
-     case _      => "RDF/XML-ABBREV" //don't like this default
-   }
-
-  def apply(req:HttpRequest[_]):RDFEncoding = {
-    val contentType = Accept(req).headOption
-    contentType map { RDFEncoding(_) } getOrElse RDFXML
+  def contentType = this match {
+    case RDFXML => "application/rdf+xml"
+    case TURTLE => "text/turtle"
+    case N3 => "text/n3"
+  }
+  
+  def jenaLang = this match {
+    case RDFXML => "RDF/XML-ABBREV"
+    case TURTLE => "TURTLE"
+    case N3 => "N3"
   }
   
 }
+
+object Lang {
+  
+  val default = RDFXML
+  
+  def apply: PartialFunction[String, Lang] = {
+    case "text/n3" => N3
+    case "text/turtle" => TURTLE
+    case "application/rdf+xml" => RDFXML
+  }
+
+  def fromRequest(req: HttpRequest[_]): Lang = {
+    val contentType = Accept(req).headOption
+    contentType map { Lang.apply } getOrElse RDFXML
+  }
+
+}
+
+case object RDFXML extends Lang
+
+case object TURTLE extends Lang
+
+case object N3 extends Lang
