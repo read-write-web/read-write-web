@@ -25,14 +25,14 @@ package org.w3.readwriteweb.auth
 
 import unfiltered.filter.Plan
 import unfiltered.request._
-import unfiltered.response.Unauthorized
 import collection.JavaConversions._
 import javax.security.auth.Subject
-import javax.servlet.http.HttpServletRequest
 import java.net.URL
 import org.w3.readwriteweb.{Resource, ResourceManager, WebCache}
 import com.hp.hpl.jena.query.{QueryExecutionFactory, QueryExecution, QuerySolutionMap, QueryFactory}
 import sun.management.resources.agent
+import unfiltered.response.{ResponseFunction, Unauthorized}
+import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
 
 
 /**
@@ -73,16 +73,18 @@ object AuthZ {
 }
 
 object NullAuthZ extends AuthZ {
-  def subject(req: NullAuthZ.HSRequest) = null
+  def subject(req: NullAuthZ.Req) = null
 
   def guard(m: Method, path: String) = null
 
-  override def protect(in: Plan.Intent) = in
+  override def protect(in: Req=>Res) = in
 }
 
 
 abstract class AuthZ {
-  type HSRequest = HttpRequest[HttpServletRequest]
+  type Req = HttpRequest[HttpServletRequest]
+  type Res = ResponseFunction[HttpServletResponse]
+  
   // I need a guard
   //   - in order to be able to have different implementations, but subclassing could do to
   //   - the guard should get the information from the file system or the authdb, so it should know where those are
@@ -90,17 +92,16 @@ abstract class AuthZ {
   // I will need a web cache to get the subject
 
 
-  def protect(in: Plan.Intent): Plan.Intent = {
-    req: HSRequest => req match {
-      case HttpMethod(method) & Path(path) if guard(method, path).allow(() => subject(req)) => in(req)
+  def protect(in: Req=>Res): Req=>Res =  {
+      case req @ HttpMethod(method) & Path(path) if guard(method, path).allow(() => subject(req)) => in(req)
       case _ => Unauthorized
     }
-  }
+  
 
-  def subject(req: HSRequest): Option[Subject]
+  protected def subject(req: Req): Option[Subject]
 
   /** create the guard defined in subclass */
-  def guard(m: Method, path: String): Guard
+  protected def guard(m: Method, path: String): Guard
 
   abstract class Guard(m: Method, path: String) {
 
@@ -118,7 +119,7 @@ class RDFAuthZ(val webCache: WebCache, rm: ResourceManager) extends AuthZ {
   import AuthZ.x509toSubject
   implicit val cache : WebCache = webCache
 
-  def subject(req: HSRequest) = req match {
+  def subject(req: Req) = req match {
     case X509Claim(claim) => Option(claim)
     case _ => None
   }

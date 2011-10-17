@@ -1,6 +1,6 @@
 package org.w3.readwriteweb
 
-import auth.{RDFAuthZ, AuthZ, X509view}
+import auth.{RDFAuthZ, X509view}
 import org.w3.readwriteweb.util._
 
 import unfiltered.jetty._

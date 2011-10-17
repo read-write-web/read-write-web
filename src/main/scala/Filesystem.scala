@@ -51,6 +51,7 @@ class Filesystem(
           case RDFRepr(rdfLang) => rdfLang
           case _ => lang
         }
+        case _ => lang
       }
       if (fileOnDisk.exists()) {
         val fis = new FileInputStream(fileOnDisk)
