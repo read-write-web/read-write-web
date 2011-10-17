@@ -42,17 +42,20 @@ object WebIDClaim {
      final val xsd: String = "http://www.w3.org/2001/XMLSchema#"
 
     val selectQuery = QueryFactory.create("""
- 		  PREFIX cert: <http://www.w3.org/ns/auth/cert#>
- 		  PREFIX rsa: <http://www.w3.org/ns/auth/rsa#>
- 		  SELECT ?key ?m ?e ?mod ?exp
- 		  WHERE {
- 		   ?key cert:identity ?webid ;
- 		      rsa:modulus ?m ;
- 		      rsa:public_exponent ?e .
- 
- 		    OPTIONAL { ?m cert:hex ?mod . }
- 		    OPTIONAL { ?e cert:decimal ?exp . }
- 		  }""")
+      PREFIX cert: <http://www.w3.org/ns/auth/cert#>
+      PREFIX rsa: <http://www.w3.org/ns/auth/rsa#>
+      SELECT ?m ?e ?mod ?exp
+      WHERE {
+       {
+         ?key  cert:identity ?webid .
+       } UNION {
+         ?webid cert:key ?key .
+       }
+        ?key rsa:modulus ?m ;
+             rsa:public_exponent ?e .
+       OPTIONAL { ?m cert:hex ?mod . }
+       OPTIONAL { ?e cert:decimal ?exp . }
+}""")
 
   /**
     * Transform an RDF representation of a number into a BigInteger
