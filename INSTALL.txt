@@ -1,0 +1,62 @@
+
+0. download code using mercurial, and switch to the webid branch
+  $ hg clone https://dvcs.w3.org/hg/read-write-web
+  $ cd read-write-web
+  $ hg checkout webid
+
+1. download java 6 or above for your Operating System - don't download just the JRE but also the java tools
+
+2. download scala http://www.scala-lang.org/
+
+3. download the scala build tool ( sbt ) from https://github.com/harrah/xsbt 
+   I have an xsbt shell script that contains
+    java $SBT_PROPS -Xmx512m -Dfile.encoding=UTF-8 -jar `dirname $0`/jars/sbt-launch-0.11.0.jar "$@"
+
+4. set up some environmental variables for the https server to run on
+
+ export SBT_PROPS='-Djetty.ssl.keyStoreType=JKS -Djetty.ssl.keyStore=keys/KEYSTORE.jks -Djetty.ssl.keyStorePassword=secret'  
+
+  Notice if you want to avoid browser warnings and you want to put this up on a public site then you need to get a CA signed certificate for your domain. There are providers that give those for free. There are protocols that will appear to make this no longer necessary
+
+5. run sbt, then start the server from the command line
+
+  $ sbt
+  >  run --https 8443 test_www /2011/09
+
+  This will compile the server, start the https port on 8442 and use files in the test_www directory so that you can access them at https://localhost:8443/2011/09/
+
+6. connect to different resources
+
+ $ curl -k https://localhost:8443/public/ 
+  If you access this via your browser and you have more than one webid certificate, your browser will ask you for  even when you access this. We are working on a solution to stop this from happening.
+
+The following is a protected resource so if you access it without authentification credentials you will get  
+
+ $  curl  -i -k https://localhost:8443/2011/09/foaf.n3
+HTTP/1.1 401 Unauthorized
+Content-Length: 0
+Server: Jetty(7.2.2.v20101205)
+   
+If you have a WebID enabled certificate ( http://webid.info/ ) with the public and private keys in a pem file, then you can access the resource with, 
+
+ $ curl -E Certificates.pem -i -k https://localhost:8443/2011/09/foaf.n3
+
+since only Henry Story can view it as seen from the file
+
+  $ cat test_www/foaf.n3.protect.n3 
+
+@prefix acl: <http://www.w3.org/ns/auth/acl#> .
+@prefix : <#> .
+
+:a1 a acl:Authorization;
+   acl:accessTo <foaf.n3>;
+   acl:mode acl:Read;
+   acl:agent <http://bblfish.net/people/henry/card#me> .
+
+If you want to give yourself access then replace Henry's WebID, "http://bblfish.net/people/henry/card#me"  with your own, or make another example for that.
+
+More interesting examples to follow soon.
+
+
+  
+
