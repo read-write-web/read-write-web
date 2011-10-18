@@ -84,13 +84,6 @@ object NullAuthZ extends AuthZ {
 abstract class AuthZ {
   type Req = HttpRequest[HttpServletRequest]
   type Res = ResponseFunction[HttpServletResponse]
-  
-  // I need a guard
-  //   - in order to be able to have different implementations, but subclassing could do to
-  //   - the guard should get the information from the file system or the authdb, so it should know where those are
-
-  // I will need a web cache to get the subject
-
 
   def protect(in: Req=>Res): Req=>Res =  {
       case req @ HttpMethod(method) & Path(path) if guard(method, path).allow(() => subject(req)) => in(req)
@@ -155,7 +148,7 @@ class RDFAuthZ(val webCache: WebCache, rm: ResourceManager) extends AuthZ {
       } yield {
         val initialBinding = new QuerySolutionMap();
         initialBinding.add("res", model.createResource("file://local"+path))
-        val qe: QueryExecution = QueryExecutionFactory.create(selectQuery, model)//, initialBinding)
+        val qe: QueryExecution = QueryExecutionFactory.create(selectQuery, model, initialBinding)
         val agentsAllowed = try {
           val exec = qe.execSelect()
           val res = for (qs <- exec) yield {
