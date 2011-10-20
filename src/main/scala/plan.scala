@@ -16,7 +16,7 @@ import Query.{QueryTypeSelect => SELECT,
               QueryTypeConstruct => CONSTRUCT,
               QueryTypeDescribe => DESCRIBE}
 
-import scalaz._
+import scalaz.{Resource=>SzResource,_}
 import unfiltered.filter.Plan
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
 import unfiltered.request._

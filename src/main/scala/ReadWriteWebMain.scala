@@ -10,6 +10,9 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import org.clapper.argot._
 import ArgotConverters._
+import javax.servlet.http.HttpServletRequest
+import unfiltered.request.HttpRequest
+
 object ReadWriteWebMain {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
@@ -95,7 +98,8 @@ object ReadWriteWebMain {
         ctx.resources(ClasspathUtils.fromClasspath("public/").toURI.toURL)
     }.
       filter(app.plan).
-      filter(new X509view().plan).run()
+      filter(new X509view().plan).
+      filter(new EchoPlan().plan).run()
     
   }
 

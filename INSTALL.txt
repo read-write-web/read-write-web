@@ -27,8 +27,13 @@
 
 6. connect to different resources
 
+6.1 GETing a public resource
+
  $ curl -k https://localhost:8443/public/ 
+
   If you access this via your browser and you have more than one webid certificate, your browser will ask you for  even when you access this. We are working on a solution to stop this from happening.
+
+6.2 GETing a protected resource
 
 The following is a protected resource so if you access it without authentification credentials you will get  
 
@@ -55,8 +60,25 @@ since only Henry Story can view it as seen from the file
 
 If you want to give yourself access then replace Henry's WebID, "http://bblfish.net/people/henry/card#me"  with your own, or make another example for that.
 
-More interesting examples to follow soon.
+6.3 Uploading a resource
 
+Say you wanted to upload an RDF file to the server
 
-  
+$ curl http://bblfish.net/people/henry/card.rdf | curl -i -k  -H "Content-Type: application/rdf+xml" -X PUT https://localhost:8443/2011/09/test2.rdf -T - 
+HTTP/1.1 100 Continue
+
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100 24386  100 24386    0     0   2223      0  0:00:10  0:00:10 --:--:-- 33405
+HTTP/1.1 201 Created
+Content-Length: 0
+Server: Jetty(7.2.2.v20101205)
+
+the file will then be available as /2011/09/test2.rdf  on the localhost server
+
+6.4 querying a resource with SPARQL 
+
+You can write a SPARQL query and then query the given model by POSTing the query to the resource
+
+curl -k -i -H "Content-Type: application/sparql-query"  -X POST https://localhost:8443/2011/09/test.rdf -T queryfriends.sparql
 
