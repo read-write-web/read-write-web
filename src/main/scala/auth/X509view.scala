@@ -38,7 +38,7 @@ import unfiltered.Cycle
 
 trait X509view[A,B]  {
    implicit def wc: WebCache
-   implicit def man: Manifest[A]
+   implicit def manif: Manifest[A]
 
     def intent: Cycle.Intent[A, B] =  {
       case req @ Path(path) if path startsWith "/test/auth/x509" =>

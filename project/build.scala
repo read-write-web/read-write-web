@@ -6,12 +6,13 @@ import Keys._
 object Dependencies {
   val specs = "org.scala-tools.testing" %% "specs" % "1.6.9" % "test"
   val dispatch_http = "net.databinder" %% "dispatch-http" % "0.8.5" 
-  val unfiltered_filter = "net.databinder" %% "unfiltered-filter" % "0.5.0"
-  val unfiltered_jetty = "net.databinder" %% "unfiltered-jetty" % "0.5.0"
+  val unfiltered_version = "0.5.1"
+  val unfiltered_filter = "net.databinder" %% "unfiltered-filter" % unfiltered_version 
+  val unfiltered_jetty = "net.databinder" %% "unfiltered-jetty" % unfiltered_version 
   // val unfiltered_spec = "net.databinder" %% "unfiltered-spec" % "0.4.1" % "test"
   val ivyUnfilteredSpec =
     <dependencies>
-      <dependency org="net.databinder" name="unfiltered-spec_2.9.1" rev="0.5.0">
+      <dependency org="net.databinder" name="unfiltered-spec_2.9.1" rev={unfiltered_version}>
         <exclude org="net.databinder" module="dispatch-mime_2.9.0-1"/>
       </dependency>
     </dependencies>

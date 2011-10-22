@@ -66,7 +66,7 @@ trait ReadWriteWebArgs {
     }
   }
 
-   implicit val webCache = new WebCache()
+  val webCache = new WebCache()
 
   val baseURL = parser.parameter[String]("baseURL", "base URL", false)
 
@@ -75,8 +75,7 @@ trait ReadWriteWebArgs {
 
 object ReadWriteWebMain extends ReadWriteWebArgs {
 
-  implicit def planify(intent: Plan.Intent): unfiltered.filter.Plan  =
-    unfiltered.filter.Planify(intent)
+   import unfiltered.filter.Planify
 
   // regular Java main
   def main(args: Array[String]) {
@@ -107,9 +106,14 @@ object ReadWriteWebMain extends ReadWriteWebArgs {
         ctx.resources(ClasspathUtils.fromClasspath("public/").toURI.toURL)
     }.
       filter(app.plan).
-//      filter(new X509view().intent[HttpServletRequest,HttpServletResponse]).
+      filter(Planify(x509v.intent)).
       filter(new EchoPlan().plan).run()
     
+  }
+
+  object x509v extends X509view[HttpServletRequest,HttpServletResponse] {
+    def wc = webCache
+    def manif = manifest[HttpServletRequest]
   }
 
 }

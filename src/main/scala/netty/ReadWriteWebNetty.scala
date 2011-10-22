@@ -69,7 +69,7 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
 
   object x509v extends  cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with X509view[ReceivedMessage,HttpResponse] {
     def wc = webCache
-    def man = manifest[ReceivedMessage]
+    def manif = manifest[ReceivedMessage]
   }
 
 }
