@@ -26,8 +26,6 @@ package org.w3.readwriteweb.netty
 import org.jboss.netty.handler.ssl.SslHandler
 import unfiltered.request.Path
 import unfiltered.response.ResponseString
-import unfiltered.netty._
-import org.w3.readwriteweb.netty.{NormalPlan, KeyAuth_Https}
 
 /**
  * A very light weight plan to test SSL login using TLS renegotiation in netty.

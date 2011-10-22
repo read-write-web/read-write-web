@@ -63,16 +63,13 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
      }
 
      // configures and launches a Netty server
-     service.plan( new tmp ).run()
+     service.plan( x509v ).run()
      
    }
 
-  class tmp extends  cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with tmp2
-
-  trait tmp2 extends X509view[ReceivedMessage,HttpResponse] {
+  object x509v extends  cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with X509view[ReceivedMessage,HttpResponse] {
     def wc = webCache
     def man = manifest[ReceivedMessage]
-
   }
 
 }

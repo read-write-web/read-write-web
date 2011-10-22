@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-KS=/Volumes/Dev/Programming/w3.org/hg/read-write-web/keys/KEYSTORE.jks
+KS=keys/KEYSTORE.jks
 while [ $# -gt 0 ] 
 do 
  case $1 in 
