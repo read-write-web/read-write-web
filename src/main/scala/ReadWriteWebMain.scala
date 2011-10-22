@@ -107,7 +107,7 @@ object ReadWriteWebMain extends ReadWriteWebArgs {
         ctx.resources(ClasspathUtils.fromClasspath("public/").toURI.toURL)
     }.
       filter(app.plan).
-      filter(new X509view().intent[HttpServletRequest,HttpServletResponse]).
+//      filter(new X509view().intent[HttpServletRequest,HttpServletResponse]).
       filter(new EchoPlan().plan).run()
     
   }

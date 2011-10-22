@@ -36,9 +36,11 @@ import unfiltered.Cycle
  * @created: 13/10/2011
  */
 
-class X509view()(implicit val webCache: WebCache) {
+trait X509view[A,B]  {
+   implicit def wc: WebCache
+   implicit def man: Manifest[A]
 
-    def intent[A: Manifest,B]: Cycle.Intent[A, B] =  {
+    def intent: Cycle.Intent[A, B] =  {
       case req @ Path(path) if path startsWith "/test/auth/x509" =>
         Ok ~> ContentType("text/html") ~> Html(
           <html><head><title>Authentication Page</title></head>

@@ -27,7 +27,8 @@ import org.clapper.argot.ArgotUsageException
 import scala.Console._
 import org.w3.readwriteweb.auth.{X509view, RDFAuthZ}
 import org.w3.readwriteweb._
-import unfiltered.netty.{ServerErrorResponse, cycle}
+import unfiltered.netty.{ReceivedMessage, ServerErrorResponse, cycle}
+import org.jboss.netty.handler.codec.http.HttpResponse
 
 /**
  * ReadWrite Web for Netty server, allowing content renegotiation
@@ -36,7 +37,7 @@ import unfiltered.netty.{ServerErrorResponse, cycle}
  * @created: 21/10/2011
  */
 
-class ReadWriteWebNetty extends ReadWriteWebArgs {
+object ReadWriteWebNetty extends ReadWriteWebArgs {
 
   // regular Java main
    def main(args: Array[String]) {
@@ -65,6 +66,14 @@ class ReadWriteWebNetty extends ReadWriteWebArgs {
      service.plan( new tmp ).run()
      
    }
-  
-   class tmp extends cycle.Plan with ServerErrorResponse
+
+  class tmp extends  cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with tmp2
+
+  trait tmp2 extends X509view[ReceivedMessage,HttpResponse] {
+    def wc = webCache
+    def man = manifest[ReceivedMessage]
+
+  }
+
 }
+
