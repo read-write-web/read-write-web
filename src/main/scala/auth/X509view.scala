@@ -26,6 +26,7 @@ package org.w3.readwriteweb.auth
 import unfiltered.request.Path
 import unfiltered.response.{Html, ContentType, Ok}
 import org.w3.readwriteweb.WebCache
+import unfiltered.Cycle
 
 /**
  * This plan just described the X509 WebID authentication information.
@@ -35,14 +36,14 @@ import org.w3.readwriteweb.WebCache
  * @created: 13/10/2011
  */
 
-class X509view(implicit val webCache: WebCache) {
+class X509view()(implicit val webCache: WebCache) {
 
-    val plan = unfiltered.filter.Planify {
+    def intent[A: Manifest,B]: Cycle.Intent[A, B] =  {
       case req @ Path(path) if path startsWith "/test/auth/x509" =>
         Ok ~> ContentType("text/html") ~> Html(
           <html><head><title>Authentication Page</title></head>
         { req match {
-          case X509Claim(xclaim: X509Claim) => <body>
+          case X509Claim(xclaim) => <body>
             <h1>Authentication Info received</h1>
             <p>You were identified with the following WebIDs</p>
              <ul>{xclaim.webidclaims.filter(cl=>cl.verified).map(p=> <li>{p.webId}</li>)}</ul>

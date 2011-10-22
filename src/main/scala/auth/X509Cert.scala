@@ -24,19 +24,62 @@
 package org.w3.readwriteweb.auth
 
 import javax.servlet.http.HttpServletRequest
-import java.security.cert.X509Certificate
 import unfiltered.request.HttpRequest
+import unfiltered.netty.ReceivedMessage
+import java.security.cert.{X509Certificate}
+import java.security.cert.Certificate
 
-/**
- * @author Henry Story, with help from Doug Tangren on unfiltered mailing list
- * @created: 14/10/2011
- */
 
-object X509Cert {
-  def unapply[T <: HttpServletRequest](r: HttpRequest[T]): Option[Array[X509Certificate]] =
-    r.underlying.getAttribute("javax.servlet.request.X509Certificate") match {
-      case certs: Array[X509Certificate] => Some(certs)
-      case _ => None
+object Certs {
+
+
+    def unapplySeq[T](r: HttpRequest[T]) (implicit m: Manifest[T]) : Option[IndexedSeq[Certificate]] =  {
+      if (m <:< manifest[HttpServletRequest]) unapplyServletRequest(r.asInstanceOf[HttpRequest[HttpServletRequest]])
+      else if (m <:< manifest[ReceivedMessage]) unapplyReceivedMessage(r.asInstanceOf[HttpRequest[ReceivedMessage]])
+      else None //todo: should perhaps throw an exception here.
+    }
+
+
+    //todo: both of these return X509Certificates optionally.
+    //todo: but they don't pass any error messages along, which they could in the case of netty
+
+    private def unapplyServletRequest[T <: HttpServletRequest](r: HttpRequest[T]):
+        Option[IndexedSeq[Certificate]] =  {
+      r.underlying.getAttribute("javax.servlet.request.X509Certificate") match {
+        case certs: Array[Certificate] => Some(certs)
+        case _ => None
+      }
+    }
+
+    private def unapplyReceivedMessage[T <: ReceivedMessage](r: HttpRequest[T]):
+      Option[IndexedSeq[Certificate]] = {
+
+      import org.jboss.netty.handler.ssl.SslHandler
+      r.underlying.context.getPipeline.get(classOf[SslHandler]) match {
+        case sslh: SslHandler => {
+          sslh.setEnableRenegotiation(true)
+          sslh.getEngine.setWantClientAuth(true)
+          val future = sslh.handshake()
+          future.await(30000) //that's certainly way too long.
+          if (future.isDone) {
+            if (future.isSuccess)
+              try {
+                Some(sslh.getEngine.getSession.getPeerCertificates)
+              } catch {
+                case e => None
+              }
+            else {
+              None
+            }
+
+          } else {
+            None
+          }
+        }
+        case _ => None
+      }
+
     }
 
 }
+

@@ -50,9 +50,9 @@ object X509Claim {
          def load(x509: X509Certificate) = new X509Claim(x509)
      })
 
-  def unapply[T <: HttpServletRequest](r: HttpRequest[T])(implicit webCache: WebCache): Option[X509Claim] =
+  def unapply[T](r: HttpRequest[T])(implicit webCache: WebCache,m: Manifest[T]): Option[X509Claim] =
     r match {
-      case X509Cert(certs) => Some(idCache.get(certs(0)))
+      case Certs(c1: X509Certificate, _*) => Some(idCache.get(c1))
       case _ => None
     }
 

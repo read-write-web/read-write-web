@@ -10,11 +10,12 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import org.clapper.argot._
 import ArgotConverters._
-import javax.servlet.http.HttpServletRequest
 import unfiltered.request.HttpRequest
+import unfiltered.Cycle
+import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
+import unfiltered.filter.Plan
 
-object ReadWriteWebMain {
-
+trait ReadWriteWebArgs {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
   val postUsageMsg= Some("""
@@ -69,6 +70,14 @@ object ReadWriteWebMain {
 
   val baseURL = parser.parameter[String]("baseURL", "base URL", false)
 
+}
+
+
+object ReadWriteWebMain extends ReadWriteWebArgs {
+
+  implicit def planify(intent: Plan.Intent): unfiltered.filter.Plan  =
+    unfiltered.filter.Planify(intent)
+
   // regular Java main
   def main(args: Array[String]) {
 
@@ -98,7 +107,7 @@ object ReadWriteWebMain {
         ctx.resources(ClasspathUtils.fromClasspath("public/").toURI.toURL)
     }.
       filter(app.plan).
-      filter(new X509view().plan).
+      filter(new X509view().intent[HttpServletRequest,HttpServletResponse]).
       filter(new EchoPlan().plan).run()
     
   }
