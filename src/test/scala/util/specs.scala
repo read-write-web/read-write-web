@@ -2,27 +2,18 @@ package org.w3.readwriteweb.util
 
 import org.w3.readwriteweb._
 
-import auth.RDFAuthZ
 import org.specs._
-import java.net.URL
-import unfiltered.response._
-import unfiltered.request._
 import dispatch._
 import java.io._
 
-import com.codecommit.antixml._
 import grizzled.file.GrizzledFile._
 
-import com.hp.hpl.jena.rdf.model._
-import com.hp.hpl.jena.query._
-import com.hp.hpl.jena.update._
-
-import org.w3.readwriteweb.util._
 import org.w3.readwriteweb.utiltest._
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import unfiltered.filter.Planify
+import unfiltered.netty.{ReceivedMessage, ServerErrorResponse, cycle}
 
-trait ResourceManaged extends Specification with unfiltered.spec.jetty.Served {
+trait JettyResourceManaged extends Specification with unfiltered.spec.jetty.Served {
   
   def resourceManager: ResourceManager
 
@@ -34,6 +25,22 @@ trait ResourceManaged extends Specification with unfiltered.spec.jetty.Served {
   def setup = { _.filter(Planify(rww.intent)) }
  
 }
+
+trait ResourceManaged extends Specification with unfiltered.spec.netty.Served {
+  import org.jboss.netty.handler.codec.http._
+
+  def resourceManager: ResourceManager
+
+  val rww = new cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with ReadWriteWeb[ReceivedMessage,HttpResponse] {
+    val rm = resourceManager
+    def manif = manifest[ReceivedMessage]
+    //  override val authz = new RDFAuthZ[ReceivedMessage,HttpResponse](webCache,filesystem)
+  }
+
+  def setup = { _.plan(rww) }
+
+}
+
 
 trait FilesystemBased extends ResourceManaged {
   
