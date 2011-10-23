@@ -20,7 +20,7 @@ object Dependencies {
   val jena = "com.hp.hpl.jena" % "jena" % "2.6.4"
   val arq = "com.hp.hpl.jena" % "arq" % "2.8.8"
   val grizzled = "org.clapper" %% "grizzled-scala" % "1.0.8" % "test"
-  val scalaz = "org.scalaz" %% "scalaz-core" % "6.0.2"
+  val scalaz = "org.scalaz" %% "scalaz-core" % "6.0.3"
   val argot =  "org.clapper" %% "argot" % "0.3.5"
 }
 
