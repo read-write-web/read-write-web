@@ -33,53 +33,54 @@ import java.security.cert.Certificate
 object Certs {
 
 
-    def unapplySeq[T](r: HttpRequest[T]) (implicit m: Manifest[T]) : Option[IndexedSeq[Certificate]] =  {
-      if (m <:< manifest[HttpServletRequest]) unapplyServletRequest(r.asInstanceOf[HttpRequest[HttpServletRequest]])
-      else if (m <:< manifest[ReceivedMessage]) unapplyReceivedMessage(r.asInstanceOf[HttpRequest[ReceivedMessage]])
-      else None //todo: should perhaps throw an exception here.
+  def unapplySeq[T](r: HttpRequest[T])(implicit m: Manifest[T]): Option[IndexedSeq[Certificate]] = {
+    if (m <:< manifest[HttpServletRequest]) unapplyServletRequest(r.asInstanceOf[HttpRequest[HttpServletRequest]])
+    else if (m <:< manifest[ReceivedMessage]) unapplyReceivedMessage(r.asInstanceOf[HttpRequest[ReceivedMessage]])
+    else None //todo: should  throw an exception here?
+  }
+
+
+  //todo: should perhaps pass back error messages, which they could in the case of netty
+
+  private def unapplyServletRequest[T <: HttpServletRequest](r: HttpRequest[T]):
+  Option[IndexedSeq[Certificate]] = {
+    r.underlying.getAttribute("javax.servlet.request.X509Certificate") match {
+      case certs: Array[Certificate] => Some(certs)
+      case _ => None
     }
+  }
 
+  private def unapplyReceivedMessage[T <: ReceivedMessage](r: HttpRequest[T]):
+  Option[IndexedSeq[Certificate]] = {
 
-    //todo: both of these return X509Certificates optionally.
-    //todo: but they don't pass any error messages along, which they could in the case of netty
-
-    private def unapplyServletRequest[T <: HttpServletRequest](r: HttpRequest[T]):
-        Option[IndexedSeq[Certificate]] =  {
-      r.underlying.getAttribute("javax.servlet.request.X509Certificate") match {
-        case certs: Array[Certificate] => Some(certs)
-        case _ => None
-      }
-    }
-
-    private def unapplyReceivedMessage[T <: ReceivedMessage](r: HttpRequest[T]):
-      Option[IndexedSeq[Certificate]] = {
-
-      import org.jboss.netty.handler.ssl.SslHandler
-      r.underlying.context.getPipeline.get(classOf[SslHandler]) match {
-        case sslh: SslHandler => {
+    import org.jboss.netty.handler.ssl.SslHandler
+    r.underlying.context.getPipeline.get(classOf[SslHandler]) match {
+      case sslh: SslHandler => try {
+        //return the client certificate in the existing session if one exists
+        Some(sslh.getEngine.getSession.getPeerCertificates)
+      } catch {
+        case e => {
+          // request a certificate from the user
           sslh.setEnableRenegotiation(true)
           sslh.getEngine.setWantClientAuth(true)
           val future = sslh.handshake()
           future.await(30000) //that's certainly way too long.
           if (future.isDone) {
-            if (future.isSuccess)
-              try {
-                Some(sslh.getEngine.getSession.getPeerCertificates)
-              } catch {
-                case e => None
-              }
-            else {
+            if (future.isSuccess) try {
+              Some(sslh.getEngine.getSession.getPeerCertificates)
+            } catch {
+              case e => None
+            } else {
               None
             }
-
           } else {
             None
           }
         }
-        case _ => None
       }
-
+      case _ => None
     }
 
+  }
 }
 
