@@ -2,6 +2,7 @@ package org.w3.readwriteweb.util
 
 import org.w3.readwriteweb._
 
+import auth.RDFAuthZ
 import org.specs._
 import java.net.URL
 import unfiltered.response._
@@ -18,12 +19,19 @@ import com.hp.hpl.jena.update._
 
 import org.w3.readwriteweb.util._
 import org.w3.readwriteweb.utiltest._
+import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
+import unfiltered.filter.Planify
 
 trait ResourceManaged extends Specification with unfiltered.spec.jetty.Served {
   
   def resourceManager: ResourceManager
-  
-  def setup = { _.filter(new ReadWriteWeb(resourceManager).plan) }
+
+  val rww = new ReadWriteWeb[HttpServletRequest,HttpServletResponse] {
+     val rm = resourceManager
+     def manif = manifest[HttpServletRequest]
+   }
+
+  def setup = { _.filter(Planify(rww.intent)) }
  
 }
 

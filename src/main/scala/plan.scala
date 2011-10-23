@@ -21,6 +21,7 @@ import unfiltered.filter.Plan
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
 import unfiltered.request._
 import unfiltered.response._
+import unfiltered.Cycle
 
 //object ReadWriteWeb {
 //
@@ -30,25 +31,20 @@ import unfiltered.response._
 //
 //}
 
-class ReadWriteWeb(rm: ResourceManager, implicit val authz: AuthZ = NullAuthZ)  {
+/**
+ * The ReadWriteWeb intent.
+ * It is independent of jetty or netty
+ */
+trait ReadWriteWeb[Req,Res] {
+  val rm: ResourceManager
+  implicit def manif: Manifest[Req]
+  implicit val authz: AuthZ[Req,Res] = new NullAuthZ[Req,Res]
   // a few type short cuts to make it easier to reason with the code here
   // one may want to generalise this code so that it does not depend so strongly on servlets.
-  type Req = HttpRequest[HttpServletRequest]
-  type Res = ResponseFunction[HttpServletResponse]
+//  type Request = HttpRequest[Req]
+//  type Response = ResponseFunction[Res]
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-
-
- /**
-  *  The Servlet Filter for the ReadWriteWeb
-  *
-  *  Planify.apply takes an Intent, which is defined in Cycle by
-  *  type Intent [-A, -B] = PartialFunction[HttpRequest[A], ResponseFunction[B]]
-  *  the corresponding syntax is: case ... => ...
-  */
-  //bblfish: I don't understand why this has to be lazy, but if it is not, it the plan ends up throwing a null
-  //pointer exception.
-  lazy val plan = unfiltered.filter.Planify(intent)
 
   /**
    * The partial function that if triggered sends to the readwrite web code.
@@ -56,8 +52,8 @@ class ReadWriteWeb(rm: ResourceManager, implicit val authz: AuthZ = NullAuthZ)  
    * ( Note that we don't want to protect this intent, since that would be to apply the security to all other applications,
    * many of which may want different authorization implementations )
    */
-  val intent : Plan.Intent = {
-      case req @ Path(path) if path startsWith rm.basePath => authz.protect(readWriteWebIntent)(req)
+  def intent : Cycle.Intent[Req,Res] = {
+      case req @ Path(path) if path startsWith rm.basePath => authz.protect(rwwIntent)(req)
   }
 
   /**
@@ -79,11 +75,11 @@ class ReadWriteWeb(rm: ResourceManager, implicit val authz: AuthZ = NullAuthZ)  
    *  At last, Validation[ResponseFunction, ResponseFuntion] is exposed as a ResponseFunction
    *  through another implicit conversion. It saves us the call to the Validation.fold() method
    */
-  val readWriteWebIntent =  (req: Req) => {
+  def rwwIntent  =  (req: HttpRequest[Req]) => {
 
           val Authoritative(uri, representation) = req
           val r: Resource = rm.resource(uri)
-          val res: Res = req match {
+          val res: ResponseFunction[Res] = req match {
             case GET(_) if representation == HTMLRepr => {
               val source = Source.fromFile("src/main/resources/skin.html")("UTF-8")
               val body = source.getLines.mkString("\n")

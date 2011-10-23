@@ -9,6 +9,7 @@ object Dependencies {
   val unfiltered_version = "0.5.1"
   val unfiltered_filter = "net.databinder" %% "unfiltered-filter" % unfiltered_version 
   val unfiltered_jetty = "net.databinder" %% "unfiltered-jetty" % unfiltered_version 
+  val unfiltered_netty = "net.databinder" %% "unfiltered-netty" % unfiltered_version 
   // val unfiltered_spec = "net.databinder" %% "unfiltered-spec" % "0.4.1" % "test"
   val ivyUnfilteredSpec =
     <dependencies>
@@ -82,6 +83,7 @@ object YourProjectBuild extends Build {
       libraryDependencies += dispatch_http,
       libraryDependencies += unfiltered_filter,
       libraryDependencies += unfiltered_jetty,
+      libraryDependencies += unfiltered_netty,
 //      libraryDependencies += slf4jSimple,
       libraryDependencies += jena,
       libraryDependencies += arq,

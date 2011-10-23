@@ -92,7 +92,11 @@ object ReadWriteWebMain extends ReadWriteWebArgs {
         baseURL.value.get,
         lang=rdfLanguage.value getOrElse RDFXML)(mode.value getOrElse ResourcesDontExistByDefault)
     
-    val app = new ReadWriteWeb(filesystem, new RDFAuthZ(webCache,filesystem))
+    val rww = new ReadWriteWeb[HttpServletRequest,HttpServletResponse] {
+      val rm = filesystem
+      def manif = manifest[HttpServletRequest]
+      override implicit val authz = new RDFAuthZ[HttpServletRequest,HttpServletResponse](webCache,filesystem)
+    }
 
     //this is incomplete: we should be able to start both ports.... not sure how to do this yet.
     val service = httpsPort.value match {
@@ -105,11 +109,13 @@ object ReadWriteWebMain extends ReadWriteWebArgs {
       context("/public"){ ctx:ContextBuilder =>
         ctx.resources(ClasspathUtils.fromClasspath("public/").toURI.toURL)
     }.
-      filter(app.plan).
+      filter(Planify(rww.intent)).
       filter(Planify(x509v.intent)).
       filter(new EchoPlan().plan).run()
     
   }
+
+
 
   object x509v extends X509view[HttpServletRequest,HttpServletResponse] {
     def wc = webCache

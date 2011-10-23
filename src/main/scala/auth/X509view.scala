@@ -30,17 +30,20 @@ import unfiltered.Cycle
 
 /**
  * This plan just described the X509 WebID authentication information.
+ * It works independently of the underlying Cycle.Intent implementations of Request and Response,
+ * so it can work with servlet filters just as well as with netty.
+ *
  * This is a simple version. A future version will show EARL output, and so be useful for debugging the endpoint.
  *
  * @author hjs
  * @created: 13/10/2011
  */
 
-trait X509view[A,B]  {
+trait X509view[Request,Response]  {
    implicit def wc: WebCache
-   implicit def manif: Manifest[A]
+   implicit def manif: Manifest[Request]
 
-    def intent: Cycle.Intent[A, B] =  {
+    def intent: Cycle.Intent[Request, Response] =  {
       case req @ Path(path) if path startsWith "/test/auth/x509" =>
         Ok ~> ContentType("text/html") ~> Html(
           <html><head><title>Authentication Page</title></head>

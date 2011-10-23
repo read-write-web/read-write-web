@@ -72,18 +72,18 @@ object AuthZ {
   }
 }
 
-object NullAuthZ extends AuthZ {
-  def subject(req: NullAuthZ.Req) = null
+class NullAuthZ[Request,Response] extends AuthZ[Request,Response] {
+  override def subject(req: Req): Option[Subject] = None
 
-  def guard(m: Method, path: String) = null
+  override def guard(m: Method, path: String): Guard = null
 
   override def protect(in: Req=>Res) = in
 }
 
 
-abstract class AuthZ {
-  type Req = HttpRequest[HttpServletRequest]
-  type Res = ResponseFunction[HttpServletResponse]
+abstract class AuthZ[Request,Response] {
+  type Req = HttpRequest[Request]
+  type Res = ResponseFunction[Response]
 
   def protect(in: Req=>Res): Req=>Res =  {
       case req @ HttpMethod(method) & Path(path) if guard(method, path).allow(() => subject(req)) => in(req)
@@ -108,7 +108,8 @@ abstract class AuthZ {
 }
 
 
-class RDFAuthZ(val webCache: WebCache, rm: ResourceManager) extends AuthZ {
+class RDFAuthZ[Request,Response](val webCache: WebCache, rm: ResourceManager)
+  (implicit val m: Manifest[Request]) extends AuthZ[Request,Response] {
   import AuthZ.x509toSubject
   implicit val cache : WebCache = webCache
 

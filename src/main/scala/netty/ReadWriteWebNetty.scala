@@ -27,8 +27,8 @@ import org.clapper.argot.ArgotUsageException
 import scala.Console._
 import org.w3.readwriteweb.auth.{X509view, RDFAuthZ}
 import org.w3.readwriteweb._
-import unfiltered.netty.{ReceivedMessage, ServerErrorResponse, cycle}
 import org.jboss.netty.handler.codec.http.HttpResponse
+import unfiltered.netty.{ServerErrorResponse, ReceivedMessage, cycle}
 
 /**
  * ReadWrite Web for Netty server, allowing content renegotiation
@@ -54,8 +54,13 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
          baseURL.value.get,
          lang=rdfLanguage.value getOrElse RDFXML)(mode.value getOrElse ResourcesDontExistByDefault)
      
-     val app = new ReadWriteWeb(filesystem, new RDFAuthZ(webCache,filesystem))
- 
+//     val app = new ReadWriteWeb(filesystem, new RDFAuthZ(webCache,filesystem))
+     val rww = new cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with ReadWriteWeb[ReceivedMessage,HttpResponse]{
+          val rm = filesystem
+          def manif = manifest[ReceivedMessage]
+          override val authz = new RDFAuthZ[ReceivedMessage,HttpResponse](webCache,filesystem)
+     }
+
      //this is incomplete: we should be able to start both ports.... not sure how to do this yet.
      val service = httpsPort.value match {
        case Some(port) => new KeyAuth_Https(port)
@@ -63,7 +68,8 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
      }
 
      // configures and launches a Netty server
-     service.plan( x509v ).run()
+     service.plan( x509v ).
+             plan( rww ).run()
      
    }
 
