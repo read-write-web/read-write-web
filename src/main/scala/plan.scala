@@ -10,7 +10,6 @@ import java.net.URL
 
 import org.slf4j.{Logger, LoggerFactory}
 
-import com.hp.hpl.jena.rdf.model.Model
 import com.hp.hpl.jena.query.{Query, QueryExecution, QueryExecutionFactory}
 import com.hp.hpl.jena.update.UpdateAction
 import Query.{QueryTypeSelect => SELECT,
@@ -18,8 +17,10 @@ import Query.{QueryTypeSelect => SELECT,
               QueryTypeConstruct => CONSTRUCT,
               QueryTypeDescribe => DESCRIBE}
 
-import scalaz._
+import scalaz.{Resource => _, _}
 import Scalaz._
+
+import com.hp.hpl.jena.rdf.model.Model
 
 //object ReadWriteWeb {
 //  
@@ -58,7 +59,7 @@ class ReadWriteWeb(rm: ResourceManager) {
   val plan = unfiltered.filter.Planify {
     case req @ Path(path) if path startsWith rm.basePath => {
       val Authoritative(uri, representation) = req
-      val r: Resource = rm.resource(uri)
+      val r = rm.resource(uri)
       req match {
         case GET(_) if representation == HTMLRepr => {
           val source = Source.fromFile("src/main/resources/skin.html")("UTF-8")

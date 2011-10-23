@@ -1,15 +1,15 @@
 package org.w3.readwriteweb
 
-import org.w3.readwriteweb.util._
-
 import java.io._
 import java.net.URL
 import org.slf4j.{Logger, LoggerFactory}
-import com.hp.hpl.jena.rdf.model._
+import com.hp.hpl.jena.rdf.model.{Resource => _, _}
 import com.hp.hpl.jena.shared.JenaException
 
-import scalaz.{sys => _, _}
+import scalaz.{Resource => _, _}
 import Scalaz._
+
+import scala.sys
 
 class Filesystem(
   baseDirectory: File,

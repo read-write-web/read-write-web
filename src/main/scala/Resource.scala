@@ -4,7 +4,7 @@ import org.w3.readwriteweb.util._
 
 import java.net.URL
 import com.hp.hpl.jena.rdf.model._
-import scalaz._
+import scalaz.{Resource => _, _}
 import Scalaz._
 
 trait ResourceManager {
