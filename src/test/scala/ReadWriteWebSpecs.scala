@@ -13,7 +13,7 @@ object ReadWriteWebSpec extends Specification {
       PutRDFXMLSpec, PostRDFSpec,
       PutInvalidRDFXMLSpec, PostOnNonExistingResourceSpec,
       // sparql query
-      PostSelectSpec, PostConstructSpec, PostAskSpec, 
+      PostSelectSpec, PostConstructSpec, PostAskSpec,
       // sparql update
       PostInsertSpec,
       // delete content

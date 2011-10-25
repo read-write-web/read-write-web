@@ -54,7 +54,6 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
          baseURL.value.get,
          lang=rdfLanguage.value getOrElse RDFXML)(mode.value getOrElse ResourcesDontExistByDefault)
      
-//   val app = new ReadWriteWeb(filesystem, new RDFAuthZ(webCache,filesystem))
      val rww = new cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with ReadWriteWeb[ReceivedMessage,HttpResponse]{
           val rm = filesystem
           def manif = manifest[ReceivedMessage]

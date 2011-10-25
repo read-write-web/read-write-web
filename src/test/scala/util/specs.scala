@@ -2,6 +2,7 @@ package org.w3.readwriteweb.util
 
 import org.w3.readwriteweb._
 
+import auth.RDFAuthZ
 import org.specs._
 import dispatch._
 import java.io._
@@ -12,6 +13,7 @@ import org.w3.readwriteweb.utiltest._
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import unfiltered.filter.Planify
 import unfiltered.netty.{ReceivedMessage, ServerErrorResponse, cycle}
+import unfiltered.spec.netty.Started
 
 trait JettyResourceManaged extends Specification with unfiltered.spec.jetty.Served {
   
@@ -26,6 +28,9 @@ trait JettyResourceManaged extends Specification with unfiltered.spec.jetty.Serv
  
 }
 
+/**
+ * Netty Resource managed.
+ **/
 trait ResourceManaged extends Specification with unfiltered.spec.netty.Served {
   import org.jboss.netty.handler.codec.http._
 
@@ -34,7 +39,6 @@ trait ResourceManaged extends Specification with unfiltered.spec.netty.Served {
   val rww = new cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with ReadWriteWeb[ReceivedMessage,HttpResponse] {
     val rm = resourceManager
     def manif = manifest[ReceivedMessage]
-    //  override val authz = new RDFAuthZ[ReceivedMessage,HttpResponse](webCache,filesystem)
   }
 
   def setup = { _.plan(rww) }
@@ -42,23 +46,24 @@ trait ResourceManaged extends Specification with unfiltered.spec.netty.Served {
 }
 
 
+
 trait FilesystemBased extends ResourceManaged {
-  
+
   lazy val mode: RWWMode = ResourcesDontExistByDefault
-  
+
   lazy val lang = RDFXML
-    
+
   lazy val baseURL = "/wiki"
-  
+
   lazy val root = new File(new File(System.getProperty("java.io.tmpdir")), "readwriteweb")
 
   lazy val resourceManager = new Filesystem(root, baseURL, lang)(mode)
-  
+
   doBeforeSpec {
     if (root.exists) root.deleteRecursively()
     root.mkdir()
   }
-  
+
 }
 
 trait SomeRDF extends SomeURI {
