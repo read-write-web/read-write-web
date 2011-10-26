@@ -26,13 +26,14 @@ package org.w3.readwriteweb.auth
 import org.w3.readwriteweb.utiltest._
 
 import dispatch._
-import org.w3.readwriteweb.TURTLE
-import java.security.KeyStore
-import java.io.{FileInputStream, File}
+import java.io.File
 import org.apache.http.conn.scheme.Scheme
-import javax.net.ssl.{X509TrustManager, TrustManager, TrustManagerFactory}
-import java.security.cert.X509Certificate
+import javax.net.ssl.{X509TrustManager, TrustManager}
 import java.lang.String
+import java.security.cert.{CertificateFactory, X509Certificate}
+import java.security._
+import interfaces.RSAPublicKey
+import org.w3.readwriteweb.{RDFXML, TURTLE}
 
 /**
  * @author hjs
@@ -49,7 +50,6 @@ object CreateWebIDSpec extends SecureFileSystemBased {
   lazy val lambdaDir = new File(directory,"Lambda")
 
 {
-  val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
   val  sslContext = javax.net.ssl.SSLContext.getInstance("TLS");
   sslContext.init(null, Array[TrustManager](new X509TrustManager {
     def checkClientTrusted(chain: Array[X509Certificate], authType: String) {}
@@ -72,7 +72,24 @@ object CreateWebIDSpec extends SecureFileSystemBased {
        :jl a foaf:Person;
            foaf:name "Joe Lambda"@en .
   """
+  
+  val updatePk = """
+       PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+       PREFIX cert: <http://www.w3.org/ns/auth/cert#>
+       PREFIX rsa: <http://www.w3.org/ns/auth/rsa#>
+       PREFIX : <#>
+       INSERT DATA {
+         :j1 foaf:key [ rsa:modulus "%s"^^cert:hex;
+                        rsa:public_exponent "%s"^^cert:int ] .
+       }
+  """
 
+  val rsagen = KeyPairGenerator.getInstance("RSA")
+  rsagen.initialize(512)
+  val rsaKP = rsagen.generateKeyPair()
+  val certFct = CertificateFactory.getInstance("X.509")
+  val testCert = X509Cert.generate_self_signed("CN=RoboTester, OU=DIG, O=W3C",rsaKP,1)
+  val testCertPk: RSAPublicKey = testCert.getPublicKey.asInstanceOf[RSAPublicKey]
   
   "PUTing nothing on /people/" should {
        "return a 201" in {
@@ -105,4 +122,25 @@ object CreateWebIDSpec extends SecureFileSystemBased {
         joeProfileOnDisk must be file
      }
    }
+
+   "POSTing public key into the /people/Lambda/Joe profile" should {
+     "return a 200" in {
+       val updateQ = updatePk.format(
+                     testCertPk.getModulus.toString(16),
+                     testCertPk.getPublicExponent()
+       )
+       System.out.println(updateQ)
+       val httpCode = Http(
+         webidProfile.secure.postSPARQL(updateQ) get_statusCode )
+        httpCode must_== 200
+     }
+     "create 3 more relations" in {
+       val model = Http(webidProfile.secure as_model(baseURI(webidProfile.secure), RDFXML))
+       model.size() must_== 7
+         
+     }
+   }
+
+
+
 }
