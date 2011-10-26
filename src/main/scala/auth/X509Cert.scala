@@ -31,6 +31,7 @@ import java.security.cert.Certificate
 import java.util.Date
 import java.math.BigInteger
 import java.security.{SecureRandom, KeyPair}
+import java.net.URL
 import sun.security.x509._
 
 object X509Cert {
@@ -50,7 +51,8 @@ object X509Cert {
    */
     def generate_self_signed(issuerDN: String,
                  pair: KeyPair,
-                 days: Int, 
+                 days: Int,
+                 webId: URL,
                  algorithm: String="SHA1withRSA"): X509Certificate = {
       var info = new X509CertInfo
       val from = new Date
@@ -64,9 +66,13 @@ object X509Cert {
       info.set(X509CertInfo.ISSUER, new CertificateIssuerName(owner))
       info.set(X509CertInfo.KEY, new CertificateX509Key(pair.getPublic))
       info.set(X509CertInfo.VERSION, new CertificateVersion(CertificateVersion.V3))
-      val algo: AlgorithmId = new AlgorithmId(AlgorithmId.md5WithRSAEncryption_oid)
+      val extensions = new CertificateExtensions();
+      val san = new SubjectAlternativeNameExtension(new GeneralNames().add(new GeneralName(new URIName(webId.toExternalForm))))
+      extensions.set(san.getName,san)
+      info.set(X509CertInfo.EXTENSIONS,extensions)
+      val algo = new AlgorithmId(AlgorithmId.md5WithRSAEncryption_oid)
       info.set(X509CertInfo.ALGORITHM_ID, new CertificateAlgorithmId(algo))
-      var cert: X509CertImpl = new X509CertImpl(info)
+      var cert = new X509CertImpl(info)
       cert.sign(pair.getPrivate, algorithm)
       val sigAlgo = cert.get(X509CertImpl.SIG_ALG).asInstanceOf[AlgorithmId]
       info.set(CertificateAlgorithmId.NAME + "." + CertificateAlgorithmId.ALGORITHM, sigAlgo)

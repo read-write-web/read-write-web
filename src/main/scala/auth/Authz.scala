@@ -140,9 +140,11 @@ class RDFAuthZ[Request,Response](val webCache: WebCache, rm: ResourceManager)
     import org.w3.readwriteweb.util.wrapValidation
     import org.w3.readwriteweb.util.ValidationW
 
+    lazy val dir = path.substring(0,path.lastIndexOf('/')+1) // we assume it always starts with /
+
 
     def allow(subj: () => Option[Subject]) = {
-      val resurl = "file://local"+path + ".protect.n3"
+      val resurl = "file://local"+dir + ".meta.n3"
       val r: Resource = rm.resource(new URL(resurl))
       val res: ValidationW[Boolean,Boolean] = for {
         model <- r.get() failMap { x => true }

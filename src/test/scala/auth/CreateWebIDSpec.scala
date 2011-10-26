@@ -34,6 +34,7 @@ import java.security.cert.{CertificateFactory, X509Certificate}
 import java.security._
 import interfaces.RSAPublicKey
 import org.w3.readwriteweb.{RDFXML, TURTLE}
+import java.net.URL
 
 /**
  * @author hjs
@@ -45,9 +46,11 @@ object CreateWebIDSpec extends SecureFileSystemBased {
   lazy val webidProfileDir = peopleDirUri / "Lambda/"
   lazy val webidProfile = webidProfileDir / "Joe"
   lazy val joeProfileOnDisk = new File(root,"people/Lambda/Joe")
+  lazy val lambdaMetaURI = webidProfileDir/".meta.n3"
 
   lazy val directory = new File(root, "people")
   lazy val lambdaDir = new File(directory,"Lambda")
+  lazy val lambdaMeta = new File(lambdaDir,".meta.n3")
 
 {
   val  sslContext = javax.net.ssl.SSLContext.getInstance("TLS");
@@ -88,8 +91,10 @@ object CreateWebIDSpec extends SecureFileSystemBased {
   rsagen.initialize(512)
   val rsaKP = rsagen.generateKeyPair()
   val certFct = CertificateFactory.getInstance("X.509")
-  val testCert = X509Cert.generate_self_signed("CN=RoboTester, OU=DIG, O=W3C",rsaKP,1)
-  val testCertPk: RSAPublicKey = testCert.getPublicKey.asInstanceOf[RSAPublicKey]
+  val webID = new URL(webidProfile.secure.to_uri + "#me")
+  val testCert = X509Cert.generate_self_signed("CN=RoboTester, OU=DIG, O=W3C", rsaKP, 1, webID)
+
+  val testCertPk = testCert.getPublicKey.asInstanceOf[RSAPublicKey]
   
   "PUTing nothing on /people/" should {
        "return a 201" in {
@@ -101,7 +106,7 @@ object CreateWebIDSpec extends SecureFileSystemBased {
        }
    }
   
-  
+
   "PUTing nothing on /people/Lambda/" should { // but should it really? Should it not create a resource too? Perhaps index.html?
      "return a 201" in {
        val httpCode = Http(webidProfileDir.secure.put(TURTLE, "") get_statusCode)
@@ -140,6 +145,37 @@ object CreateWebIDSpec extends SecureFileSystemBased {
          
      }
    }
+
+  val aclRestriction = """
+  @prefix acl: <http://www.w3.org/ns/auth/acl#> .
+  @prefix : <#> .
+
+  :a1 a acl:Authorization;
+     acl:accessTo <foaf.n3>;
+     acl:mode acl:Read;
+     acl:agent <%s> .
+  """
+
+
+  "PUT access control statements in directory" should {
+    "return a 201" in {
+      val httpCode = Http( lambdaMetaURI.secure.put(TURTLE, aclRestriction.format(webID.toExternalForm)) get_statusCode )
+       httpCode must_== 201
+    }
+
+    "create a resource on disk" in {
+       lambdaMeta must be file
+    }
+    "make the initial resource inaccessible to anyone other than the user" in {
+      val httpCode = Http.when(_ == 401)(webidProfile.secure.get get_statusCode)
+      httpCode must_== 401
+    }
+//    "access it as the user" in {
+//    ok so here we have to set the client certificate for the connection only.
+//      Http.client.getConnectionManager.
+//    }
+
+  }
 
 
 
