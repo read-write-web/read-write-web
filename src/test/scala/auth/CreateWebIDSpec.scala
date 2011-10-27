@@ -28,13 +28,46 @@ import org.w3.readwriteweb.utiltest._
 import dispatch._
 import java.io.File
 import org.apache.http.conn.scheme.Scheme
-import javax.net.ssl.{X509TrustManager, TrustManager}
 import java.lang.String
 import java.security.cert.{CertificateFactory, X509Certificate}
 import java.security._
 import interfaces.RSAPublicKey
 import org.w3.readwriteweb.{RDFXML, TURTLE}
-import java.net.URL
+import java.net.{Socket, URL}
+import scala.collection.{mutable, immutable}
+import javax.net.ssl._
+
+
+/**
+ * A key manager that can contain multiple keys, but where the client can take one of a number of identities
+ * One at a time - so this is not sychronised. It also assumes that the server will accept all CAs, which in
+ * these test cases it does.
+ */
+class FlexiKeyManager extends X509ExtendedKeyManager {
+  val keys = mutable.Map[String, Pair[Array[X509Certificate],PrivateKey]]()
+  
+  def addClientCert(alias: String,certs: Array[X509Certificate], privateKey: PrivateKey) {
+    keys.put(alias,Pair(certs,privateKey))
+  }
+  
+  var currentId: String = null
+  
+  def setId(alias: String) { currentId = if (keys.contains(alias)) alias else null }
+  
+  def getClientAliases(keyType: String, issuers: Array[Principal]) = if (currentId!=null) Array(currentId) else null
+  
+  def chooseClientAlias(keyType: Array[String], issuers: Array[Principal], socket: Socket) = currentId
+
+  def getServerAliases(keyType: String, issuers: Array[Principal]) = null
+
+  def chooseServerAlias(keyType: String, issuers: Array[Principal], socket: Socket) = ""
+
+  def getCertificateChain(alias: String) = keys.get(alias) match { case Some(certNKey) => certNKey._1; case None => null}
+
+  def getPrivateKey(alias: String) = keys.get(alias).map(ck=>ck._2).getOrElse(null)
+
+  override def chooseEngineClientAlias(keyType: Array[String], issuers: Array[Principal], engine: SSLEngine): String = currentId
+}
 
 /**
  * @author hjs
@@ -52,17 +85,21 @@ object CreateWebIDSpec extends SecureFileSystemBased {
   lazy val lambdaDir = new File(directory,"Lambda")
   lazy val lambdaMeta = new File(lambdaDir,".meta.n3")
 
-{
+
+ val keyManager = new FlexiKeyManager();
+
   val  sslContext = javax.net.ssl.SSLContext.getInstance("TLS");
-  sslContext.init(null, Array[TrustManager](new X509TrustManager {
+  sslContext.init(Array(keyManager.asInstanceOf[KeyManager]), Array[TrustManager](new X509TrustManager {
     def checkClientTrusted(chain: Array[X509Certificate], authType: String) {}
     def checkServerTrusted(chain: Array[X509Certificate], authType: String) {}
     def getAcceptedIssuers = Array[X509Certificate]()
   }),null); // we are not trying to test our trust of localhost server
-  val sf = new org.apache.http.conn.ssl.SSLSocketFactory(sslContext)
-  val  scheme = new Scheme("https", sf, 443);
-  Http.client.getConnectionManager.getSchemeRegistry.register(scheme)
-}
+  {
+   import org.apache.http.conn.ssl._
+   val sf = new SSLSocketFactory(sslContext,SSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER)
+   val  scheme = new Scheme("https", 443, sf);
+   Http.client.getConnectionManager.getSchemeRegistry.register(scheme)
+  }
 
 
   val foaf = """
@@ -87,14 +124,24 @@ object CreateWebIDSpec extends SecureFileSystemBased {
        }
   """
 
+  val updateFriend = """
+       PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+       PREFIX : <#>
+       INSERT DATA {
+          :j1 foaf:knows <%s> .
+       }
+  """
+
   val rsagen = KeyPairGenerator.getInstance("RSA")
   rsagen.initialize(512)
   val rsaKP = rsagen.generateKeyPair()
   val certFct = CertificateFactory.getInstance("X.509")
   val webID = new URL(webidProfile.secure.to_uri + "#me")
-  val testCert = X509Cert.generate_self_signed("CN=RoboTester, OU=DIG, O=W3C", rsaKP, 1, webID)
+  val testCert = X509Cert.generate_self_signed("CN=JoeLambda, OU=DIG, O=W3C", rsaKP, 1, webID)
 
   val testCertPk = testCert.getPublicKey.asInstanceOf[RSAPublicKey]
+
+  keyManager.addClientCert("JoeLambda",Array(testCert),rsaKP.getPrivate)
   
   "PUTing nothing on /people/" should {
        "return a 201" in {
@@ -148,12 +195,18 @@ object CreateWebIDSpec extends SecureFileSystemBased {
 
   val aclRestriction = """
   @prefix acl: <http://www.w3.org/ns/auth/acl#> .
+  @prefix foaf: <http://xmlns.com/foaf/0.1/> .
   @prefix : <#> .
 
   :a1 a acl:Authorization;
-     acl:accessTo <foaf.n3>;
-     acl:mode acl:Read;
+     acl:accessTo <Joe>;
+     acl:mode acl:Write;
      acl:agent <%s> .
+
+  :allRead a acl:Authorization;
+     acl:accessTo <Joe>;
+     acl:mode acl:Read;
+     acl:agentClass foaf:Agent .
   """
 
 
@@ -166,14 +219,45 @@ object CreateWebIDSpec extends SecureFileSystemBased {
     "create a resource on disk" in {
        lambdaMeta must be file
     }
-    "make the initial resource inaccessible to anyone other than the user" in {
-      val httpCode = Http.when(_ == 401)(webidProfile.secure.get get_statusCode)
+    
+    "everybody can still read the profile" in {
+      keyManager.setId(null)
+      val model = Http(webidProfile.secure as_model(baseURI(webidProfile.secure), RDFXML))
+      model.size() must_== 7
+    }
+    
+    "no one other than the user can change the profile" in {
+      val httpCode = Http.when(_ == 401)(webidProfile.secure.put(TURTLE, foaf) get_statusCode)
       httpCode must_== 401
     }
-//    "access it as the user" in {
-//    ok so here we have to set the client certificate for the connection only.
-//      Http.client.getConnectionManager.
-//    }
+
+    "access it as the user - allow him to add a friend" in {
+      keyManager.setId("JoeLambda")
+//      val scon =webidProfile.secure.to_uri.toURL.openConnection().asInstanceOf[HttpsURLConnection]
+//      scon.setSSLSocketFactory(sslContext.getSocketFactory)
+//      scon.setRequestProperty("Content-Type",TURTLE.contentType)
+//      scon.setRequestMethod("POST")
+//      val msg = updateFriend.format("http://bblfish.net/#hjs").getBytes("UTF-8")
+//      scon.setRequestProperty("Content-Length",msg.length.toString)
+//      scon.setDoOutput(true)
+//      scon.setDoInput(true)
+//
+//      val out = scon.getOutputStream
+//      out.write(msg)
+//      out.flush()
+//      out.close()
+//      scon.connect()
+//
+//      val httpCode = scon.getResponseCode
+
+      val httpCode = Http( webidProfile.secure.put(TURTLE, updateFriend.format("http://bblfish.net/#hjs")) get_statusCode )
+      httpCode must_== 201
+    }
+
+    "and so have one more relation in the foaf" in {
+      val model = Http(webidProfile.secure as_model(baseURI(webidProfile.secure), RDFXML))
+      model.size() must_== 8
+    }
 
   }
 

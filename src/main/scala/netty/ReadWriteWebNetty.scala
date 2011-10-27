@@ -31,7 +31,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse
 import unfiltered.netty.{ServerErrorResponse, ReceivedMessage, cycle}
 
 /**
- * ReadWrite Web for Netty server, allowing content renegotiation
+ * ReadWrite Web for Netty server, allowing TLS renegotiation
  *
  * @author hjs
  * @created: 21/10/2011

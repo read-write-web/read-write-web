@@ -53,7 +53,7 @@ trait ReadWriteWeb[Req,Res] {
    * many of which may want different authorization implementations )
    */
   def intent : Cycle.Intent[Req,Res] = {
-      case req @ Path(path) if path startsWith rm.basePath => authz.protect(rwwIntent)(req)
+      case req @ Path(path) if path startsWith rm.basePath => authz.protect(rwwIntent)(manif)(req)
   }
 
   /**

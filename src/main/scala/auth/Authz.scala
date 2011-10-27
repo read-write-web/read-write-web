@@ -28,12 +28,12 @@ import unfiltered.request._
 import collection.JavaConversions._
 import javax.security.auth.Subject
 import java.net.URL
-import org.w3.readwriteweb.{Resource, ResourceManager, WebCache}
 import com.hp.hpl.jena.query.{QueryExecutionFactory, QueryExecution, QuerySolutionMap, QueryFactory}
 import sun.management.resources.agent
 import unfiltered.response.{ResponseFunction, Unauthorized}
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
-
+import com.hp.hpl.jena.rdf.model.{RDFNode, ResourceFactory}
+import org.w3.readwriteweb.{Authoritative, Resource, ResourceManager, WebCache}
 
 /**
  * @author hjs
@@ -75,9 +75,9 @@ object AuthZ {
 class NullAuthZ[Request,Response] extends AuthZ[Request,Response] {
   override def subject(req: Req): Option[Subject] = None
 
-  override def guard(m: Method, path: String): Guard = null
+  override def guard(m: Method, path: URL): Guard = null
 
-  override def protect(in: Req=>Res) = in
+  override def protect(in: Req=>Res)(implicit  m: Manifest[Request]) = in
 }
 
 
@@ -85,8 +85,9 @@ abstract class AuthZ[Request,Response] {
   type Req = HttpRequest[Request]
   type Res = ResponseFunction[Response]
 
-  def protect(in: Req=>Res): Req=>Res =  {
-      case req @ HttpMethod(method) & Path(path) if guard(method, path).allow(() => subject(req)) => in(req)
+
+  def protect(in: Req=>Res)(implicit  m: Manifest[Request]): Req=>Res =  {
+      case req @ HttpMethod(method) & Authoritative(url,_) if guard(method, url).allow(() => subject(req)) => in(req)
       case _ => Unauthorized
     }
   
@@ -94,9 +95,9 @@ abstract class AuthZ[Request,Response] {
   protected def subject(req: Req): Option[Subject]
 
   /** create the guard defined in subclass */
-  protected def guard(m: Method, path: String): Guard
+  protected def guard(m: Method, path: URL): Guard
 
-  abstract class Guard(m: Method, path: String) {
+  abstract class Guard(m: Method, url: URL) {
 
     /**
      * verify if the given request is authorized
@@ -120,6 +121,7 @@ class RDFAuthZ[Request,Response](val webCache: WebCache, rm: ResourceManager)
 
   object RDFGuard {
     val acl = "http://www.w3.org/ns/auth/acl#"
+    val foafAgent = ResourceFactory.createResource("http://xmlns.com/foaf/0.1/Agent")
     val Read = acl+"Read"
     val Write = acl+"Write"
     val Control = acl+"Control"
@@ -135,23 +137,21 @@ class RDFAuthZ[Request,Response](val webCache: WebCache, rm: ResourceManager)
     		  }""")
   }
 
-  def guard(method: Method, path: String) = new Guard(method, path) {
+  def guard(method: Method, url: URL) = new Guard(method, url) {
     import RDFGuard._
     import org.w3.readwriteweb.util.wrapValidation
     import org.w3.readwriteweb.util.ValidationW
 
-    lazy val dir = path.substring(0,path.lastIndexOf('/')+1) // we assume it always starts with /
 
 
     def allow(subj: () => Option[Subject]) = {
-      val resurl = "file://local"+dir + ".meta.n3"
-      val r: Resource = rm.resource(new URL(resurl))
+      val r: Resource = rm.resource(new URL(url,".meta.n3"))
       val res: ValidationW[Boolean,Boolean] = for {
         model <- r.get() failMap { x => true }
       } yield {
         val initialBinding = new QuerySolutionMap();
-        initialBinding.add("res", model.createResource("file://local"+path))
-        val qe: QueryExecution = QueryExecutionFactory.create(selectQuery, model, initialBinding)
+        initialBinding.add("res", model.createResource(url.toString))  //todo: this will work only if the files are described with relative URLs
+        val qe = QueryExecutionFactory.create(selectQuery, model, initialBinding)
         val agentsAllowed = try {
           val exec = qe.execSelect()
           val res = for (qs <- exec) yield {
@@ -161,15 +161,16 @@ class RDFAuthZ[Request,Response](val webCache: WebCache, rm: ResourceManager)
               case Control => List(POST)
               case _ => List(GET, PUT, POST, DELETE) //nothing everything is allowed
             }
-            if (methods.contains(method)) Some(Pair(qs.get("agent"), qs.get("group")))
+            if (methods.contains(method)) Some((qs.get("agent"), qs.get("group")))
             else None
           }
           res.flatten.toList
         } finally {
           qe.close()
         }
-        if (agentsAllowed.size>0) {
-          subj() match {
+        if (agentsAllowed.size > 0) {
+          if (agentsAllowed.exists( pair =>  pair._2 == foafAgent )) true
+          else subj() match {
             case Some(s) => agentsAllowed.exists{ 
               p =>  s.getPrincipals(classOf[WebIdPrincipal]).
                 exists(id=> {
