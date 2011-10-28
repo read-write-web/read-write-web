@@ -79,6 +79,8 @@ class Filesystem(
         // We remove any base URIs on same server different port as well, for proxying.
         def generalize(u:String) = u.replaceAll("//localhost[:0-9]*/", "//localhost[:0-9]*/");
         // fos.write(("# Resource.scala 80: "+generalize(baseBit(url.toString))+"\n").getBytes) 
+        logger.debug("@@ Munged output string with regexp: %s " format (generalize(baseBit(url.toString))));
+
         fos.write(temp.toString().replaceAll(generalize(baseBit(url.toString)), "").getBytes); // tbl
         
 //        writer.write(model, fos, url.toString)
