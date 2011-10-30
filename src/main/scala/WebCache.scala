@@ -46,7 +46,6 @@ class WebCache extends ResourceManager {
   def sanityCheck() = true  //cache dire exists? But is this needed for functioning?
 
   def resource(u : URL) = new org.w3.readwriteweb.Resource {
-
     def get() = {
       // note we prefer rdf/xml and turtle over html, as html does not always contain rdfa, and we prefer those over n3,
       // as we don't have a full n3 parser. Better would be to have a list of available parsers for whatever rdf framework is
@@ -63,10 +62,10 @@ class WebCache extends ResourceManager {
             case None => RDFXML  // it would be better to try to do a bit of guessing in this case by looking at content
           }
           val loc = headers("Content-Location").headOption match {
-            case Some(loc) => new URL(u,loc)
+            case Some(loc) =>  new URL(u,loc)
             case None => new URL(u.getProtocol,u.getAuthority,u.getPort,u.getPath)
           }
-          res>>{ in=>modelFromInputStream(in,loc,encoding) }
+          res>>{ in=> modelFromInputStream(in,loc,encoding) }
 
         }
       })

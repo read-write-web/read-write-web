@@ -171,12 +171,14 @@ class RDFAuthZ[Request,Response](val webCache: WebCache, rm: ResourceManager)
         if (agentsAllowed.size > 0) {
           if (agentsAllowed.exists( pair =>  pair._2 == foafAgent )) true
           else subj() match {
-            case Some(s) => agentsAllowed.exists{ 
-              p =>  s.getPrincipals(classOf[WebIdPrincipal]).
-                exists(id=> {
-                val ps = if (p._1 != null) p._1.toString else null;
-                ps == id.webid
-              })
+            case Some(s) => {
+              agentsAllowed.exists{
+                p =>  s.getPrincipals(classOf[WebIdPrincipal]).
+                  exists(id=> {
+                  val ps = if (p._1 != null) p._1.toString else null;
+                  ps == id.webid
+                })
+              }
             }
             case None => false
           }

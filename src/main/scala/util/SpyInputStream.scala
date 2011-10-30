@@ -3,7 +3,7 @@
  * under the MIT licence defined at
  *    http://www.opensource.org/licenses/mit-license.html
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of 
  * this software and associated documentation files (the "Software"), to deal in the
  * Software without restriction, including without limitation the rights to use, copy,
  * modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
@@ -21,22 +21,38 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package org.w3.readwriteweb.auth
+package org.w3.readwriteweb.util
 
-import org.specs.Specification
+import java.io.{IOException, OutputStream, InputStream}
+
 
 /**
+ * Wrap an inputstream and write everything that comes in here
  * @author hjs
- * @created: 25/10/2011
+ * @created: 30/10/2011
  */
 
-object SecureReadWriteWebSpec extends Specification {
-  try {
-  "The Secure Read Write Web".isSpecifiedBy(
-     CreateWebIDSpec
-   )
-  } catch {
-    case e => e.printStackTrace(System.out)
-  }
+class SpyInputStream(val in: InputStream, val out: OutputStream) extends InputStream {
+  var stopOut = false
+  
+  def read() ={
 
+    val i = try {
+       in.read()
+   } catch {
+      case ioe: IOException => {
+        out.close()
+        stopOut=true
+        throw ioe;
+      }
+    }
+    if (!stopOut) try {
+      out.write(i)
+    } catch {
+      case ioe: IOException => {
+        stopOut = true
+      }
+    }
+    i
+  }
 }

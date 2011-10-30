@@ -1,8 +1,14 @@
 @prefix acl: <http://www.w3.org/ns/auth/acl#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix : <#> .
 
 :a1 a acl:Authorization;
    acl:accessTo <foaf.n3>;
-   acl:mode acl:Read;
+   acl:mode acl:Write;
    acl:agent <http://bblfish.net/people/henry/card#me> .
+
     
+:readAll a acl:Authorization;
+   acl:accessTo <foaf.n3>;
+   acl:mode acl:Read;
+   acl:agentClass foaf:Agent .

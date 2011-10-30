@@ -58,7 +58,8 @@ object SslLoginTest extends  NormalPlan {
        req.underlying.context.getPipeline.get(classOf[org.jboss.netty.handler.ssl.SslHandler])  match {
           case sslh: SslHandler => {
             sslh.setEnableRenegotiation(true)
-            sslh.getEngine.setWantClientAuth(true)
+            sslh.getEngine.setNeedClientAuth(true)
+//            sslh.getEngine.setWantClientAuth(true)
             val future = sslh.handshake()
             future.await(5000)
             val res = if (future.isDone) {

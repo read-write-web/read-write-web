@@ -26,12 +26,15 @@ package org.w3.readwriteweb.auth
 import unfiltered.spec.netty.Started
 import org.specs.Specification
 import unfiltered.netty.{ReceivedMessage, ServerErrorResponse, cycle}
-import org.w3.readwriteweb.auth.RDFAuthZ
 import java.io.File
 import org.w3.readwriteweb._
 import grizzled.file.GrizzledFile._
 
-import org.specs.specification.BeforeAfter
+import java.security.cert.X509Certificate
+import org.apache.http.conn.scheme.Scheme
+import dispatch.Http
+import org.apache.http.client.HttpClient
+import javax.net.ssl.{SSLContext, X509TrustManager, KeyManager}
 
 /**
  * @author hjs
@@ -42,9 +45,21 @@ import org.specs.specification.BeforeAfter
 trait SecureServed extends Started {
   import org.w3.readwriteweb.netty._
 
+  //todo: replace this with non property method of setting this.
+  System.setProperty("netty.ssl.keyStore",getClass.getClassLoader.getResource("KEYSTORE.jks").getFile)
+  System.setProperty("netty.ssl.keyStoreType","JKS")
+  System.setProperty("netty.ssl.keyStorePassword","secret")
+
   def setup: (Https => Https)
   lazy val server = setup( KeyAuth_Https(port) )
 
+
+}
+
+object AcceptAllTrustManager extends X509TrustManager {
+      def checkClientTrusted(chain: Array[X509Certificate], authType: String) {}
+      def checkServerTrusted(chain: Array[X509Certificate], authType: String) {}
+      def getAcceptedIssuers = Array[X509Certificate]()
 }
 
 /**
@@ -55,7 +70,40 @@ trait SecureResourceManaged extends Specification with SecureServed {
 
   def resourceManager: ResourceManager
 
+  /**
+   * Inject flexible behavior into the client ssl so that it does not
+   * break on every localhost problem. It returns a key manager which can be used
+   * to allow the client to take on various guises
+   */
+  def flexi(client: HttpClient, km: KeyManager): SSLContext = {
+
+    val  sslContext = javax.net.ssl.SSLContext.getInstance("TLS");
+  
+    sslContext.init(Array(km.asInstanceOf[KeyManager]), Array(AcceptAllTrustManager),null); // we are not trying to test our trust of localhost server
+
+    import org.apache.http.conn.ssl._
+    val sf = new SSLSocketFactory(sslContext, SSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER)
+    val scheme = new Scheme("https", 443, sf);
+    client.getConnectionManager.getSchemeRegistry.register(scheme)
+
+    sslContext
+  }
+
+
+
   val webCache = new WebCache()
+  val serverSslContext = javax.net.ssl.SSLContext.getInstance("TLS");
+
+
+
+  flexi(webCache.http.client, new FlexiKeyManager)
+
+
+  val testKeyManager = new FlexiKeyManager();
+  val sslContext = flexi(Http.client,testKeyManager)
+  
+
+
 
   val rww = new cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with ReadWriteWeb[ReceivedMessage,HttpResponse] {
     val rm = resourceManager

@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-KS=keys/KEYSTORE.jks
+KS=src/test/resources/KEYSTORE.jks
 while [ $# -gt 0 ] 
 do 
  case $1 in 
@@ -14,6 +14,8 @@ do
    ;; # see: http://download.oracle.com/javase/7/docs/technotes/guides/security/jsse/JSSERefGuide.html#workarounds
   -sslLegacy) PROPS="$PROPS -Dsun.security.ssl.allowLegacyHelloMessages=true"
    ;;
+  -sslDebug) PROPS="$PROPS -Djavax.net.debug=all"
+   ;; # see http://download.oracle.com/javase/1,5,0/docs/guide/security/jsse/ReadDebug.html
   *) echo the arguments to use are -d
    ;;
   esac

@@ -16,12 +16,10 @@ import Query.{QueryTypeSelect => SELECT,
               QueryTypeConstruct => CONSTRUCT,
               QueryTypeDescribe => DESCRIBE}
 
-import scalaz.{Resource=>SzResource,_}
-import unfiltered.filter.Plan
-import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
+import scalaz.{Resource=>SzResource}
 import unfiltered.request._
-import unfiltered.response._
 import unfiltered.Cycle
+import unfiltered.response._
 
 //object ReadWriteWeb {
 //
@@ -77,7 +75,7 @@ trait ReadWriteWeb[Req,Res] {
    */
   def rwwIntent  =  (req: HttpRequest[Req]) => {
 
-          val Authoritative(uri, representation) = req
+          val Authoritative(uri: URL, representation: Representation) = req
           val r: Resource = rm.resource(uri)
           val res: ResponseFunction[Res] = req match {
             case GET(_) if representation == HTMLRepr => {
@@ -93,10 +91,11 @@ trait ReadWriteWeb[Req,Res] {
                   case _ => Lang.default
                 }
               } yield {
-                req match {
+                val res = req match {
                   case GET(_) => Ok ~> ViaSPARQL ~> ContentType(lang.contentType) ~> ResponseModel(model, uri, lang)
                   case HEAD(_) => Ok ~> ViaSPARQL ~> ContentType(lang.contentType)
                 }
+                res ~> ContentLocation( uri.toString ) // without this netty (perhaps jetty too?) sends very weird headers, breaking tests
               }
             case PUT(_) & RequestLang(lang) if representation == DirectoryRepr => {
               for {

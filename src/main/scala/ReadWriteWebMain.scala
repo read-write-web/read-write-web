@@ -10,10 +10,7 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import org.clapper.argot._
 import ArgotConverters._
-import unfiltered.request.HttpRequest
-import unfiltered.Cycle
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
-import unfiltered.filter.Plan
 
 trait ReadWriteWebArgs {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
