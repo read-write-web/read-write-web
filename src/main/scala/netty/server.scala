@@ -34,7 +34,7 @@ import java.net.Socket
 trait NormalPlan extends cycle.Plan with cycle.ThreadPool with ServerErrorResponse
 
 
-case class KeyAuth_Https(override val port: Int) extends Https(port)  with KeyAuth_Ssl
+class KeyAuth_Https(override val port: Int) extends Https(port)  with KeyAuth_Ssl
 
 
 /**

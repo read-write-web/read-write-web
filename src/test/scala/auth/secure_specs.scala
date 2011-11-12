@@ -51,7 +51,7 @@ trait SecureServed extends Started {
   System.setProperty("netty.ssl.keyStorePassword","secret")
 
   def setup: (Https => Https)
-  lazy val server = setup( KeyAuth_Https(port) )
+  lazy val server = setup( new KeyAuth_Https(port) )
 
 
 }
