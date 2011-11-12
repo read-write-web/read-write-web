@@ -8,14 +8,14 @@ import scalaz._
 import Scalaz._
 
 trait ResourceManager {
-  def basePath: String
-  def sanityCheck(): Boolean
-  def resource(url: URL): Resource
+  def basePath:String
+  def sanityCheck():Boolean
+  def resource(url:URL):Resource
 }
 
 trait Resource {
-  def get(): Validation[Throwable, Model]
-  def save(model: Model): Validation[Throwable, Unit]
+  def get():Validation[Throwable, Model]
+  def save(model:Model):Validation[Throwable, Unit]
   def createDirectory(model: Model): Validation[Throwable, Unit]
 }
 
