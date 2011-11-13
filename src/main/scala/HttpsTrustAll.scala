@@ -29,7 +29,9 @@ import org.jsslutils.keystores.KeyStoreLoader
 import org.jsslutils.sslcontext.trustmanagers.TrustAllClientsWrappingTrustManager
 import org.jsslutils.sslcontext.{X509TrustManagerWrapper, X509SSLContextFactory}
 import sys.SystemProperties
+import scala.util.Properties.{propOrNone => getProperty, javaHome}
 import unfiltered.jetty.{Ssl, Https}
+import unfiltered.jetty.Server
 
 
 /**
@@ -37,7 +39,10 @@ import unfiltered.jetty.{Ssl, Https}
  * @created: 12/10/2011
  */
 
-case class HttpsTrustAll(override val port: Int, override val host: String) extends Https(port, host) with TrustAll
+class HttpsTrustAll(
+    override val port: Int,
+    override val host: String)
+extends Https(port, host) with TrustAll
 
 
 /**
@@ -55,36 +60,45 @@ case class HttpsTrustAll(override val port: Int, override val host: String) exte
  *  the user experience would be very bad, since TLS does not give many options for explaining what the problem
  *  is.
  */
-trait TrustAll { self: Ssl =>
-   import scala.sys.SystemProperties._
+trait TrustAll extends Ssl with Server with DelayedInit {
 
-   lazy val sslContextFactory = new X509SSLContextFactory(
-               serverCertKeyStore,
-               tryProperty("jetty.ssl.keyStorePassword"),
-               serverCertKeyStore); //this one is not needed since our wrapper ignores all trust managers
+  import scala.sys.SystemProperties._
 
-   lazy val trustWrapper = new X509TrustManagerWrapper {
-     def wrapTrustManager(trustManager: X509TrustManager) = new TrustAllClientsWrappingTrustManager(trustManager)
-   }
-
-   lazy val serverCertKeyStore = {
+  val sslContextFactory = {
+    val trustWrapper =
+      new X509TrustManagerWrapper {
+        def wrapTrustManager(trustManager: X509TrustManager) =
+          new TrustAllClientsWrappingTrustManager(trustManager)
+      }
+    
+    val serverCertKeyStore = {
       val keyStoreLoader = new KeyStoreLoader
-   		keyStoreLoader.setKeyStoreType(System.getProperty("jetty.ssl.keyStoreType","JKS"))
-   		keyStoreLoader.setKeyStorePath(trustStorePath)
-   		keyStoreLoader.setKeyStorePassword(System.getProperty("jetty.ssl.keyStorePassword","password"))
-      keyStoreLoader.loadKeyStore();
-   }
+      keyStoreLoader.setKeyStoreType(getProperty("jetty.ssl.keyStoreType") getOrElse "JKS")
+      keyStoreLoader.setKeyStorePath(trustStorePath)
+      keyStoreLoader.setKeyStorePassword(getProperty("jetty.ssl.keyStorePassword") getOrElse "password")
+      keyStoreLoader.loadKeyStore()
+    }
+    
+    val factory = new X509SSLContextFactory(
+      serverCertKeyStore,
+      getProperty("jetty.ssl.keyStorePassword") getOrElse sys.error("jetty.ssl.keyStorePassword not set"),
+      serverCertKeyStore) //this one is not needed since our wrapper ignores all trust managers
+    
+    factory.setTrustManagerWrapper(trustWrapper)
+    
+    factory
+  }
 
-   sslContextFactory.setTrustManagerWrapper(trustWrapper);
-
-
- 	 lazy val trustStorePath =  new SystemProperties().get("jetty.ssl.keyStore") match {
-       case Some(path) => path
-       case None => new File(new File(tryProperty("user.home")), ".keystore").getAbsolutePath
-   }
-
-   sslConn.setSslContext(sslContextFactory.buildSSLContext())
-   sslConn.setWantClientAuth(true)
+  val trustStorePath =
+    getProperty("jetty.ssl.keyStore") getOrElse {
+      new File(new File(javaHome), ".keystore").getAbsolutePath
+    }
+  
+  // not tested if ok, there was a problem anyway
+  def delayedInit(x: ⇒ Unit): Unit = {
+    sslConn.setSslContext(sslContextFactory.buildSSLContext())
+    sslConn.setWantClientAuth(true)
+  }
 
 }
 

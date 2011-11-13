@@ -34,12 +34,16 @@ import java.security._
 import interfaces.RSAPublicKey
 import unfiltered.util.IO
 import sun.security.x509._
-
+import org.w3.readwriteweb.util.trySome
 
 object X509CertSigner {
 
-  def apply(keyStoreLoc: URL, keyStoreType: String, password: String, alias: String) = {
-    val keystore =  KeyStore.getInstance(keyStoreType)
+  def apply(
+      keyStoreLoc: URL,
+      keyStoreType: String,
+      password: String,
+      alias: String): X509CertSigner = {
+    val keystore = KeyStore.getInstance(keyStoreType)
 
     IO.use(keyStoreLoc.openStream()) { in =>
       keystore.load(in, password.toCharArray)
@@ -48,11 +52,13 @@ object X509CertSigner {
     val certificate = keystore.getCertificate(alias).asInstanceOf[X509Certificate]
     //one could verify that indeed this is the private key corresponding to the public key in the cert.
 
-    new X509CertSigner(certificate,privateKey)
+    new X509CertSigner(certificate, privateKey)
   }
 }
 
-class X509CertSigner(signingCert: X509Certificate, signingKey: PrivateKey ) {
+class X509CertSigner(
+    signingCert: X509Certificate,
+    signingKey: PrivateKey ) {
   val WebID_DN="""O=FOAF+SSL, OU=The Community of Self Signers, CN=Not a Certification Authority"""
 
   /**
@@ -69,136 +75,131 @@ class X509CertSigner(signingCert: X509Certificate, signingKey: PrivateKey ) {
    * @param days how many days from now the Certificate is valid for
    * @param algorithm the signing algorithm, eg "SHA1withRSA"
    */
-    def generate(subjectDN: String,
-                 subjectKey: RSAPublicKey,
-                 days: Int,
-                 webId: URL): X509Certificate = {   //todo: the algorithm should be deduced from private key in part
+  def generate(
+      subjectDN: String,
+      subjectKey: RSAPublicKey,
+      days: Int,
+      webId: URL): X509Certificate = {   //todo: the algorithm should be deduced from private key in part
 
+    var info = new X509CertInfo
+    val from = new Date(System.currentTimeMillis()-10*1000*60) //start 10 minutes ago, to avoid network trouble
+    val to = new Date(from.getTime + days*24*60*60*1000) 
+    val interval = new CertificateValidity(from, to)
+    val serialNumber = new BigInteger(64, new SecureRandom)
+    val subjectXN = new X500Name(subjectDN)
+    val issuerXN = new X500Name(signingCert.getSubjectDN.toString)
 
-      var info = new X509CertInfo
-      val from = new Date(System.currentTimeMillis()-10*1000*60) //start 10 minutes ago, to avoid network trouble
-      val to = new Date(from.getTime + days*24*60*60*1000) 
-      val interval = new CertificateValidity(from, to)
-      val serialNumber = new BigInteger(64, new SecureRandom)
-      val subjectXN = new X500Name(subjectDN)
-      val issuerXN = new X500Name(signingCert.getSubjectDN.toString)
+    info.set(X509CertInfo.VALIDITY, interval)
+    info.set(X509CertInfo.SERIAL_NUMBER, new CertificateSerialNumber(serialNumber))
+    info.set(X509CertInfo.SUBJECT, new CertificateSubjectName(subjectXN))
+    info.set(X509CertInfo.ISSUER, new CertificateIssuerName(issuerXN))
+    info.set(X509CertInfo.KEY, new CertificateX509Key(subjectKey))
+    info.set(X509CertInfo.VERSION, new CertificateVersion(CertificateVersion.V3))
 
-      info.set(X509CertInfo.VALIDITY, interval)
-      info.set(X509CertInfo.SERIAL_NUMBER, new CertificateSerialNumber(serialNumber))
-      info.set(X509CertInfo.SUBJECT, new CertificateSubjectName(subjectXN))
-      info.set(X509CertInfo.ISSUER, new CertificateIssuerName(issuerXN))
-      info.set(X509CertInfo.KEY, new CertificateX509Key(subjectKey))
-      info.set(X509CertInfo.VERSION, new CertificateVersion(CertificateVersion.V3))
+    //
+    //extensions
+    //
+    val extensions = new CertificateExtensions
 
-      //
-      //extensions
-      //
-      val extensions = new CertificateExtensions();
+    val san =
+      new SubjectAlternativeNameExtension(
+          true,
+          new GeneralNames().add(
+              new GeneralName(new URIName(webId.toExternalForm))))
+    
+    extensions.set(san.getName, san)
 
-      val san = new SubjectAlternativeNameExtension(true, new GeneralNames().add(new GeneralName(new URIName(webId.toExternalForm))))
-      extensions.set(san.getName,san)
+    val basicCstrExt = new BasicConstraintsExtension(false,1)
+    extensions.set(basicCstrExt.getName,basicCstrExt)
 
-      val basicCstrExt = new BasicConstraintsExtension(false,1)
-      extensions.set(basicCstrExt.getName,basicCstrExt)
-
-      { import KeyUsageExtension._
-        val keyUsage = new KeyUsageExtension()
-        List(DIGITAL_SIGNATURE, NON_REPUDIATION, KEY_ENCIPHERMENT, KEY_AGREEMENT, KEY_CERTSIGN).foreach {
-           usage => keyUsage.set(usage,true)
-        }
-        extensions.set(keyUsage.getName,keyUsage)
-      }
-
-      { import NetscapeCertTypeExtension._
-      val netscapeExt = new NetscapeCertTypeExtension()
-       List(SSL_CLIENT, S_MIME) foreach { ext => netscapeExt.set(ext,true) }
-        extensions.set(netscapeExt.getName, new NetscapeCertTypeExtension(false,netscapeExt.getValue))
-      }
-      
-      val subjectKeyExt = new SubjectKeyIdentifierExtension(new KeyIdentifier(subjectKey).getIdentifier)
-      extensions.set(subjectKeyExt.getName,subjectKeyExt)
-      
-      info.set(X509CertInfo.EXTENSIONS,extensions)
-
-      val algo = signingCert.getPublicKey.getAlgorithm match {
-        case "DSA" =>  new AlgorithmId(AlgorithmId.sha1WithDSA_oid )
-        case "RSA" =>  new AlgorithmId(AlgorithmId.sha1WithRSAEncryption_oid)
-        case _ => throw new RuntimeException("Don't know how to sign with this type of key")  
-      }
-
-      info.set(X509CertInfo.ALGORITHM_ID, new CertificateAlgorithmId(algo))
-
-      // Sign the cert to identify the algorithm that's used.
-      val tmpCert = new X509CertImpl(info)
-      tmpCert.sign(signingKey,algo.getName)
-
-      //update the algorithm and re-sign
-      val sigAlgo = tmpCert.get(X509CertImpl.SIG_ALG).asInstanceOf[AlgorithmId]
-      info.set(CertificateAlgorithmId.NAME + "." + CertificateAlgorithmId.ALGORITHM, sigAlgo)
-      val cert = new X509CertImpl(info)
-      cert.sign(signingKey,algo.getName)
-      
-      cert.verify(signingCert.getPublicKey)
-      return cert
+    {
+      import KeyUsageExtension._
+      val keyUsage = new KeyUsageExtension
+      val usages =
+        List(DIGITAL_SIGNATURE, NON_REPUDIATION, KEY_ENCIPHERMENT, KEY_AGREEMENT,  KEY_CERTSIGN)
+      usages foreach { usage => keyUsage.set(usage, true) }
+      extensions.set(keyUsage.getName,keyUsage)
     }
 
+    {
+      import NetscapeCertTypeExtension._
+      val netscapeExt = new NetscapeCertTypeExtension
+      List(SSL_CLIENT, S_MIME) foreach { ext => netscapeExt.set(ext, true) }
+      extensions.set(
+        netscapeExt.getName,
+        new NetscapeCertTypeExtension(false, netscapeExt.getValue))
+    }
+      
+    val subjectKeyExt =
+      new SubjectKeyIdentifierExtension(new KeyIdentifier(subjectKey).getIdentifier)
+
+    extensions.set(subjectKeyExt.getName, subjectKeyExt)
+    
+    info.set(X509CertInfo.EXTENSIONS, extensions)
+
+    val algo = signingCert.getPublicKey.getAlgorithm match {
+      case "DSA" => new AlgorithmId(AlgorithmId.sha1WithDSA_oid )
+      case "RSA" => new AlgorithmId(AlgorithmId.sha1WithRSAEncryption_oid)
+      case _ => sys.error("Don't know how to sign with this type of key")  
+    }
+
+    info.set(X509CertInfo.ALGORITHM_ID, new CertificateAlgorithmId(algo))
+
+    // Sign the cert to identify the algorithm that's used.
+    val tmpCert = new X509CertImpl(info)
+    tmpCert.sign(signingKey, algo.getName)
+
+    //update the algorithm and re-sign
+    val sigAlgo = tmpCert.get(X509CertImpl.SIG_ALG).asInstanceOf[AlgorithmId]
+    info.set(CertificateAlgorithmId.NAME + "." + CertificateAlgorithmId.ALGORITHM, sigAlgo)
+    val cert = new X509CertImpl(info)
+    cert.sign(signingKey,algo.getName)
+      
+    cert.verify(signingCert.getPublicKey)
+    return cert
+  }
 
 }
 
 
 object Certs {
 
-
   def unapplySeq[T](r: HttpRequest[T])(implicit m: Manifest[T]): Option[IndexedSeq[Certificate]] = {
-    if (m <:< manifest[HttpServletRequest]) unapplyServletRequest(r.asInstanceOf[HttpRequest[HttpServletRequest]])
-    else if (m <:< manifest[ReceivedMessage]) unapplyReceivedMessage(r.asInstanceOf[HttpRequest[ReceivedMessage]])
-    else None //todo: should  throw an exception here?
+    if (m <:< manifest[HttpServletRequest])
+      unapplyServletRequest(r.asInstanceOf[HttpRequest[HttpServletRequest]])
+    else if (m <:< manifest[ReceivedMessage])
+      unapplyReceivedMessage(r.asInstanceOf[HttpRequest[ReceivedMessage]])
+    else
+      None //todo: should  throw an exception here?
   }
 
 
   //todo: should perhaps pass back error messages, which they could in the case of netty
 
-  private def unapplyServletRequest[T <: HttpServletRequest](r: HttpRequest[T]):
-  Option[IndexedSeq[Certificate]] = {
+  private def unapplyServletRequest[T <: HttpServletRequest](r: HttpRequest[T]): Option[IndexedSeq[Certificate]] =
     r.underlying.getAttribute("javax.servlet.request.X509Certificate") match {
       case certs: Array[Certificate] => Some(certs)
       case _ => None
     }
-  }
-
-  private def unapplyReceivedMessage[T <: ReceivedMessage](r: HttpRequest[T]):
-  Option[IndexedSeq[Certificate]] = {
+  
+  private def unapplyReceivedMessage[T <: ReceivedMessage](r: HttpRequest[T]): Option[IndexedSeq[Certificate]] = {
 
     import org.jboss.netty.handler.ssl.SslHandler
-    r.underlying.context.getPipeline.get(classOf[SslHandler]) match {
-      case sslh: SslHandler => try {
-        //return the client certificate in the existing session if one exists
-        Some(sslh.getEngine.getSession.getPeerCertificates)
-      } catch {
-        case e => {
-          // request a certificate from the user
-          sslh.setEnableRenegotiation(true)
-          r match {
-            case UserAgent(agent) if needAuth(agent) => sslh.getEngine.setNeedClientAuth(true)
-            case _ => sslh.getEngine.setWantClientAuth(true)  
-          }
-          
-          val future = sslh.handshake()
-          future.await(30000) //that's certainly way too long.
-          if (future.isDone) {
-            if (future.isSuccess) try {
-              Some(sslh.getEngine.getSession.getPeerCertificates)
-            } catch {
-              case e => None
-            } else {
-              None
-            }
-          } else {
-            None
-          }
-        }
+    
+    val sslh = r.underlying.context.getPipeline.get(classOf[SslHandler])
+    
+    trySome(sslh.getEngine.getSession.getPeerCertificates.toIndexedSeq) orElse {
+      sslh.setEnableRenegotiation(true)
+      r match {
+        case UserAgent(agent) if needAuth(agent) => sslh.getEngine.setNeedClientAuth(true)
+        case _ => sslh.getEngine.setWantClientAuth(true)  
       }
-      case _ => None
+      val future = sslh.handshake()
+      future.await(30000) //that's certainly way too long.
+      if (future.isDone && future.isSuccess)
+        trySome(sslh.getEngine.getSession.getPeerCertificates.toIndexedSeq)
+      else
+        None
     }
 
   }
@@ -211,9 +212,8 @@ object Certs {
   *  so that changes to browsers could update server behavior
   *
   */
-  def needAuth(agent: String): Boolean = {
+  def needAuth(agent: String): Boolean =
     agent.contains("Java")
-  }
   
 }
 

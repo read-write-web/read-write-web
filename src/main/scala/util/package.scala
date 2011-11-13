@@ -8,8 +8,6 @@ import java.net.URL
 
 package object util {
   
-
-
   def modelFromInputStream(
       is: InputStream,
       base: URL,
@@ -39,5 +37,13 @@ package object util {
     new ValidationW[E, S] { val validation = v }
   
   implicit def unwrap[E, F <: E, S <: E](v: Validation[F,S]): E = v.fold(e => e, s => s)
+  
+  // I wonder if this is already defined somewhere...
+  def trySome[T](body: => T): Option[T] =
+    try {
+      Option(body)
+    } catch {
+      case _ => None
+    }
   
 }

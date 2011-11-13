@@ -42,10 +42,10 @@ import org.w3.readwriteweb.{Post, RDFXML, TURTLE}
  * these test cases it does.
  */
 class FlexiKeyManager extends X509ExtendedKeyManager {
-  val keys = mutable.Map[String, Pair[Array[X509Certificate],PrivateKey]]()
+  val keys = mutable.Map[String, (Array[X509Certificate], PrivateKey)]()
   
   def addClientCert(alias: String,certs: Array[X509Certificate], privateKey: PrivateKey) {
-    keys.put(alias,Pair(certs,privateKey))
+    keys += (alias -> (certs -> privateKey))
   }
   
   var currentId: String = null

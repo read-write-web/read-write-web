@@ -97,7 +97,7 @@ object ReadWriteWebMain extends ReadWriteWebArgs {
 
     //this is incomplete: we should be able to start both ports.... not sure how to do this yet.
     val service = httpsPort.value match {
-      case Some(port) => HttpsTrustAll(port,"0.0.0.0")
+      case Some(port) => new HttpsTrustAll(port,"0.0.0.0")
       case None => Http(httpPort.value.get)
     }
 

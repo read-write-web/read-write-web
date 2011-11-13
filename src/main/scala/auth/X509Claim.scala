@@ -45,16 +45,16 @@ object X509Claim {
   final val logger = LoggerFactory.getLogger(classOf[X509Claim])
 
   val idCache: Cache[X509Certificate, X509Claim] =
-     CacheBuilder.newBuilder().expireAfterWrite(30, TimeUnit.MINUTES).
-       build(new CacheLoader[X509Certificate, X509Claim]() {
-         def load(x509: X509Certificate) = new X509Claim(x509)
+     CacheBuilder.newBuilder()
+     .expireAfterWrite(30, TimeUnit.MINUTES)
+     .build(new CacheLoader[X509Certificate, X509Claim] {
+       def load(x509: X509Certificate) = new X509Claim(x509)
      })
 
-  def unapply[T](r: HttpRequest[T])(implicit webCache: WebCache,m: Manifest[T]): Option[X509Claim] =
-    r match {
-      case Certs(c1: X509Certificate, _*) => Some(idCache.get(c1))
-      case _ => None
-    }
+  def unapply[T](r: HttpRequest[T])(implicit webCache: WebCache,m: Manifest[T]): Option[X509Claim] = r match {
+    case Certs(c1: X509Certificate, _*) => Some(idCache.get(c1))
+    case _ => None
+  }
 
 
 
@@ -65,13 +65,14 @@ object X509Claim {
    * @param cert X.509 certificate from which to extract the URIs.
    * @return Iterator of URIs as strings found in the subjectAltName extension.
    */
-	def getClaimedWebIds(cert: X509Certificate): Iterator[String] =
-    if (cert == null)  Iterator.empty;
+  def getClaimedWebIds(cert: X509Certificate): Iterator[String] =
+    if (cert == null)
+      Iterator.empty
     else cert.getSubjectAlternativeNames() match {
       case coll if (coll != null) => {
-        for (sanPair <- coll
-             if (sanPair.get(0) == 6)
-        ) yield sanPair(1).asInstanceOf[String]
+        for {
+          sanPair <- coll if (sanPair.get(0) == 6)
+        } yield sanPair(1).asInstanceOf[String]
       }.iterator
       case _ => Iterator.empty
     }
@@ -89,18 +90,19 @@ object X509Claim {
  * @author bblfish
  * @created: 30/03/2011
  */
-class X509Claim(val cert: X509Certificate) extends Refreshable  {
+// should just be a case class
+class X509Claim(val cert: X509Certificate) extends Refreshable {
 
   import X509Claim._
-  val claimReceivedDate = new Date();
+  val claimReceivedDate = new Date()
   lazy val tooLate = claimReceivedDate.after(cert.getNotAfter())
   lazy val tooEarly = claimReceivedDate.before(cert.getNotBefore())
 
   /* a list of unverified principals */
-  lazy val webidclaims = getClaimedWebIds(cert).map {
-    webid =>new WebIDClaim(webid, cert.getPublicKey)
-  }.toSet
-
+  lazy val webidclaims = {
+    val claims = getClaimedWebIds(cert) map { webid => new WebIDClaim(webid, cert.getPublicKey) }
+    claims.toSet
+  }
 
 
   //note could also implement Destroyable
@@ -112,28 +114,22 @@ class X509Claim(val cert: X509Certificate) extends Refreshable  {
   //note: one could also take the validity period to be dependent on the validity of the profile representation
   //in which case updating the validity period would make more sense.
 
-  override
-  def refresh() {
-  }
+  override def refresh() = ()
 
   /* The certificate is currently within the valid time zone */
-  override
-  def isCurrent(): Boolean = !(tooLate||tooEarly)
+  override def isCurrent(): Boolean = ! (tooLate || tooEarly)
 
-  lazy val error = {}
+  lazy val error = ()
 
   def canEqual(other: Any) = other.isInstanceOf[X509Claim]
 
-  override
-  def equals(other: Any): Boolean =
-    other match {
-      case that: X509Claim => (that eq this) || (that.canEqual(this) && cert == that.cert)
-      case _ => false
-    }
+  override def equals(other: Any): Boolean = other match {
+    case that: X509Claim => (that eq this) || (that.canEqual(this) && cert == that.cert)
+    case _ => false
+  }
 
-  override
-  lazy val hashCode: Int = 41 * (41 +
-    (if (cert != null) cert.hashCode else 0))
+  override lazy val hashCode: Int =
+    41 * (41 + (if (cert != null) cert.hashCode else 0))
 
 }
 

@@ -25,7 +25,7 @@ package org.w3.readwriteweb.auth
 
 import unfiltered.filter.Plan
 import unfiltered.request._
-import collection.JavaConversions._
+import collection.JavaConverters._
 import javax.security.auth.Subject
 import java.net.URL
 import com.hp.hpl.jena.query.{QueryExecutionFactory, QueryExecution, QuerySolutionMap, QueryFactory}
@@ -40,6 +40,7 @@ import org.w3.readwriteweb.{Authoritative, Resource, ResourceManager, WebCache}
  * @created: 14/10/2011
  */
 
+// TODO pull request to the unfiltered project!
 object HttpMethod {
   def unapply(req: HttpRequest[_]): Option[Method] =
     Some(
@@ -59,39 +60,35 @@ object HttpMethod {
 
 object AuthZ {
 
-
   implicit def x509toSubject(x509c: X509Claim)(implicit cache: WebCache): Subject = {
     val subject = new Subject()
     subject.getPublicCredentials.add(x509c)
     val verified = for (
-      claim <- x509c.webidclaims;
-      if (claim.verified)
+      claim <- x509c.webidclaims if (claim.verified)
     ) yield claim.principal
-    subject.getPrincipals.addAll(verified)
+    subject.getPrincipals.addAll(verified.asJava)
     subject
   }
 }
 
-class NullAuthZ[Request,Response] extends AuthZ[Request,Response] {
-  override def subject(req: Req): Option[Subject] = None
+class NullAuthZ[Request, Response] extends AuthZ[Request, Response] {
+  def subject(req: Req): Option[Subject] = None
 
-  override def guard(m: Method, path: URL): Guard = null
+  def guard(m: Method, path: URL): Guard = null
 
-  override def protect(in: Req=>Res)(implicit  m: Manifest[Request]) = in
+  override def protect(in: Req => Res)(implicit  m: Manifest[Request]) = in
 }
 
 
-abstract class AuthZ[Request,Response] {
+trait AuthZ[Request, Response] {
   type Req = HttpRequest[Request]
   type Res = ResponseFunction[Response]
 
-
-  def protect(in: Req=>Res)(implicit  m: Manifest[Request]): Req=>Res =  {
-      case req @ HttpMethod(method) & Authoritative(url,_) if guard(method, url).allow(() => subject(req)) => in(req)
-      case _ => Unauthorized
-    }
+  def protect(in: Req => Res)(implicit m: Manifest[Request]): Req => Res = {
+    case req @ HttpMethod(method) & Authoritative(url,_) if guard(method, url).allow(subject(req)) => in(req)
+    case _ => Unauthorized
+  }
   
-
   protected def subject(req: Req): Option[Subject]
 
   /** create the guard defined in subclass */
@@ -103,16 +100,18 @@ abstract class AuthZ[Request,Response] {
      * verify if the given request is authorized
      * @param subj function returning the subject to be authorized if the resource needs authorization
      */
-    def allow(subj: () => Option[Subject]): Boolean
+    def allow(subj: => Option[Subject]): Boolean
   }
 
 }
 
 
-class RDFAuthZ[Request,Response](val webCache: WebCache, rm: ResourceManager)
+class RDFAuthZ[Request, Response](val webCache: WebCache, rm: ResourceManager)
   (implicit val m: Manifest[Request]) extends AuthZ[Request,Response] {
+  
   import AuthZ.x509toSubject
-  implicit val cache : WebCache = webCache
+  
+  implicit val cache: WebCache = webCache
 
   def subject(req: Req) = req match {
     case X509Claim(claim) => Option(claim)
@@ -127,24 +126,21 @@ class RDFAuthZ[Request,Response](val webCache: WebCache, rm: ResourceManager)
     val Control = acl+"Control"
 
     val selectQuery = QueryFactory.create("""
-    		  PREFIX acl: <http://www.w3.org/ns/auth/acl#>
-    		  SELECT ?mode ?group ?agent
-    		  WHERE {
+          PREFIX acl: <http://www.w3.org/ns/auth/acl#>
+          SELECT ?mode ?group ?agent
+          WHERE {
               ?auth acl:accessTo ?res ;
                     acl:mode ?mode .
           OPTIONAL { ?auth acl:agentClass ?group . }
-	        OPTIONAL { ?auth acl:agent ?agent . }
-    		  }""")
+          OPTIONAL { ?auth acl:agent ?agent . }
+          }""")
   }
 
   def guard(method: Method, url: URL) = new Guard(method, url) {
     import RDFGuard._
-    import org.w3.readwriteweb.util.wrapValidation
-    import org.w3.readwriteweb.util.ValidationW
+    import org.w3.readwriteweb.util.{ValidationW, wrapValidation}
 
-
-
-    def allow(subj: () => Option[Subject]) = {
+    def allow(subj: => Option[Subject]) = {
       val r: Resource = rm.resource(new URL(url,".meta.n3"))
       val res: ValidationW[Boolean,Boolean] = for {
         model <- r.get() failMap { x => true }
@@ -154,7 +150,7 @@ class RDFAuthZ[Request,Response](val webCache: WebCache, rm: ResourceManager)
         val qe = QueryExecutionFactory.create(selectQuery, model, initialBinding)
         val agentsAllowed = try {
           val exec = qe.execSelect()
-          val res = for (qs <- exec) yield {
+          val res = for (qs <- exec.asScala) yield {
             val methods = qs.get("mode").toString match {
               case Read => List(GET)
               case Write => List(PUT, POST)
@@ -170,10 +166,10 @@ class RDFAuthZ[Request,Response](val webCache: WebCache, rm: ResourceManager)
         }
         if (agentsAllowed.size > 0) {
           if (agentsAllowed.exists( pair =>  pair._2 == foafAgent )) true
-          else subj() match {
+          else subj match {
             case Some(s) => {
               agentsAllowed.exists{
-                p =>  s.getPrincipals(classOf[WebIdPrincipal]).
+                p =>  s.getPrincipals(classOf[WebIdPrincipal]).asScala.
                   exists(id=> {
                   val ps = if (p._1 != null) p._1.toString else null;
                   ps == id.webid
@@ -196,7 +192,6 @@ class RDFAuthZ[Request,Response](val webCache: WebCache, rm: ResourceManager)
 
 
 class ResourceGuard(path: String, reqMethod: Method) {
-
 
   def allow(subjFunc: () => Option[Subject]) = {
     subjFunc().isEmpty
