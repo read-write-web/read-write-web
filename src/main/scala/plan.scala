@@ -8,7 +8,6 @@ import java.net.URL
 
 import org.slf4j.{Logger, LoggerFactory}
 
-import com.hp.hpl.jena.rdf.model.Model
 import com.hp.hpl.jena.query.{Query, QueryExecution, QueryExecutionFactory}
 import com.hp.hpl.jena.update.UpdateAction
 import Query.{QueryTypeSelect => SELECT,
@@ -20,6 +19,8 @@ import scalaz.{Resource => _}
 import unfiltered.request._
 import unfiltered.Cycle
 import unfiltered.response._
+
+import com.hp.hpl.jena.rdf.model.Model
 
 //object ReadWriteWeb {
 //
