@@ -34,29 +34,12 @@ import unfiltered.response.{ResponseFunction, Unauthorized}
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
 import com.hp.hpl.jena.rdf.model.{RDFNode, ResourceFactory}
 import org.w3.readwriteweb.{Authoritative, Resource, ResourceManager, WebCache}
+import org.w3.readwriteweb.util.HttpMethod
 
 /**
  * @author hjs
  * @created: 14/10/2011
  */
-
-// TODO pull request to the unfiltered project!
-object HttpMethod {
-  def unapply(req: HttpRequest[_]): Option[Method] =
-    Some(
-      req.method match {
-        case "GET" => GET
-        case "PUT" => PUT
-        case "HEAD" => HEAD
-        case "POST" => POST
-        case "CONNECT" => CONNECT
-        case "OPTIONS" => OPTIONS
-        case "TRACE" => TRACE
-        case m => new Method(m)
-      })
-
-
-}
 
 object AuthZ {
 
