@@ -33,7 +33,7 @@ package object util {
       case t => t.fail
     }
 
-  implicit def wrapValidation[E, S](v: Validation[E,S]): ValidationW[E, S] =
+  implicit def wrapValidation[E, S](v: Validation[E, S]): ValidationW[E, S] =
     new ValidationW[E, S] { val validation = v }
   
   implicit def unwrap[E, F <: E, S <: E](v: Validation[F,S]): E = v.fold(e => e, s => s)
