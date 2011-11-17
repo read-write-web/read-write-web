@@ -10,6 +10,7 @@ object Dependencies {
   val unfiltered_filter = "net.databinder" %% "unfiltered-filter" % unfiltered_version 
   val unfiltered_jetty = "net.databinder" %% "unfiltered-jetty" % unfiltered_version 
   val unfiltered_netty = "net.databinder" %% "unfiltered-netty" % unfiltered_version 
+  val scalate = "net.databinder" %% "unfiltered-scalate" % unfiltered_version  
   // val unfiltered_spec = "net.databinder" %% "unfiltered-spec" % "0.4.1" % "test"
   val ivyUnfilteredSpec =
     <dependencies>
@@ -17,7 +18,7 @@ object Dependencies {
         <exclude org="net.databinder" module="dispatch-mime_2.9.0-1"/>
       </dependency>
     </dependencies>
-  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.6"
+  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.6.4"
   val antiXML = "com.codecommit" %% "anti-xml" % "0.4-SNAPSHOT" % "test"
   val jena = "com.hp.hpl.jena" % "jena" % "2.6.4"
   val arq = "com.hp.hpl.jena" % "arq" % "2.8.8"
@@ -89,7 +90,7 @@ object YourProjectBuild extends Build {
       libraryDependencies += unfiltered_filter,
       libraryDependencies += unfiltered_jetty,
       libraryDependencies += unfiltered_netty,
-//      libraryDependencies += slf4jSimple,
+      libraryDependencies += slf4jSimple,
       libraryDependencies += jena,
       libraryDependencies += arq,
       libraryDependencies += antiXML,
@@ -98,6 +99,7 @@ object YourProjectBuild extends Build {
       libraryDependencies += jsslutils,
       libraryDependencies += argot,
       libraryDependencies += guava,
+      libraryDependencies += scalate,
 
       jarName in assembly := "read-write-web.jar"
     )
