@@ -6,4 +6,6 @@ case object write extends RWWAction
 case object append extends RWWAction
 case object control extends RWWAction
 
-trait RWWAuthorization extends Authorization[RWWAction]
+trait RWWAuthorization extends Authorization {
+  override val actions: Seq[RWWAction]
+}

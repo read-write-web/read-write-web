@@ -3,15 +3,28 @@ package org.w3.webacl
 import java.net.{URI, URL}
 import scala.util.matching.Regex
 
-trait Authorization[A <: Action] {
+case class WebACL(
+    imports: Seq[WebACL],
+    authorizations: Seq[Authorization]) {
   
-  val agentPolicies: Set[AcceptedAgentPolicy]
-  val actions: Set[A]
-  val accessTo: Set[ResourcePolicy]
+  def authorized(
+      agent: Agent,
+      action: Action,
+      accessedResource: URL): Boolean =
+    (authorizations exists { _.authorized(agent, action, accessedResource) }) ||
+    (imports exists { _.authorized(agent, action, accessedResource) })
+}
+
+
+trait Authorization {
+  
+  val agentPolicies: Seq[AcceptedAgentPolicy]
+  val actions: Seq[Action]
+  val accessTo: Seq[ResourcePolicy]
   
   final def authorized(
       agent: Agent,
-      action: A,
+      action: Action,
       accessedResource: URL): Boolean = {
     def agentIsConcernedBySomePolicy = agentPolicies exists { _ concerns agent }
     def knownAction = actions contains action
