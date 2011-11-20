@@ -23,16 +23,13 @@
 
 package org.w3.readwriteweb.auth
 
-import unfiltered.filter.Plan
 import unfiltered.request._
 import collection.JavaConverters._
 import javax.security.auth.Subject
 import java.net.URL
-import com.hp.hpl.jena.query.{QueryExecutionFactory, QueryExecution, QuerySolutionMap, QueryFactory}
-import sun.management.resources.agent
+import com.hp.hpl.jena.query.{QueryExecutionFactory, QuerySolutionMap, QueryFactory}
 import unfiltered.response.{ResponseFunction, Unauthorized}
-import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
-import com.hp.hpl.jena.rdf.model.{RDFNode, ResourceFactory}
+import com.hp.hpl.jena.rdf.model.ResourceFactory
 import org.w3.readwriteweb.{Authoritative, Resource, ResourceManager, WebCache}
 import org.w3.readwriteweb.util.HttpMethod
 
@@ -46,10 +43,10 @@ object AuthZ {
   implicit def x509toSubject(x509c: X509Claim)(implicit cache: WebCache): Subject = {
     val subject = new Subject()
     subject.getPublicCredentials.add(x509c)
-    val verified = for (
-      claim <- x509c.webidclaims if (claim.verified)
-    ) yield claim.principal
-    subject.getPrincipals.addAll(verified.asJava)
+    if (x509c.isCurrent()) {
+      val verified = x509c.verifiedClaims.map(claim => claim.principal)
+      subject.getPrincipals.addAll(verified.asJava)
+    }
     subject
   }
 }
@@ -91,9 +88,9 @@ trait AuthZ[Request, Response] {
 
 class RDFAuthZ[Request, Response](val webCache: WebCache, rm: ResourceManager)
   (implicit val m: Manifest[Request]) extends AuthZ[Request,Response] {
-  
+
   import AuthZ.x509toSubject
-  
+
   implicit val cache: WebCache = webCache
 
   def subject(req: Req) = req match {
@@ -172,14 +169,5 @@ class RDFAuthZ[Request, Response](val webCache: WebCache, rm: ResourceManager)
   }
 
 }
-
-
-class ResourceGuard(path: String, reqMethod: Method) {
-
-  def allow(subjFunc: () => Option[Subject]) = {
-    subjFunc().isEmpty
-  }
-}
-
 
 

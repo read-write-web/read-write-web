@@ -41,7 +41,8 @@ package object util {
   // I wonder if this is already defined somewhere...
   def trySome[T](body: => T): Option[T] =
     try {
-      Option(body)
+      val res = body;
+      if (res == null) None else Option(res)
     } catch {
       case _ => None
     }

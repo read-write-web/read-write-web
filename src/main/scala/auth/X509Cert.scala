@@ -69,6 +69,8 @@ class X509CertSigner(
    *
    * WARNING THIS IS   in construction
    *
+   * Look in detail at http://www.ietf.org/rfc/rfc2459.txt
+   *
    * Create a self-signed X.509 Certificate
    * @param subjectDN the X.509 Distinguished Name, eg "CN=Test, L=London, C=GB"
    * @param pair the KeyPair
@@ -116,7 +118,7 @@ class X509CertSigner(
       import KeyUsageExtension._
       val keyUsage = new KeyUsageExtension
       val usages =
-        List(DIGITAL_SIGNATURE, NON_REPUDIATION, KEY_ENCIPHERMENT, KEY_AGREEMENT,  KEY_CERTSIGN)
+        List(DIGITAL_SIGNATURE, NON_REPUDIATION, KEY_ENCIPHERMENT, KEY_AGREEMENT)
       usages foreach { usage => keyUsage.set(usage, true) }
       extensions.set(keyUsage.getName,keyUsage)
     }
