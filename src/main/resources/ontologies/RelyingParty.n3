@@ -1,0 +1,176 @@
+# vocabulary to allow a RelyingParty to make a report on an attempt at a WebID authentication.
+
+@prefix cert: <http://www.w3.org/ns/auth/cert#> .
+@prefix rsa: <http://www.w3.org/ns/auth/rsa#> .
+@prefix earl: <http://www.w3.org/ns/earl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix wit: <http://www.w3.org/2005/Incubator/webid/earl/RelyingParty#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+
+
+<#> a owl:Ontology .
+
+<> a foaf:Document;
+	dc:author <http://bblfish.net/people/henry/card#me>; 
+	dc:contributor <http://www.bergnet.org/people/bergi/card#me>;
+	rdfs:comment "Document describing a vocabulary to allow a RelyingParty to make a report on an attempt at a WebID authentication."@en;
+	rdfs:seeAlso <http://www.w3.org/2005/Incubator/webid/earl/RelyingPartyExample#>.
+
+#
+# Classes
+#
+
+wit:WebIDClaim a rdfs:Class;
+	rdfs:comment "A WebID Claim is a graph that consists of a claim that a public key identifies some WebID. Every WebID published in a certificate constitutes one WebID claim: the claim that the referent of the WebID is the only one to know the private key of the public key that came in the certificate"@en.
+
+#
+# Properties
+#
+wit:claimedKey a rdfs:Property;
+	rdfs:comment "Public key of a WebID Claim."@en;
+	rdfs:domain wit:WebIDClaim;
+	rdfs:range rsa:RSAPublicKey.
+
+wit:claimedIdentity a rdfs:Property;
+	rdfs:comment "Identity URI of a WebID Claim."@en;
+	rdfs:domain wit:WebIDClaim.
+
+#
+# pure certificate tests
+#
+wit:certificateProvided a earl:TestCase;
+	dct:title "Did the client provide a X509 certificate?"@en;
+    dct:description "Without a client certificate this type of WebID Authentication can not take place."@en;
+	skos:note "If the client provided an certificate, the earl:pointer property must point to it. The certificate is described with the class cert:Certificate using the property cert:base64der. The property cert:principal_key must point to the contained public key. The public key is described with a rsa:publicKey which contains the properties rsa:modulus and rsa:public_exponent. The log:semantics property must point to a blank node that contains a log:includes property for every WebIDClaim."@en.
+
+wit:certificateProvidedSAN a earl:TestCase;
+	dct:title "Does the client certificate contain a subject alternative name?"@en;
+    dct:description "The client certificate must contain at least one Subject Alternative Name in the SAN field of the certificate"@en;
+	skos:note "The earl:subject property must point to the certificate. The earl:pointer must contain the complete subject alternative name string. The certificate is described with the class cert:Certificate using the property cert:base64der. The property cert:principal_key should point to the contained public key."@en.
+
+wit:certificateDateOk a earl:TestCase;
+	dct:title "Is the certificate alive?"@en;
+    dct:description "The time of this session should be between the begin and end date of the certificate validity times"@en;
+	skos:note "The earl:subject property must point to the certificate. The certificate is described with the class cert:Certificate using the property cert:base64der. The property cert:principal_key should point to the contained public key."@en.
+
+wit:certificatePubkeyRecognised a earl:TestCase;
+	dct:title "Could the public key be recognised?"@en;
+	dct:description "The public key in the certificate is recognised by the WebId code. If it is not then this server will not know how to match it with the remote WebID Profile. "@en;
+	skos:note "The earl:subject property must point to the certificate. The earl:pointer must point to the public key. The certificate is described with the class cert:Certificate using the property cert:base64der. The property cert:principal_key should point to the contained public key. The public key is described with the class rsa:RSAPublicKey with the properties rsa:modulus and rsa:public_exponent like described in the WebID specification."@en.
+
+wit:certificateCriticalExtensionsOk a earl:TestCase;
+	dct:title "Does the certificate contain no unnecessary critical extensions?"@en;
+	dct:description "Critical Extensions are not a direct problem for WebID, but may cause many servers to reject the certificate before the WebID code gets to see it. These tests should not generate errors but only warnings"@en;
+	skos:note "The earl:subject property must point to the certificate. The certificate is described with the class cert:Certificate using the property cert:base64der. The property cert:principal_key should point to the contained public key."@en.
+
+wit:certificateOk a earl:TestRequirement;
+	dct:title "Does the certificate fulfill all requirements for a WebID certificate?"@en;
+	dct:description "The certificate must be alive, have one or more WebIDs, should have a public key recognised by the semantic web layer, and should avoid having critical extensions. "@en;
+	dct:hasPart
+		wit:certificateProvided,
+		wit:certificateProvidedSAN,
+		wit:certificateDateOk,
+		wit:certificatePubkeyRecognised,
+		wit:certificateCriticalExtensionsOk;
+	skos:note "If any of the child test cases fails this test requirement must return earl:failed."@en.
+
+#
+# profile tests
+#
+wit:profileGet a earl:TestCase;
+	dct:title "Is the WebID Profile accessible and downloadable?"@en;
+    dct:description "The WebID profile must be retrievable if the claims are going to be verified."@en;
+    skos:note "The earl:subject property should point to the WebID profile, or to a link where a copy of that profile can be fetched. The content could also be included in the document." .
+
+wit:profileWellFormed a earl:TestCase;
+	dct:title "Is the profile well formed?"@en;
+	dct:description "The WebId Profile must be parseable Content and transformable to an RDF graph"@en;
+    skos:note "The earl:subject property should point to the WebID profile, or to a link where a copy of that profile can be fetched. The content could also be included in the document." .
+
+
+wit:profileAllKeysWellFormed a earl:TestCase;
+	dct:title "Does the profile contain only well formed keys for that WebID?"@en;
+	dct:description "All the keys in the profile should be well formed and semantically consistent. It is not necessarily fatal to a particular WebID authentication if they are not, but it is worth alerting the user, as this may lead to inconsistent user experience."@en;
+	skos:note "One does not need to test all keys in a profile, only those that are tied to the WebIDs found in the X509 cert. But to help users one could give them a deeper test of the profile."@en;
+	dct:hasPart
+		wit:profileWellFormedPubkey.
+
+wit:profileWellFormedPubkey a earl:TestRequirement;
+	dct:title "Is the public key well formed?"@en;
+	dct:description "A particular Public key should be well formed"@en;
+	skos:note "The earl:subject property must point to a graph that contains the public key and its webid relation. To help this being processed by tools that are not able to deal with n3 graphs, this should point using the log:n3string relation to a turtle serialisation of the graph (turtle is a subset of n3)"@en;
+	skos:note "The current cert ontology doesn't include properties for DSA, and so there are currently no tests for DSA keys either"@en;
+	dct:hasPart
+		wit:pubkeyRSAModulus,
+		wit:pubkeyRSAExponent.
+
+wit:pubkeyRSAModulus a earl:TestCase;
+	dct:title "Is the RSA modulus well formed?"@en;
+    dct:description "There may be a number of ways of writing the modulus. Is this server able to parse this particular modulus?"@en;
+	dct:hasPart
+		wit:pubkeyRSAModulusFunctional,
+		wit:pubkeyRSAModulusLiteral.
+
+wit:pubkeyRSAModulusFunctional a earl:TestCase;
+	dct:title "Does the public key contain only one modulus?"@en;
+	dct:description "More than one modulus if they don't convert to the same number will lead to erratic behavior (one server will choose one the other server will chose the other)"@en.
+
+wit:pubkeyRSAModulusLiteral a earl:TestCase;
+	dct:title "Is the RSA modulus a literal number?"@en;
+	dct:description "In the current ontology we have moved to literals as the standard way of describing modulus and exponents"@en.
+
+wit:pubkeyRSAExponent a earl:TestCase;
+	dct:title "Is the RSA public exponent well formed?"@en;
+    dct:description "There may be a number of ways of writing the exponent. Is this server able to parse this particular exponent?"@en;
+	dct:hasPart
+		wit:pubkeyRSAExponentFunctional,
+		wit:pubkeyRSAExponentLiteral.
+
+wit:pubkeyRSAExponentFunctional a earl:TestCase;
+	dct:title "Does the public key contain only one public exponent?"@en;
+	dct:description "More than one exponent if they don't convert to the same number is very likely to create erratic behavior (one server will choose one the other server will chose the other)"@en.
+
+wit:pubkeyRSAExponentLiteral a earl:TestCase;
+	dct:title "Is the RSA public exponent a literal number?"@en;
+	dct:description "In the current ontology we have moved to literals as the standard way of describing modulus and exponents"@en.
+
+wit:profileOk a earl:TestRequirement;
+	dct:title "Does the profile fulfill all requirements for WebID authentication?"@en;
+	dct:hasPart
+		wit:profileGet,
+		wit:profileWellFormed,
+		wit:profileAllKeysWellFormed.
+
+wit:pubkeyRSAModulusOldFunctional a earl:TestCase;
+	dct:title "If modulus is using non literal notation, is there only one cert:hex relation to plain literal?"@en;
+	skos:note "this should be a deprecated test sooner rather than later. Warn people to move to newer notation."@en.
+
+wit:pubkeyRSAExponentOldFunctional a earl:TestCase;
+	dct:title "If public exponent is using non literal notation, is there only one cert:decimal relation to plain literal?"@en.
+
+wit:pubkeyOldOk a earl:TestRequirement;
+	dct:title "Is the public key present in valid old non literal notation?"@en;
+	dct:hasPart
+		wit:pubkeyRSAModulusOldFunctional,
+		wit:pubkeyRSAExponentOldFunctional.
+
+#
+# webid protocol tests: ie: tying pubkey and  Webid in certificate to remote WebID identifying description
+#
+wit:webidClaim a earl:TestRequirement;
+	dct:title "Could the particular WebID claim be verified?"@en;
+	dct:description "Verification of a particular WebID claim"@en;
+	dct:hasPart
+		wit:certificateOk,
+		wit:profileOk.
+
+wit:webidAuthentication a earl:TestRequirement;
+	dct:title "Could at least one WebID claim be verified?"@en;
+	dct:description "At least one WebID claimed in the certificate has public key that verifies."@en;
+	dct:hasPart wit:webidClaim.

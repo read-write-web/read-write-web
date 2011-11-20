@@ -23,10 +23,15 @@
 
 package org.w3.readwriteweb.auth
 
-import unfiltered.request.Path
-import unfiltered.response.{Html, ContentType, Ok}
-import org.w3.readwriteweb.WebCache
+import java.io.File
+import unfiltered.response.{Ok, Html}
 import unfiltered.Cycle
+import org.fusesource.scalate.{Binding, TemplateEngine}
+import xml.{Elem, XML}
+import unfiltered.request.{Path, &}
+import org.fusesource.scalate.scuery.{Transform, Transformer}
+import org.w3.readwriteweb.WebCache
+import unfiltered.scalate.Scalate
 
 /**
  * This plan just described the X509 WebID authentication information.
@@ -39,26 +44,37 @@ import unfiltered.Cycle
  * @created: 13/10/2011
  */
 
-trait X509view[Request,Response]  {
+trait X509view[Req,Res]  {
    implicit def wc: WebCache
-   implicit def manif: Manifest[Request]
+   implicit def manif: Manifest[Req]
 
-    def intent: Cycle.Intent[Request, Response] =  {
-      case req @ Path(path) if path startsWith "/test/auth/x509" =>
-        Ok ~> ContentType("text/html") ~> Html(
-          <html><head><title>Authentication Page</title></head>
-        { req match {
-          case X509Claim(xclaim) => <body>
-            <h1>Authentication Info received</h1>
-            <p>You were identified with the following WebIDs</p>
-             <ul>{xclaim.webidclaims.filter(cl=>cl.verified).map(p=> <li>{p.webId}</li>)}</ul>
-            <p>You sent the following certificate</p>
-            <pre>{xclaim.cert.toString}</pre>
-          </body>
-          case _ => <body><p>We received no Authentication information</p></body>
-        }
-          }</html>)
+  val fileDir: File = new File(this.getClass.getResource("/template/").toURI)
+  val templateDirs = List(fileDir)
+  implicit val engine = new TemplateEngine(templateDirs)
+  implicit val bindings: List[Binding] = List(Binding(name = "title", className = "String"))
+  implicit val additionalAttributes = List(("title", "My First Title"))
 
+  val template: Elem = XML.loadFile(new File(fileDir, "WebId.xhtml"))
+
+  def intent : Cycle.Intent[Req,Res] = {
+    case Path("/test/auth/webid") & X509Claim(claim) => Ok ~> Html( new X509Filler(claim).apply(template) )
+    case req @ Path("/test/WebIdAuth2") => Ok ~> Scalate(req, "hello.ssp")
+  }
+
+}
+
+
+class X509Filler(x509: X509Claim)(implicit cache: WebCache) extends Transformer {
+  $(".cert_test") { node =>
+      val x509Tests = certOk.test(x509);
+      val ff = for (tst <- x509Tests) yield {
+        new Transform(node) {
+          $(".tst_question").contents = tst.of.title
+          $(".tst_txt").contents = tst.of.description
+          $(".tst_res").contents = tst.result.name
+          $(".tst_res_txt").contents = tst.msg
+        }.toNodes()
       }
-
+      ff.flatten
+  }
 }

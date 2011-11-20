@@ -28,10 +28,7 @@ import scala.Console._
 import org.w3.readwriteweb.auth.{X509view, RDFAuthZ}
 import org.w3.readwriteweb._
 import org.jboss.netty.handler.codec.http.HttpResponse
-import ui.WebIDAuthnReport
 import unfiltered.netty.{ServerErrorResponse, ReceivedMessage, cycle}
-import unfiltered.filter.Planify._
-import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
 
 /**
  * ReadWrite Web for Netty server, allowing TLS renegotiation
@@ -63,8 +60,6 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
           override val authz = new RDFAuthZ[ReceivedMessage,HttpResponse](webCache,filesystem)
      }
 
-     val test = new cycle.Plan with cycle.ThreadPool with ServerErrorResponse with WebIDAuthnReport[ReceivedMessage,HttpResponse]
-
      //this is incomplete: we should be able to start both ports.... not sure how to do this yet.
      val service = httpsPort.value match {
        case Some(port) => new KeyAuth_Https(port)
@@ -73,8 +68,7 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
 
      // configures and launches a Netty server
      service.plan( x509v ).
-            plan( test ).
-            plan( rww ).run()
+             plan( rww ).run()
      
    }
 

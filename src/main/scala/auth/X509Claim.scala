@@ -90,7 +90,7 @@ object X509Claim {
  * @author bblfish
  * @created: 30/03/2011
  */
-// should just be a case class
+// can't be a case class as it then creates object which clashes with defined one
 class X509Claim(val cert: X509Certificate) extends Refreshable {
 
   import X509Claim._
@@ -103,6 +103,10 @@ class X509Claim(val cert: X509Certificate) extends Refreshable {
     val claims = getClaimedWebIds(cert) map { webid => new WebIDClaim(webid, cert.getPublicKey) }
     claims.toSet
   }
+
+  def verifiedClaims(implicit cache: WebCache) = for (
+    claim <- webidclaims if (claim.verified)
+  ) yield claim
 
 
   //note could also implement Destroyable
@@ -118,8 +122,6 @@ class X509Claim(val cert: X509Certificate) extends Refreshable {
 
   /* The certificate is currently within the valid time zone */
   override def isCurrent(): Boolean = ! (tooLate || tooEarly)
-
-  lazy val error = ()
 
   def canEqual(other: Any) = other.isInstanceOf[X509Claim]
 

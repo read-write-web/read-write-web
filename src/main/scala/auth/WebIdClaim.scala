@@ -23,14 +23,13 @@
 
 package org.w3.readwriteweb.auth
 
-import com.hp.hpl.jena.rdf.model.RDFNode
 import java.math.BigInteger
 import java.security.PublicKey
 import org.w3.readwriteweb.WebCache
-import java.util.LinkedList
 import java.security.interfaces.RSAPublicKey
-import java.net.URL
 import com.hp.hpl.jena.query.{QueryExecutionFactory, QueryExecution, QuerySolutionMap, QueryFactory}
+import com.hp.hpl.jena.rdf.model.RDFNode
+import java.net.URL
 
 /**
  * @author hjs
@@ -137,18 +136,12 @@ object WebIDClaim {
 }
 
 /**
- * An X509 Claim maintains information about the proofs associated with claims
- * found in an X509 Certificate. It is the type of object that can be passed
- * into the public credentials part of a Subject node
- *
- * todo: think of what this would look like for a chain of certificates
+ * A claim that the user identified by the WebId controls the public key
  *
  * @author bblfish
  * @created 30/03/2011
  */
 class WebIDClaim(val webId: String, val key: PublicKey) {
-
-	var errors = new LinkedList[java.lang.Throwable]()
 
 	lazy val principal = new WebIdPrincipal(webId)
 
@@ -158,7 +151,7 @@ class WebIDClaim(val webId: String, val key: PublicKey) {
 
   def verified(implicit cache: WebCache): Boolean = {
     if (!valid) tests = verify(cache)
-    tests.exists(v => v.isInstanceOf[Verified])
+    tests.contains(verifiedWebID)
   }
   
   private def verify(implicit cache: WebCache): List[Verification] = {
@@ -234,20 +227,15 @@ class WebIDClaim(val webId: String, val key: PublicKey) {
 
 }
 
+class ProfileError(msg: String,  t: Throwable) extends Verification(profileOkTst,failed,msg, Some(t))
+class KeyProblem(msg: String) extends Verification(profileWellFormedKeyTst,failed,msg)
 
-class Verification(msg: String)
-class Verified(msg: String) extends Verification(msg)
-class Unverified(msg: String) extends Verification(msg)
+object keyDoesNotMatch extends Verification(null,null,null) //this test will be forgotten
 
-class TestFailure(msg: String) extends Verification(msg)
-class ProfileError(msg: String,  t: Throwable ) extends TestFailure(msg)
-class KeyProblem(msg: String) extends TestFailure(msg)
+object verifiedWebID extends Verification(webidClaimTst, passed, "WebId verified")
+object noMatchingKey extends Verification(webidClaimTst, failed, "No keys in profile matches key in cert")
+object unsupportedProtocol extends Verification(webidClaimTst,untested,"WebID protocol not supported" )
 
-object unsupportedProtocol extends TestFailure("WebID protocol not supported")
-object noMatchingKey extends TestFailure("No keys in profile matches key in cert")
-object keyDoesNotMatch extends TestFailure("Key does not match")
+object certificateKeyTypeNotSupported extends Verification(pubkeyTypeTst,failed,"The certificate key type is not supported. We only support RSA")
 
-object verifiedWebID extends Verified("WebId verified")
-object notstarted extends Unverified("No verification attempt started")
-object failed extends Unverified("Tests failed")
-object certificateKeyTypeNotSupported extends TestFailure("The certificate key type is not supported. We only support RSA")
+

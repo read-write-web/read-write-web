@@ -3,7 +3,6 @@ package org.w3.readwriteweb
 import auth.{RDFAuthZ, X509view}
 import org.w3.readwriteweb.util._
 
-import ui.WebIDAuthnReport
 import unfiltered.jetty._
 import java.io.File
 import Console.err
@@ -102,7 +101,6 @@ object ReadWriteWebMain extends ReadWriteWebArgs {
       override implicit val authz = new RDFAuthZ[HttpServletRequest,HttpServletResponse](webCache,filesystem)
     }
 
-    def test = new WebIDAuthnReport[HttpServletRequest,HttpServletResponse]() {}
 
     //this is incomplete: we should be able to start both ports.... not sure how to do this yet.
     val service = httpsPort.value match {
@@ -114,8 +112,7 @@ object ReadWriteWebMain extends ReadWriteWebArgs {
     service.filter(new FilterLogger(logger)).
       context("/public"){ ctx:ContextBuilder =>
         ctx.resources(ClasspathUtils.fromClasspath("public/").toURI.toURL)
-    }.filter(Planify(test.intent)).
-      filter(Planify(rww.intent)).
+    }.filter(Planify(rww.intent)).
       filter(Planify(x509v.intent)).
       filter(new EchoPlan().plan).run()
     
