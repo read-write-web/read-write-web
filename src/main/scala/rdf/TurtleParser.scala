@@ -2,7 +2,6 @@ package org.w3.rdf.turtle
 
 import org.w3.rdf._
 import scala.util.parsing.combinator._
-import java.net.URI
 
 object MyParsers extends RegexParsers {
   val uri = """[a-zA-Z0-9:/#_\.\-\+]+""".r
@@ -94,80 +93,4 @@ class TurtleParser extends JavaTokenParsers {
   
 }
 
-import java.net.URL
-trait TurtleSerializer[RDF <: RDFModel] {
-  
-  val rdf: RDF
-  
-  def asString(g: rdf.Graph, base: URL): String
-  
-}
 
-import org.w3.rdf.jena.JenaModel
-import com.hp.hpl.jena.rdf.model.{Model, ModelFactory}
-import org.w3.readwriteweb.TURTLE
-
-object JenaTurtleSerializer extends TurtleSerializer[JenaModel] {
-  
-  val rdf = JenaModel
-  
-  def asString(g: rdf.Graph, base: URL): String = {
-    val model = ModelFactory.createModelForGraph(g.jenaGraph)
-    val writer = model.getWriter(TURTLE.jenaLang)
-    val sw = new java.io.StringWriter
-    writer.write(model, sw, base.toString)
-    sw.toString
-  }
-  
-}
-
-object ConcreteTurtleSerializer extends TurtleSerializer[ConcreteRDFModel] {
-  
-  val rdf = ConcreteRDFModel
-  
-  def asString(g: rdf.Graph, base: URL): String = {
-    g map {
-      t =>
-        val rdf.Triple(rdf.SubjectNode(s), rdf.PredicateIRI(p), o) = t
-        try {
-          "%s %s %s" format (nodeStr(s), iriStr(p), objectStr(o))
-        } catch {
-          case e => {
-            println("=== "+t)
-            println("s: "+s)
-            println("p: "+p)
-            println("o: "+o)
-            throw e
-          }
-        }
-    } mkString "\n"
-  }
-
-  def objectStr(n: rdf.Object): String = {
-    n match {
-//       case l:rdf.ObjectLiteral => {
-//         val x:rdf.ObjectLiteral = l
-//         "**ObjectLiteral(" + x + ")**"
-//       }
-      case rdf.ObjectNode(n) => nodeStr(n)
-      case rdf.ObjectLiteral(l) => literalStr(l)
-      case x => { sys.error(x.toString) }
-    }
-  }
-
-  private def nodeStr(n: rdf.Node): String = {
-    n match {
-      case rdf.NodeIRI(i) => iriStr(i)
-      case rdf.NodeBNode(b) => bnodeStr(b)
-    }
-  }
-
-  private def iriStr(i: rdf.IRI): String =
-    "<%s>" format { val rdf.IRI(s) = i; s }
-
-  private def bnodeStr(b: rdf.BNode): String =
-    "_:" + { val rdf.BNode(l) = b; l }
- 
-  private def literalStr(l: rdf.Literal): String = l.toString
-
-}

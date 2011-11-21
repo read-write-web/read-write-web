@@ -1,5 +1,6 @@
-package org.w3.rdf
+package org.w3.rdf.concrete
 
+import org.w3.rdf.RDFModel
 import org.w3.isomorphic._
 
 trait ConcreteRDFModel extends RDFModel {
@@ -80,4 +81,3 @@ trait ConcreteRDFModel extends RDFModel {
 
 object ConcreteRDFModel extends ConcreteRDFModel
 
-object ConcreteModelWithImplicits extends ConcreteRDFModel with Implicits

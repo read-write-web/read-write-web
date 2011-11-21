@@ -82,11 +82,9 @@ object Main {
     val rdfxmlParser = org.w3.rdf.rdfxml.RDFXMLParser(rdf)
     
     val g: rdf.Graph = rdfxmlParser.parse(new File("src/test/resources/card.rdf"))
-
-//    val m:Graph = g.jenaGraph
     
     //val s = org.w3.rdf.turtle.ConcreteTurtleSerializer
-    val s = org.w3.rdf.turtle.JenaTurtleSerializer
+    val s = org.w3.rdf.jena.JenaTurtleSerializer
     
     println(s.asString(g, new java.net.URL("http://www.w3.org/People/Berners-Lee/card")))
     

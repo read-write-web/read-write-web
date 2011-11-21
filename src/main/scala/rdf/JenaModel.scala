@@ -1,12 +1,12 @@
 package org.w3.rdf.jena
 
-import org.w3.rdf._
-import com.hp.hpl.jena.graph.{Graph => JenaGraph, Triple => JenaTriple, Node => JenaNode, _}
-import com.hp.hpl.jena.rdf.model.{AnonId}
-import com.hp.hpl.jena.datatypes.{RDFDatatype, TypeMapper}
+import org.w3.rdf.RDFModel
 import org.w3.readwriteweb.util.trySome
-
 import org.w3.isomorphic._
+
+import com.hp.hpl.jena.graph.{Graph => JenaGraph, Triple => JenaTriple, Node => JenaNode, _}
+import com.hp.hpl.jena.rdf.model.AnonId
+import com.hp.hpl.jena.datatypes.{RDFDatatype, TypeMapper}
 
 trait JenaModel extends RDFModel {
 
@@ -132,4 +132,4 @@ trait JenaModel extends RDFModel {
 
 object JenaModel extends JenaModel
 
-object JenaModelWithImplicits extends JenaModel with Implicits
+//object JenaModelWithImplicits extends JenaModel with Implicits
