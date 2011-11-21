@@ -41,7 +41,7 @@ object ParseError {
 
 object RDFXMLParser {
   
-  def apply(rdf: Model) = new Object {
+  def apply(rdf: RDFModel) = new Object {
     private val parser = new RDFXMLParser
     def parse(file:File): rdf.Graph = parser.toGraph(file)(rdf)._1
   }
@@ -54,16 +54,16 @@ class RDFXMLParser {
    * http://jena.sourceforge.net/javadoc/com/hp/hpl/jena/rdf/arp/AResource.html
    * note: see setUserData and getUserData for when BNode will be abstract
    */
-  def toNode(a: AResource)(implicit rdf: Model): rdf.Node =
+  def toNode(a: AResource)(implicit rdf: RDFModel): rdf.Node =
     if (a.isAnonymous)
       rdf.NodeBNode(rdf.BNode(a.getAnonymousID))
     else
       rdf.NodeIRI(rdf.IRI(a.getURI))
   
-  def toPredicate(a: AResource)(implicit rdf: Model): rdf.Predicate =
+  def toPredicate(a: AResource)(implicit rdf: RDFModel): rdf.Predicate =
     rdf.PredicateIRI(rdf.IRI(a.getURI))
   
-  def toLiteral(l: ALiteral)(implicit rdf: Model): rdf.Literal = {
+  def toLiteral(l: ALiteral)(implicit rdf: RDFModel): rdf.Literal = {
     val datatype:String = l.getDatatypeURI
     if (datatype == null) {
       val lang = l.getLang match {
@@ -76,16 +76,16 @@ class RDFXMLParser {
     }
   }
   
-  def toGraph(file:File)(implicit rdf: Model): (rdf.Graph, List[ParseError]) =
+  def toGraph(file:File)(implicit rdf: RDFModel): (rdf.Graph, List[ParseError]) =
     toGraph(new FileInputStream(file))(rdf)
   
-  def toGraph(rdfxml:String)(implicit rdf: Model): (rdf.Graph, List[ParseError]) =
+  def toGraph(rdfxml:String)(implicit rdf: RDFModel): (rdf.Graph, List[ParseError]) =
     toGraph(new StringReader(rdfxml))(rdf)
   
-  def toGraph(in:InputStream)(implicit rdf: Model): (rdf.Graph, List[ParseError]) =
+  def toGraph(in:InputStream)(implicit rdf: RDFModel): (rdf.Graph, List[ParseError]) =
     toGraph(new BufferedReader(new InputStreamReader(in)))(rdf)
   
-  def toGraph(in:Reader)(implicit rdf: Model): (rdf.Graph, List[ParseError]) = {
+  def toGraph(in:Reader)(implicit rdf: RDFModel): (rdf.Graph, List[ParseError]) = {
     
     // the accumulator for the triples
     var triples = Set[rdf.Triple]()
