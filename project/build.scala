@@ -47,6 +47,7 @@ object BuildSettings {
     organization := buildOrganization,
     version      := buildVersion,
     scalaVersion := buildScalaVersion,
+    scalaHome    := Some(file("/home/betehess/tools/scala")),
     parallelExecution in Test := false,
     scalacOptions ++= Seq("-deprecation", "-unchecked")
   )

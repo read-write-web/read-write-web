@@ -41,7 +41,7 @@ class EchoPlan {
       Ok ~> PlainTextContent ~> {
         val headers = req.underlying.getHeaderNames()
         val result = for (name <- headers ;
-             val nameStr = name.asInstanceOf[String]
+              nameStr = name.asInstanceOf[String]
         ) yield {
           nameStr + ": " + req.underlying.getHeader(nameStr)+"\r\n"
         }

@@ -4,7 +4,7 @@ import java.net.{URI, URL}
 import scala.util.matching.Regex
 
 case class WebACL(
-    imports: Seq[WebACL],
+    includes: Seq[WebACL],
     authorizations: Seq[Authorization]) {
   
   def authorized(
@@ -12,7 +12,7 @@ case class WebACL(
       action: Action,
       accessedResource: URL): Boolean =
     (authorizations exists { _.authorized(agent, action, accessedResource) }) ||
-    (imports exists { _.authorized(agent, action, accessedResource) })
+    (includes exists { _.authorized(agent, action, accessedResource) })
 }
 
 
