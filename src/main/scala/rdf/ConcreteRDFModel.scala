@@ -38,11 +38,14 @@ trait ConcreteRDFModel extends RDFModel {
   object PredicateIRI extends Isomorphic1[IRI, PredicateIRI]
 
   sealed trait Object {
-    def unapply(o: Object): Option[Object] = o match {
-      case on: ObjectNode => Some(on)
-      case ol: ObjectLiteral => Some(ol)
-      case _ => None
-    }
+//    def unapply(o: Object): Option[Object] = {
+//      println("*** do I get here?")
+//      o match {
+//        case on: ObjectNode => Some(on)
+//        case ol: ObjectLiteral => Some(ol)
+//        case _ => None
+//      }
+//    } 
   }
   case class ObjectNode(n: Node) extends Object
   object ObjectNode extends Isomorphic1[Node, ObjectNode]

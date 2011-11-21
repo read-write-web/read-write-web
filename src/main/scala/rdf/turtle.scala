@@ -99,13 +99,21 @@ class TurtleParser extends JavaTokenParsers {
 // as the Module type does not escape from any method here, we can pass it at the constructor level
 class TurtleSerializer {
   
-  //val rdf = ConcreteRDFModel
+  //type RDFModel = ConcreteRDFModel
   
+  class Def[C](implicit desired : Manifest[C]) {
+     def unapply[X](c : X)(implicit m : Manifest[X]) : Option[C] = {
+       def sameArgs = desired.typeArguments.zip(m.typeArguments).forall {case (desired,actual) => desired >:> actual}
+       if (desired >:> m && sameArgs) Some(c.asInstanceOf[C])
+       else None
+     }
+   }
   
   def showAsString(rdf: RDFModel)(g: rdf.Graph): String = {
     g map {
       t =>
-        val rdf.Triple(rdf.SubjectNode(s), rdf.PredicateIRI(p), o) = t
+        //val rdf.Triple(rdf.SubjectNode(s), rdf.PredicateIRI(p), o: rdf.Object) = t
+        val rdf.Triple(rdf.SubjectNode(s), rdf.PredicateIRI(p), o: rdf.Object) = t
         try {
           "%s %s %s" format (nodeStr(rdf)(s), iriStr(rdf)(p), objectStr(rdf)(o))
         } catch {
@@ -122,12 +130,11 @@ class TurtleSerializer {
 
   def objectStr(rdf: RDFModel)(n: rdf.Object): String = {
     n match {
-//       case l:rdf.ObjectLiteral => {
-//         val x:rdf.ObjectLiteral = l
-//         "**ObjectLiteral(" + x + ")**"
-//       }
-      case rdf.ObjectNode(n) => nodeStr(rdf)(n)
+      case rdf.ObjectNode(on) => nodeStr(rdf)(on)
       case rdf.ObjectLiteral(l) => literalStr(rdf)(l)
+//      case on: rdf.ObjectNode => { val rdf.ObjectNode(oo) = on; nodeStr(rdf)(oo) }
+//      case l: rdf.ObjectLiteral => { val rdf.ObjectLiteral(ll) = l; literalStr(rdf)(ll) }
+      
       case x => { sys.error(x.toString) }
     }
   }
