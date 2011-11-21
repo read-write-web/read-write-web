@@ -76,22 +76,24 @@ object Main {
 //    val g = turtle.toGraph(new File("/tmp/card.n3"))
 
     //import org.w3.rdf.jena.JenaModel
-    val rdf = ConcreteRDFModel
+    //val rdf = ConcreteRDFModel
+    val rdf = org.w3.rdf.jena.JenaModel
     
     val rdfxmlParser = org.w3.rdf.rdfxml.RDFXMLParser(rdf)
     
-    val g: rdf.Graph = rdfxmlParser.parse(new File("/tmp/card.rdf"))
+    val g: rdf.Graph = rdfxmlParser.parse(new File("src/test/resources/card.rdf"))
 
 //    val m:Graph = g.jenaGraph
     
-    val s = new org.w3.rdf.turtle.TurtleSerializer
+    //val s = org.w3.rdf.turtle.ConcreteTurtleSerializer
+    val s = org.w3.rdf.turtle.JenaTurtleSerializer
     
-    //println(s.showAsString(rdf)(g))
+    println(s.asString(g, new java.net.URL("http://www.w3.org/People/Berners-Lee/card")))
     
-    import rdf._
-    val ol = ObjectLiteral(PlainLiteral("The Next Wave of the Web (Plenary Panel)",None))
-    
-    println(s.objectStr(rdf)(ol))
+//    import rdf._
+//    val ol = ObjectLiteral(PlainLiteral("The Next Wave of the Web (Plenary Panel)",None))
+//    
+//    println(s.objectStr(ol))
     
     
     

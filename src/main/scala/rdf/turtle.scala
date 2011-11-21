@@ -17,8 +17,6 @@ import MyParsers._
 
 class TurtleParser extends JavaTokenParsers {
   
-  import rdf._
-  
   def toGraph(t:String)(implicit rdf: RDFModel): rdf.Graph = parseAll(turtle, t).get
 
   def toGraph(file:java.io.File)(implicit rdf: RDFModel): rdf.Graph = {
@@ -96,26 +94,43 @@ class TurtleParser extends JavaTokenParsers {
   
 }
 
-// as the Module type does not escape from any method here, we can pass it at the constructor level
-class TurtleSerializer {
+import java.net.URL
+trait TurtleSerializer[RDF <: RDFModel] {
   
-  //type RDFModel = ConcreteRDFModel
+  val rdf: RDF
   
-  class Def[C](implicit desired : Manifest[C]) {
-     def unapply[X](c : X)(implicit m : Manifest[X]) : Option[C] = {
-       def sameArgs = desired.typeArguments.zip(m.typeArguments).forall {case (desired,actual) => desired >:> actual}
-       if (desired >:> m && sameArgs) Some(c.asInstanceOf[C])
-       else None
-     }
-   }
+  def asString(g: rdf.Graph, base: URL): String
   
-  def showAsString(rdf: RDFModel)(g: rdf.Graph): String = {
+}
+
+import org.w3.rdf.jena.JenaModel
+import com.hp.hpl.jena.rdf.model.{Model, ModelFactory}
+import org.w3.readwriteweb.TURTLE
+
+object JenaTurtleSerializer extends TurtleSerializer[JenaModel] {
+  
+  val rdf = JenaModel
+  
+  def asString(g: rdf.Graph, base: URL): String = {
+    val model = ModelFactory.createModelForGraph(g.jenaGraph)
+    val writer = model.getWriter(TURTLE.jenaLang)
+    val sw = new java.io.StringWriter
+    writer.write(model, sw, base.toString)
+    sw.toString
+  }
+  
+}
+
+object ConcreteTurtleSerializer extends TurtleSerializer[ConcreteRDFModel] {
+  
+  val rdf = ConcreteRDFModel
+  
+  def asString(g: rdf.Graph, base: URL): String = {
     g map {
       t =>
-        //val rdf.Triple(rdf.SubjectNode(s), rdf.PredicateIRI(p), o: rdf.Object) = t
-        val rdf.Triple(rdf.SubjectNode(s), rdf.PredicateIRI(p), o: rdf.Object) = t
+        val rdf.Triple(rdf.SubjectNode(s), rdf.PredicateIRI(p), o) = t
         try {
-          "%s %s %s" format (nodeStr(rdf)(s), iriStr(rdf)(p), objectStr(rdf)(o))
+          "%s %s %s" format (nodeStr(s), iriStr(p), objectStr(o))
         } catch {
           case e => {
             println("=== "+t)
@@ -128,31 +143,31 @@ class TurtleSerializer {
     } mkString "\n"
   }
 
-  def objectStr(rdf: RDFModel)(n: rdf.Object): String = {
+  def objectStr(n: rdf.Object): String = {
     n match {
-      case rdf.ObjectNode(on) => nodeStr(rdf)(on)
-      case rdf.ObjectLiteral(l) => literalStr(rdf)(l)
-//      case on: rdf.ObjectNode => { val rdf.ObjectNode(oo) = on; nodeStr(rdf)(oo) }
-//      case l: rdf.ObjectLiteral => { val rdf.ObjectLiteral(ll) = l; literalStr(rdf)(ll) }
-      
+//       case l:rdf.ObjectLiteral => {
+//         val x:rdf.ObjectLiteral = l
+//         "**ObjectLiteral(" + x + ")**"
+//       }
+      case rdf.ObjectNode(n) => nodeStr(n)
+      case rdf.ObjectLiteral(l) => literalStr(l)
       case x => { sys.error(x.toString) }
     }
   }
 
-  private def nodeStr(rdf: RDFModel)(n: rdf.Node): String = {
+  private def nodeStr(n: rdf.Node): String = {
     n match {
-      case rdf.NodeIRI(i) => iriStr(rdf)(i)
-      case rdf.NodeBNode(b) => bnodeStr(rdf)(b)
+      case rdf.NodeIRI(i) => iriStr(i)
+      case rdf.NodeBNode(b) => bnodeStr(b)
     }
   }
 
-  private def iriStr(rdf: RDFModel)(i: rdf.IRI): String =
+  private def iriStr(i: rdf.IRI): String =
     "<%s>" format { val rdf.IRI(s) = i; s }
 
-  private def bnodeStr(rdf: RDFModel)(b: rdf.BNode): String =
+  private def bnodeStr(b: rdf.BNode): String =
     "_:" + { val rdf.BNode(l) = b; l }
  
-  private def literalStr(rdf: RDFModel)(l: rdf.Literal): String = l.toString
+  private def literalStr(l: rdf.Literal): String = l.toString
 
 }
-

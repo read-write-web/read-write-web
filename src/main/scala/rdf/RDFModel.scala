@@ -50,7 +50,6 @@ trait RDFModel { self =>
   val ObjectNode: Isomorphic1[Node, ObjectNode]
   val ObjectLiteral: Isomorphic1[Literal, ObjectLiteral]
 
-  val Literal: PatternMatching1[Literal, Literal]
   val PlainLiteral: Isomorphic2[String, Option[LangTag], PlainLiteral]
   val TypedLiteral: Isomorphic2[String, IRI, TypedLiteral]
 
