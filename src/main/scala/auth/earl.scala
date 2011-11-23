@@ -27,7 +27,8 @@ import com.hp.hpl.jena.vocabulary.DCTerms
 import java.security.cert.X509Certificate
 import java.security.interfaces.RSAPublicKey
 import org.w3.readwriteweb.util.trySome
-import com.hp.hpl.jena.rdf.model.{Property, ModelFactory}
+import java.lang.ref.WeakReference
+import com.hp.hpl.jena.rdf.model.{Model, Property, ModelFactory}
 
 /**
  * Classes for the tests in WebID Authentication.
@@ -48,10 +49,15 @@ object Tests {
   val ns = "http://www.w3.org/2005/Incubator/webid/earl/RelyingParty"
   val skos = "http://www.w3.org/2004/02/skos/core#"
 
+  private var m : WeakReference[Model] = null
+  
   //todo: this model should be a weak pointer
-  val model= ModelFactory.createDefaultModel().read(
-    this.getClass.getResourceAsStream("/ontologies/RelyingParty.n3"),
-    ns,  "TURTLE" )
+   def model= {
+     if (m==null || m.get() == null) m = new WeakReference( ModelFactory.createDefaultModel().read(
+       this.getClass.getResourceAsStream("/ontologies/RelyingParty.n3"),
+       ns,  "TURTLE" ) )
+     m.get;
+   }
 
 
 }
