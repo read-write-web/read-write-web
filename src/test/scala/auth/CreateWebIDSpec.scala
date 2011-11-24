@@ -34,6 +34,7 @@ import scala.collection.mutable
 import javax.net.ssl._
 import java.io.File
 import org.w3.readwriteweb.{Post, RDFXML, TURTLE}
+import org.apache.commons.codec.binary.Hex
 
 
 /**
@@ -101,11 +102,11 @@ object CreateWebIDSpec extends SecureFileSystemBased {
 
   val updatePk = """
        PREFIX cert: <http://www.w3.org/ns/auth/cert#>
-       PREFIX rsa: <http://www.w3.org/ns/auth/rsa#>
+       PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
        PREFIX : <#>
        INSERT DATA {
-         :jL cert:key [ rsa:modulus "%s"^^cert:hex;
-                        rsa:public_exponent "%s"^^cert:int ] .
+         :jL cert:key [ cert:modulus "%s"^^xsd:hexBinary;
+                        cert:exponent "%s"^^xsd:integer ] .
        }
   """
 
@@ -181,8 +182,9 @@ object CreateWebIDSpec extends SecureFileSystemBased {
 
        val joeKey = joeCert(0).getPublicKey.asInstanceOf[RSAPublicKey]
 
+       val hex = new String(Hex.encodeHex(joeKey.getModulus.toByteArray))
        val updateQStr = updatePk.format(
-                     joeKey.getModulus.toString(16),
+                     hex.stripPrefix("00"),
                      joeKey.getPublicExponent()
        )
 

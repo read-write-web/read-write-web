@@ -35,6 +35,8 @@ import org.apache.http.conn.scheme.Scheme
 import dispatch.Http
 import org.apache.http.client.HttpClient
 import javax.net.ssl.{SSLContext, X509TrustManager, KeyManager}
+import util.trySome
+import java.nio.file.Files
 
 /**
  * @author hjs
@@ -122,7 +124,18 @@ trait SecureFileSystemBased extends SecureResourceManaged {
 
   lazy val baseURL = "/wiki"
 
-  lazy val root = new File(new File(System.getProperty("java.io.tmpdir")), "readwriteweb")
+  /**
+   * finding where the specs2 output directory is, so that we can create temporary directories there,
+   * which can then be viewed if tests are unsuccessful, but that will also be removed on "sbt clean"
+   */
+  lazy val outDirBase = new File(trySome { System.getProperty("spec2.outDir") } getOrElse  "target/specs2-reports/")
+
+  lazy val root = {
+    outDirBase.mkdirs()
+    val dir = Files.createTempDirectory(outDirBase.toPath, "test_rww_")
+    System.out.println("Temp directory: "+dir.toString)
+    dir.toFile
+  }
 
   lazy val resourceManager = new Filesystem(root, baseURL, lang)(mode)
 

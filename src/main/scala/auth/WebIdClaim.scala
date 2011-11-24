@@ -23,13 +23,12 @@
 
 package org.w3.readwriteweb.auth
 
-import java.math.BigInteger
 import java.security.PublicKey
 import org.w3.readwriteweb.WebCache
 import java.security.interfaces.RSAPublicKey
 import com.hp.hpl.jena.query.{QueryExecutionFactory, QueryExecution, QuerySolutionMap, QueryFactory}
-import com.hp.hpl.jena.rdf.model.RDFNode
 import java.net.URL
+import com.hp.hpl.jena.datatypes.xsd.XSDDatatype
 
 /**
  * @author hjs
@@ -37,101 +36,16 @@ import java.net.URL
  */
 
 object WebIDClaim {
-     final val cert: String = "http://www.w3.org/ns/auth/cert#"
-     final val xsd: String = "http://www.w3.org/2001/XMLSchema#"
+    final val cert: String = "http://www.w3.org/ns/auth/cert#"
 
-    val selectQuery = QueryFactory.create("""
-      PREFIX cert: <http://www.w3.org/ns/auth/cert#>
-      PREFIX rsa: <http://www.w3.org/ns/auth/rsa#>
-      SELECT ?m ?e ?mod ?exp
-      WHERE {
-         {
-           ?key  cert:identity ?webid .
-         } UNION {
-           ?webid cert:key ?key .
-         }
-          ?key rsa:modulus ?m ;
-               rsa:public_exponent ?e .
+    val askQuery = QueryFactory.create("""
+      PREFIX : <http://www.w3.org/ns/auth/cert#>
+      ASK {
+          ?webid :key [ :modulus ?m ;
+                        :exponent ?e ].
+      }""")
 
-       OPTIONAL { ?m cert:hex ?mod . }
-       OPTIONAL { ?e cert:decimal ?exp . }
-      }""") //Including OPTIONAL notation, for backward compatibility - should remove that after a while
-
-  /**
-    * Transform an RDF representation of a number into a BigInteger
-    * <p/>
-    * Passes a statement as two bindings and the relation between them. The
-    * subject is the number. If num is already a literal number, that is
-    * returned, otherwise if enough information from the relation to optstr
-    * exists, that is used.
-    *
-    * @param num the number node
-    * @param optRel name of the relation to the literal
-    * @param optstr the literal representation if it exists
-    * @return the big integer that num represents, or null if undetermined
-    */
-   def toInteger(num: RDFNode, optRel: String, optstr: RDFNode): Option[BigInteger] =
-       if (null == num) None
-       else if (num.isLiteral) {
-         val lit = num.asLiteral()
-         toInteger_helper(lit.getLexicalForm,lit.getDatatypeURI)
-       } else if (null != optstr && optstr.isLiteral) {
-           toInteger_helper(optstr.asLiteral().getLexicalForm,optRel)
-       } else None
-
-
-    private def intValueOfHexString(s: String): BigInteger = {
-      val strval = cleanHex(s);
-      new BigInteger(strval, 16);
-    }
-
-
-    /**
-     * This takes any string and returns in order only those characters that are
-     * part of a hex string
-     *
-     * @param strval
-     *            any string
-     * @return a pure hex string
-     */
-
-    private def cleanHex(strval: String) = {
-      def legal(c: Char) = {
-        //in order of appearance probability
-        ((c >= '0') && (c <= '9')) ||
-          ((c >= 'A') && (c <= 'F')) ||
-          ((c >= 'a') && (c <= 'f'))
-      }
-      (for (c <- strval; if legal(c)) yield c)
-    }
-
-
-   /**
-    * This transforms a literal into a number if possible ie, it returns the
-    * BigInteger of "ddd"^^type
-    *
-    * @param num the string representation of the number
-    * @param tpe the type of the string representation
-    * @return the number
-    */
-   protected def toInteger_helper(num: String, tpe: String): Option[BigInteger] =
-     try {
-       if (tpe.equals(cert + "decimal") || tpe.equals(cert + "int")
-         || tpe.equals(xsd + "integer") || tpe.equals(xsd + "int")
-         || tpe.equals(xsd + "nonNegativeInteger")) {
-         // cert:decimal is deprecated
-         Some(new BigInteger(num.trim(), 10));
-       } else if (tpe.equals(cert + "hex")) {
-         Some(intValueOfHexString(num));
-       } else {
-         // it could be some other encoding - one should really write a
-         // special literal transformation class
-         None;
-       }
-     } catch {
-       case e: NumberFormatException => None
-     }
-
+     def hex(bytes: Array[Byte]): String = bytes.map("%02X" format _).mkString.stripPrefix("00")
 
 }
 
@@ -147,6 +61,8 @@ class WebIDClaim(val webId: String, val key: PublicKey) {
 
 	var tests: List[Verification] = List()
 
+  /** the tests have been done and are still valid - the idea is perhaps after a time tests would
+   * have to be done again? Eg: the claim is cached and re-used after a while */
   private var valid = false
 
   def verified(implicit cache: WebCache): Boolean = {
@@ -157,7 +73,6 @@ class WebIDClaim(val webId: String, val key: PublicKey) {
   private def verify(implicit cache: WebCache): List[Verification] = {
     import org.w3.readwriteweb.util.wrapValidation
 
-    import collection.JavaConversions._
     import WebIDClaim._
     try {
       return if (!webId.startsWith("http:") && !webId.startsWith("https:")) {
@@ -171,32 +86,21 @@ class WebIDClaim(val webId: String, val key: PublicKey) {
             t => new ProfileError("error fetching profile", t)
           }
         } yield {
+          val rsakey = key.asInstanceOf[RSAPublicKey]
           val initialBinding = new QuerySolutionMap();
           initialBinding.add("webid",model.createResource(webId))
-          val qe: QueryExecution = QueryExecutionFactory.create(WebIDClaim.selectQuery, model,initialBinding)
+          initialBinding.add("m",model.createTypedLiteral( hex(rsakey.getModulus.toByteArray), XSDDatatype.XSDhexBinary))
+          initialBinding.add("e",model.createTypedLiteral( rsakey.getPublicExponent.toString, XSDDatatype.XSDinteger ))
+          val qe: QueryExecution = QueryExecutionFactory.create(WebIDClaim.askQuery, model,initialBinding)
           try {
-            qe.execSelect().map( qs => {
-              val modulus = toInteger(qs.get("m"), cert + "hex", qs.get("mod"))
-              val exponent = toInteger(qs.get("e"), cert + "decimal", qs.get("exp"))
-
-              (modulus, exponent) match {
-                case (Some(mod), Some(exp)) => {
-                  val rsakey = key.asInstanceOf[RSAPublicKey]
-                  if (rsakey.getPublicExponent == exp && rsakey.getModulus == mod) verifiedWebID
-                  else keyDoesNotMatch
-                }
-                case _ => new KeyProblem("profile contains key that cannot be analysed:" +
-                  qs.varNames().map(nm => nm + "=" + qs.get(nm).toString) + "; ")
-              }
-            }).toList
-            //it would be nice if we could keep a lot more state of what was verified and how
-            //will do that when implementing tests, so that these tests can then be used directly as much as possible
+            if (qe.execAsk()) verifiedWebID
+            else noMatchingKey
           } finally {
             qe.close()
           }
         }
         res.either match {
-          case Right(tests) => tests
+          case Right(tests) => tests::Nil
           case Left(profileErr) => profileErr::Nil
         }
       }
@@ -206,8 +110,6 @@ class WebIDClaim(val webId: String, val key: PublicKey) {
 
 
   }
-  
-
 
 	def canEqual(other: Any) = other.isInstanceOf[WebIDClaim]
 

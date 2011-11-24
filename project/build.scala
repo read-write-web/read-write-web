@@ -4,7 +4,9 @@ import Keys._
 // some usefull libraries
 // they are pulled only if used
 object Dependencies {
-  val specs = "org.scala-tools.testing" %% "specs" % "1.6.9" % "test"
+//  val specs = "org.scala-tools.testing" %% "specs" % "1.6.9" % "test"
+  val specs2 = "org.specs2" %% "specs2" % "1.6.1"
+  val specs2_scalaz =  "org.specs2" %% "specs2-scalaz-core" % "6.0.1" % "test"
   val dispatch_http = "net.databinder" %% "dispatch-http" % "0.8.5" 
   val unfiltered_version = "0.5.1"
   val unfiltered_filter = "net.databinder" %% "unfiltered-filter" % unfiltered_version 
@@ -82,7 +84,8 @@ object YourProjectBuild extends Build {
       resolvers += mavenLocal,
       resolvers += ScalaToolsReleases,
       resolvers += ScalaToolsSnapshots,
-      libraryDependencies += specs,
+      libraryDependencies += specs2,
+      libraryDependencies += specs2_scalaz,
 //      libraryDependencies += unfiltered_spec,
       ivyXML := ivyUnfilteredSpec,
       libraryDependencies += dispatch_http,
