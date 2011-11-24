@@ -1,13 +1,31 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 	<head id="head">
-	<title>WebId Tests</title>	
+	<title>WebId Tests</title>
+    <script src="/public/logout.js" type="text/javascript"/>
     </head>
 <body>
-  <h1>WebID Login Test Page</h1>
+  <h1>WebID Authentication Report</h1>
       
-  <p>This page describes in detail the state of your <a href="http://webid.info/">WebID authentication</a> session on Thu Nov 17 08:31:53 PST 2011. </p>
+  <p>This page describes in detail the state of your <a href="http://webid.info/spec">WebID authentication</a> session on <span class="date">Thu Nov 17 08:31:53 PST 2011.</span> </p>
+  <p><a href="" onclick="return logout()">logout (only works on IE and Firefox)</a></p>
 
-  <h1>Certificate</h1>
+  <h2>WebIDs</h2>
+
+
+  <div class="webid_tests">
+      <h3 class="webid">WebID found: http://example.com/#me</h3>
+  <table class="webid_test" width="100%" rules="groups">
+      <caption class="tst_question">Could at least one WebID claim be verified?</caption>
+      <thead><tr><td>description</td><td class="tst_txt">At least one WebID claimed in the certificate has public key that verifies.</td></tr></thead>
+      <tbody>
+      <tr><td>subject</td><td><a href="#cert" class="tst_sub">the certificate sent by your browser</a></td></tr>
+      <tr><td>test result</td><td><font color="green" class="tst_res">passed</font></td></tr>
+      <tr><td>result description</td><td class="tst_res_txt">found 1 valid principals</td></tr>
+      </tbody>
+  </table>
+  </div>
+
+  <h2>Certificate</h2>
 
   <table class="cert_test" width="100%" rules="groups">
       <caption class="tst_question">Could at least one WebID claim be verified?</caption>
@@ -16,25 +34,73 @@
       <tr><td>subject</td><td><a href="#cert" class="tst_sub">the certificate sent by your browser</a></td></tr>
       <tr><td>test result</td><td><font color="green" class="tst_res">passed</font></td></tr>
       <tr><td>result description</td><td class="tst_res_txt">found 1 valid principals</td></tr>
-      <tr><td></td><td><span>http://bblfish.net/people/henry/card#me</span></td></tr>
       </tbody>
   </table>
 
+  <pre id="cert" class="certificate">
+     [
+[
+  Version: V3
+  Subject: CN=bblfish card, UID="http://bblfish.net/people/henry/card#me", OU=The Community Of Self Signers, O="FOAF+SSL"
+  Signature Algorithm: SHA1withRSA, OID = 1.2.840.113549.1.1.5
 
-  <h2>WebIDs</h2>
+  Key:  Sun RSA public key, 2048 bits
+  modulus: 29276035035233808417997195473778175708233314700694241553008612528653781013623122865570033487009536689247533331761722724660608054531558090663455411500325187338854460881301515279078846015120633986716818977529842189338176012229254648239522297497009662210454225806222613866046067793530738567337748639961376015224198752644381326876084270910516940108410574284271163097309003672549551471387551533430789028823217042638678304885964246676816153930097022404865758197235094201678987827523441881216134115935329236878612750489032605710888040354783823145723591295889526935774242920905400540513434433523747939289419807546467215299433
+  public exponent: 65537
+  Validity: [From: Mon Mar 28 16:06:50 CEST 2011,
+               To: Sun Mar 18 17:06:50 CET 2012]
+  Issuer: CN=Not a Certification Authority, OU=The Community of Self Signers, O="FOAF+SSL"
+  SerialNumber: [    67ce0006 f8638fb8 6a1685aa 4acbc116]
 
-  <p class="no_certificate">We have not received a cert</p>
+Certificate Extensions: 5
+[1]: ObjectId: 2.5.29.14 Criticality=false
+SubjectKeyIdentifier [
+KeyIdentifier [
+0000: CE 84 32 EF 53 A7 2B 25   BC A8 4E DB A0 E1 E9 2E  ..2.S.+%..N.....
+0010: B8 CD D9 A4                                        ....
+]
+]
 
-     <table class="test" width="100%" rules="groups">
-        <caption class="tst_question">Could at least one WebID claim be verified?</caption>
-        <thead class="tst_txt"><tr><td>description</td><td>At least one WebID claimed in the certificate has public key that verifies.</td></tr></thead>
-        <tbody>
-        <tr class="tst_sub"><td>subject</td><td><a href="#cert">the certificate sent by your browser</a></td></tr>
-        <tr class="tst_res"><td>test result</td><td><font color="green">passed</font></td></tr>
-        <tr class="tst_res_txt"><td>result description</td><td>found 1 valid principals</td></tr>
-        <tr><td></td><td><span>http://bblfish.net/people/henry/card#me</span></td></tr>
-        </tbody>
-    </table>
+[2]: ObjectId: 2.16.840.1.113730.1.1 Criticality=false
+NetscapeCertType [
+   SSL client
+   S/MIME
+]
+
+[3]: ObjectId: 2.5.29.17 Criticality=true
+SubjectAlternativeName [
+  URIName: http://bblfish.net/people/henry/card#me
+]
+
+[4]: ObjectId: 2.5.29.15 Criticality=true
+KeyUsage [
+  DigitalSignature
+  Non_repudiation
+  Key_Encipherment
+  Key_Agreement
+  Key_CertSign
+]
+
+[5]: ObjectId: 2.5.29.19 Criticality=true
+BasicConstraints:[
+  CA:false
+  PathLen: undefined
+]
+
+]
+  Algorithm: [SHA1withRSA]
+  Signature:
+0000: 7D 24 C5 20 43 60 60 0C   6A 1E 1C 96 8C E7 8E C9  .$. C``.j.......
+0010: E0 94 63 4C 09 37 76 CC   FB 71 9D 60 C5 52 3B 83  ..cL.7v..q.`.R;.
+0020: D9 85 A1 73 C4 17 77 F9   3B 4F 51 A5 55 97 4B 7D  ...s..w.;OQ.U.K.
+0030: 3D 7B E7 F0 FB 8D 8A 57   11 51 FB 53 23 BC 0D 39  =......W.Q.S#..9
+0040: ED B6 50 1E 3E 60 EA 6E   CA 53 FA F7 29 57 5A 2B  ..P.>`.n.S..)WZ+
+0050: 52 B5 A5 31 32 7B 84 0C   CF 12 FF 5A 04 E1 EB 64  R..12......Z...d
+0060: FC 8A 0D E5 09 3B 42 60   C0 05 B1 39 4F CD 0F 7E  .....;B`...9O...
+0070: 3B 4A C8 37 95 36 C5 B7   48 EB 67 10 CB 1C BC 42  ;J.7.6..H.g....B
+
+]
+  </pre>
 
 </body>
 </html>

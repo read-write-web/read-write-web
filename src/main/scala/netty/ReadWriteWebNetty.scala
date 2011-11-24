@@ -28,7 +28,12 @@ import scala.Console._
 import org.w3.readwriteweb.auth.{X509view, RDFAuthZ}
 import org.w3.readwriteweb._
 import org.jboss.netty.handler.codec.http.HttpResponse
+import unfiltered.jetty.ContextBuilder
+import util.ClasspathUtils
 import unfiltered.netty.{ServerErrorResponse, ReceivedMessage, cycle}
+import unfiltered.request.Path
+import java.io.{FileInputStream, File}
+import unfiltered.response.{JsContent, NotFound, ResponseString, Ok}
 
 /**
  * ReadWrite Web for Netty server, allowing TLS renegotiation
@@ -67,10 +72,27 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
      }
 
      // configures and launches a Netty server
-     service.plan( x509v ).
-             plan( rww ).run()
+     service.plan(publicStatic).
+       plan( x509v ).
+       plan( rww ).run()
      
    }
+
+  object publicStatic extends  cycle.Plan  with cycle.ThreadPool with ServerErrorResponse {
+    def intent = {
+      case Path(path) if path.startsWith("/public") => {
+        try {
+          val in = publicStatic.getClass.getResourceAsStream(path)
+          val source = scala.io.Source.fromInputStream(in)
+          val lines = source.mkString
+          source.close()
+          Ok ~> ResponseString(lines) ~> JsContent //currently that's all I am interested in, but of course this is not right.
+        } catch {
+          case _ => NotFound
+        }
+      }
+    }
+  }
 
   object x509v extends  cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with X509view[ReceivedMessage,HttpResponse] {
     def wc = webCache

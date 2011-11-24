@@ -28,10 +28,12 @@ import unfiltered.response.{Ok, Html}
 import unfiltered.Cycle
 import org.fusesource.scalate.{Binding, TemplateEngine}
 import xml.{Elem, XML}
-import unfiltered.request.{Path, &}
+import unfiltered.request.Path
 import org.fusesource.scalate.scuery.{Transform, Transformer}
 import org.w3.readwriteweb.WebCache
 import unfiltered.scalate.Scalate
+import java.text.DateFormat
+import java.util.Date
 
 /**
  * This plan just described the X509 WebID authentication information.
@@ -54,17 +56,25 @@ trait X509view[Req,Res]  {
   implicit val bindings: List[Binding] = List(Binding(name = "title", className = "String"))
   implicit val additionalAttributes = List(("title", "My First Title"))
 
-  val template: Elem = XML.loadFile(new File(fileDir, "WebId.xhtml"))
-
+  lazy val webidTst: Elem = XML.loadFile(new File(fileDir, "WebId.xhtml"))
+  lazy val noX509: Elem = XML.loadFile(new File(fileDir, "NoWebId.xhtml"))
+  
   def intent : Cycle.Intent[Req,Res] = {
-    case Path("/test/auth/webid") & X509Claim(claim) => Ok ~> Html( new X509Filler(claim).apply(template) )
+    case req @ Path("/test/auth/webid")  => req match {
+      case X509Claim(claim) => Ok ~> Html( new X509Filler(claim).apply(webidTst) )
+      case _ => Ok ~> Html (new NoX509().apply(noX509))
+    }
     case req @ Path("/test/WebIdAuth2") => Ok ~> Scalate(req, "hello.ssp")
   }
 
 }
 
+class NoX509() extends Transformer {
+  $(".date").contents = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.LONG).format(new Date)
+}
 
 class X509Filler(x509: X509Claim)(implicit cache: WebCache) extends Transformer {
+  $(".date").contents = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.LONG).format( x509.claimReceivedDate)
   $(".cert_test") { node =>
       val x509Tests = certOk.test(x509);
       val ff = for (tst <- x509Tests) yield {
@@ -77,4 +87,26 @@ class X509Filler(x509: X509Claim)(implicit cache: WebCache) extends Transformer 
       }
       ff.flatten
   }
+  $(".webid_tests") { node =>
+    val ff = for (idclaim <- x509.webidclaims.toList) yield {
+      new Transform(node) {
+        $(".webid").contents = "Testing webid " +idclaim.webId
+        $(".webid_test") { n2 =>
+          idclaim.verified
+          val nn = for (tst <-idclaim.tests) yield {
+            new Transform(n2) {
+              $(".tst_question").contents = tst.of.title
+              $(".tst_txt").contents = tst.of.description
+              $(".tst_res").contents = tst.result.name
+              $(".tst_res_txt").contents = tst.msg
+            }.toNodes()
+          }
+          nn.flatten
+        }
+      }.toNodes()
+    }
+    ff.flatten
+  }
+  $(".certificate").contents = x509.cert.toString
+
 }
