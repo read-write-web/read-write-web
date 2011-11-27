@@ -59,7 +59,7 @@ class WebCache extends ResourceManager {
         res >:> { headers =>
           val encoding = headers("Content-Type").headOption match {
             case Some(mime) => Lang(mime) getOrElse Lang.default
-            case None => RDFXML  // it would be better to try to do a bit of guessing in this case by looking at content
+            case None => RDFXML  //todo: it would be better to try to do a bit of guessing in this case by looking at content
           }
           val loc = headers("Content-Location").headOption match {
             case Some(loc) =>  new URL(u,loc)

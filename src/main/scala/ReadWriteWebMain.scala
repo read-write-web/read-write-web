@@ -11,15 +11,10 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.clapper.argot._
 import ArgotConverters._
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
-import unfiltered.scalate.Scalate
-import unfiltered.request.Path
-import org.fusesource.scalate.{Binding, TemplateEngine}
-import org.fusesource.scalate.scuery.Transformer
-import xml.XML
-import unfiltered.response.{HttpResponse, Html, Ok}
 
 trait ReadWriteWebArgs {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
+  new net.rootdev.javardfa.jena.RDFaReader  //import rdfa parser
 
   val postUsageMsg= Some("""
   |PROPERTIES
@@ -78,7 +73,7 @@ trait ReadWriteWebArgs {
 
 object ReadWriteWebMain extends ReadWriteWebArgs {
 
-   import unfiltered.filter.Planify
+  import unfiltered.filter.Planify
 
   // regular Java main
   def main(args: Array[String]) {

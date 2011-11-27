@@ -31,12 +31,16 @@ sealed trait Lang {
     case RDFXML => "application/rdf+xml"
     case TURTLE => "text/turtle"
     case N3 => "text/n3"
+    case XHTML => "application/xhtml+xml"
+    case HTML => "text/html"  
   }
   
   def jenaLang = this match {
     case RDFXML => "RDF/XML-ABBREV"
     case TURTLE => "TURTLE"
     case N3 => "N3"
+    case HTML => "HTML"
+    case XHTML => "XHTML"
   }
 
 }
@@ -54,6 +58,8 @@ object Lang {
       case "text/n3" => Some(N3)
       case "text/turtle" => Some(TURTLE)
       case "application/rdf+xml" => Some(RDFXML)
+      case "text/html" => Some(HTML)
+      case "text/xhtml" => Some(XHTML)
       case _ => None
   }    
   
@@ -67,3 +73,7 @@ case object RDFXML extends Lang
 case object TURTLE extends Lang
 
 case object N3 extends Lang
+
+case object XHTML extends Lang
+
+case object HTML extends Lang

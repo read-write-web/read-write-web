@@ -45,7 +45,7 @@ object WebIDClaim {
                         :exponent ?e ].
       }""")
 
-     def hex(bytes: Array[Byte]): String = bytes.map("%02X" format _).mkString.stripPrefix("00")
+     def hex(bytes: Array[Byte]): String = bytes.dropWhile(_ == 0).map("%02X" format _).mkString
 
 }
 

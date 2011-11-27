@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-export BASE=`dirname $0`/..
+BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 KS=$BASE/src/test/resources/KEYSTORE.jks
 while [ $# -gt 0 ] 
 do 

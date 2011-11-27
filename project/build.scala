@@ -1,7 +1,7 @@
 import sbt._
 import Keys._
 
-// some usefull libraries
+// some useful libraries
 // they are pulled only if used
 object Dependencies {
 //  val specs = "org.scala-tools.testing" %% "specs" % "1.6.9" % "test"
@@ -23,6 +23,8 @@ object Dependencies {
   val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.6.4"
   val antiXML = "com.codecommit" %% "anti-xml" % "0.4-SNAPSHOT" % "test"
   val jena = "com.hp.hpl.jena" % "jena" % "2.6.4"
+  val rdfa = "net.rootdev" % "java-rdfa" % "0.4.2-RC2"
+  val htmlparser = "nu.validator.htmlparser" % "htmlparser" % "1.2.1"
   val arq = "com.hp.hpl.jena" % "arq" % "2.8.8"
   val grizzled = "org.clapper" %% "grizzled-scala" % "1.0.8" % "test"
   val scalaz = "org.scalaz" %% "scalaz-core" % "6.0.3"
@@ -102,6 +104,8 @@ object YourProjectBuild extends Build {
       libraryDependencies += argot,
       libraryDependencies += guava,
       libraryDependencies += scalate,
+      libraryDependencies += rdfa,
+      libraryDependencies += htmlparser,
 
       jarName in assembly := "read-write-web.jar"
     )
