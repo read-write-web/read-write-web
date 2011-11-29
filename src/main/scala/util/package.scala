@@ -5,6 +5,7 @@ import com.hp.hpl.jena.rdf.model._
 import scalaz._
 import Scalaz._
 import java.net.URL
+import com.hp.hpl.jena.shared.WrappedIOException
 
 package object util {
   
@@ -47,4 +48,11 @@ package object util {
       case _ => None
     }
   
+   def tryOrFail[T](body: => T): Validation[Throwable,T] =
+      try {
+        val res = body;
+        res.success
+      } catch {
+        case e => e.fail
+      }
 }

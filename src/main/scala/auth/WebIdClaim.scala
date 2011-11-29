@@ -23,121 +23,81 @@
 
 package org.w3.readwriteweb.auth
 
-import java.security.PublicKey
 import org.w3.readwriteweb.WebCache
 import java.security.interfaces.RSAPublicKey
 import com.hp.hpl.jena.query.{QueryExecutionFactory, QueryExecution, QuerySolutionMap, QueryFactory}
-import java.net.URL
 import com.hp.hpl.jena.datatypes.xsd.XSDDatatype
+import scalaz.{Scalaz, Validation}
+import Scalaz._
+import org.w3.readwriteweb.util.wrapValidation
+
 
 /**
- * @author hjs
+ * @author Henry Story
  * @created: 13/10/2011
  */
 
+/**
+ * One can only construct a WebID via the WebIDClaim apply
+ */
 object WebIDClaim {
-    final val cert: String = "http://www.w3.org/ns/auth/cert#"
+  final val cert: String = "http://www.w3.org/ns/auth/cert#"
 
-    val askQuery = QueryFactory.create("""
+  val askQuery = QueryFactory.create("""
       PREFIX : <http://www.w3.org/ns/auth/cert#>
       ASK {
           ?webid :key [ :modulus ?m ;
                         :exponent ?e ].
       }""")
 
-     def hex(bytes: Array[Byte]): String = bytes.dropWhile(_ == 0).map("%02X" format _).mkString
+  def hex(bytes: Array[Byte]): String = bytes.dropWhile(_ == 0).map("%02X" format _).mkString
 
+  def apply(san: String, rsakey: RSAPublicKey)(implicit cache: WebCache): Validation[WebIDClaimErr, WebIDClaim] =
+    for (id <- WebID(san) failMap {
+      case e => new WebIDClaimErr("Unsupported WebID", Some(e))
+    })
+    yield new WebIDClaim(id,rsakey)
 }
 
 /**
- * A claim that the user identified by the WebId controls the public key
- *
- * @author bblfish
- * @created 30/03/2011
+ * One has to construct a WebID using the object, that can do basic verifications
  */
-class WebIDClaim(val webId: String, val key: PublicKey) {
+class WebIDClaim private (val webid: WebID, val rsakey: RSAPublicKey)(implicit cache: WebCache) {
+  import WebIDClaim.hex
+  import XSDDatatype._
 
-	lazy val principal = new WebIdPrincipal(webId)
-
-	var tests: List[Verification] = List()
-
-  /** the tests have been done and are still valid - the idea is perhaps after a time tests would
-   * have to be done again? Eg: the claim is cached and re-used after a while */
-  private var valid = false
-
-  def verified(implicit cache: WebCache): Boolean = {
-    if (!valid) tests = verify(cache)
-    tests.contains(verifiedWebID)
-  }
-  
-  private def verify(implicit cache: WebCache): List[Verification] = {
-    import org.w3.readwriteweb.util.wrapValidation
-
-    import WebIDClaim._
-    try {
-      return if (!webId.startsWith("http:") && !webId.startsWith("https:")) {
-        //todo: ftp, and ftps should also be doable, though content negotiations is then lacking
-        unsupportedProtocol::Nil
-      } else if (!key.isInstanceOf[RSAPublicKey]) {
-        certificateKeyTypeNotSupported::Nil
-      } else {
-        val res = for {
-          model <- cache.resource(new URL(webId)).get() failMap {
-            t => new ProfileError("error fetching profile", t)
-          }
-        } yield {
-          val rsakey = key.asInstanceOf[RSAPublicKey]
-          val initialBinding = new QuerySolutionMap();
-          initialBinding.add("webid",model.createResource(webId))
-          initialBinding.add("m",model.createTypedLiteral( hex(rsakey.getModulus.toByteArray), XSDDatatype.XSDhexBinary))
-          initialBinding.add("e",model.createTypedLiteral( rsakey.getPublicExponent.toString, XSDDatatype.XSDinteger ))
-          val qe: QueryExecution = QueryExecutionFactory.create(WebIDClaim.askQuery, model,initialBinding)
-          try {
-            if (qe.execAsk()) verifiedWebID
-            else noMatchingKey
-          } finally {
-            qe.close()
-          }
-        }
-        res.either match {
-          case Right(tests) => tests::Nil
-          case Left(profileErr) => profileErr::Nil
-        }
+  lazy val verify: Validation[WebIDClaimErr,WebID] =
+    webid.getDefiningModel.failMap {
+      case e => new WebIDClaimErr("could not fetch model", Some(e))
+    }.flatMap { model =>
+      val initialBinding = new QuerySolutionMap();
+      initialBinding.add("webid", model.createResource(webid.url.toString))
+      initialBinding.add("m", model.createTypedLiteral(hex(rsakey.getModulus.toByteArray), XSDhexBinary))
+      initialBinding.add("e", model.createTypedLiteral(rsakey.getPublicExponent.toString, XSDinteger))
+      val qe: QueryExecution = QueryExecutionFactory.create(WebIDClaim.askQuery, model, initialBinding)
+      try {
+        if (qe.execAsk()) webid.success
+        else new WebIDClaimErr("could not verify public key").fail
+      } finally {
+        qe.close()
       }
-    } finally {
-      valid = true
     }
-
-
-  }
-
-	def canEqual(other: Any) = other.isInstanceOf[WebIDClaim]
-
-	override
-	def equals(other: Any): Boolean =
-		other match {
-			case that: WebIDClaim => (that eq this) || (that.canEqual(this) && webId == that.webId && key == that.key)
-			case _ => false
-		}
-
-	override
-	lazy val hashCode: Int = 41 * (
-		41 * (
-			41 + (if (webId != null) webId.hashCode else 0)
-			) + (if (key != null) key.hashCode else 0)
-		)
-
 }
 
-class ProfileError(msg: String,  t: Throwable) extends Verification(profileOkTst,failed,msg, Some(t))
-class KeyProblem(msg: String) extends Verification(profileWellFormedKeyTst,failed,msg)
+trait Err {
+  val msg: String
+  val cause: Option[Throwable]=None
+}
 
-object keyDoesNotMatch extends Verification(null,null,null) //this test will be forgotten
+abstract class Failure extends Throwable with Err
 
-object verifiedWebID extends Verification(webidClaimTst, passed, "WebId verified")
-object noMatchingKey extends Verification(webidClaimTst, failed, "No keys in profile matches key in cert")
-object unsupportedProtocol extends Verification(webidClaimTst,untested,"WebID protocol not supported" )
+abstract class SANFailure extends Failure
+case class UnsupportedProtocol(val msg: String) extends SANFailure
+case class URISyntaxError(val msg: String) extends SANFailure
 
-object certificateKeyTypeNotSupported extends Verification(pubkeyTypeTst,failed,"The certificate key type is not supported. We only support RSA")
+abstract class ProfileError extends Failure
+case class ProfileGetError(val msg: String,  override val cause: Option[Throwable]) extends ProfileError
+case class ProfileParseError(val msg: String, override val cause: Option[Throwable]) extends ProfileError
 
-
+//it would be useful to pass the graph in
+class WebIDClaimErr(val msg: String, override val cause: Option[Throwable]=None) extends Failure

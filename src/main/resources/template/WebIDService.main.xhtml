@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head id="head">
+	<title>WebId Identity Provider Info Page</title>
+	<script src="/public/logout.js" type="text/javascript" />
+</head>
+<body>
+
+<div id="tx-content">
+    <p>This is a simple Identity Provider for <a href="http://webid.info/spec">WebID</a>. It is meant to help
+        sites that would like to provide WebID authentication to their users quickly.</p>
+    <p>If you are hosting such a site then you can rely on this service to help authenticate your users with WebID,
+        without your needing to set up https on your server. When you are satisfied of its usefulness you can deploy it
+        to your site.</p>
+    <p>There are two stages to get going. First you need to create the login button linking to this service. Then you need to
+        understand how to interpret what will be returned, so that you can write a script to authenticate
+        your users with the given WebID - ie, set a cookie for them.</p>
+
+    <h2>Create your login link</h2>
+    <p>Create a login button or link that points to this service. This needs to contain an attribute as a URL to a
+        script on your site so that we can send you the response. This will be done by redirecting the user's browser
+        with a signed response containing his WebID. To create such a link enter the URL of your login service here:</p>
+    <form action="" method="get">Requesting auth service URL:
+        <input name="rs" size="80" type="text" />
+        <input type="submit" value="Log into this service provider" />
+    </form>
+    <p>By clicking on the form you will land on a page whose URL is the one you should enter into your
+        login button/link. You will also see what identity you were logged in as, and given some options to change
+        it.
+    </p>
+
+    <h2>Understanding the response</h2>
+    <p>The redirected to URL is constructed on the following pattern: </p>
+    <pre><b>$relyingService?webid=$webid&amp;ts=$timeStamp</b>&amp;sig=$URLSignature</pre>
+    <p>Where the above variables have the following meanings: </p>
+    <ul>
+        <li><code>$relyingService</code> is the URL passed by the server in
+            the initial request as the <code>rs</code> parameter, and is the service to which the response is sent.</li>
+        <li><code>$webid</code> is the WebID of the user connecting.</li>
+        <li><code>$timeStamp</code> is a time stamp in XML Schema format
+            (same as used by Atom). This is needed to reduce the ease of developing
+            replay attacks.</li>
+        <li><code>$URLSignature</code> is the signature of the whole URL
+            in bold above using the public key shown below, and encoded in a
+            <a href="http://commons.apache.org/codec/apidocs/org/apache/commons/codec/binary/Base64.html#encodeBase64URLSafeString%28byte[]%29">URL friendly base64</a> encoding.</li>
+    </ul>
+
+    <h3>Error responses</h3>
+    <p>In case of error the service gets redirected to <code>$relyingService?error=$code</code>Where
+        $code can be either one of</p>
+    <ul>
+        <li><code>nocert</code>: when the client has no cert. </li>
+        <li><code>noVerifiedWebId</code>: no verified WebId was found in the certificate</li>
+        <li><code>noWebId</code>: todo: show this error when there are no webids at all</li>
+        <li><code>IdPError</code>: for some error in the IdP setup. Warn
+            the IdP administrator!</li>
+        <li>other messages, not standardised yet</li>
+    </ul>
+
+    <h2>Verifiying the WebId</h2>
+
+    <p>In order for the Relying Party to to be comfortable that the returned WebId
+        was not altered in transit, the whole URL is signed by this server as
+        shown above. Here are the public keys and algorithms this us using:</p>
+
+
+    <p>The signature uses the RSA with SHA-1 algorithm.</p>
+
+    <p>The public key used by this service that verifies the signature is: </p>
+
+    <ul>
+        <li>Key Type: <pre>http://www.w3.org/ns/auth/rsa#RSAPublicKey</pre></li>
+        <li>public exponent (decimal): <pre>65537</pre> </li>
+        <li>modulus (decimal):<br />
+           <pre>84:56:e8:8b:04:b9:1f:3b:10:00:07:ab:18:e8:fc:66:4e:aa:bc:47:f6:
+41:56:ab:96:6f:9c:d5:fc:5d:e9:fd:ce:a1:0f:5e:ce:26:f5:2e:35:e2:
+b7:0f:b3:db:17:0b:1b:c9:73:69:39:8a:39:4d:23:c3:b2:99:a7:a5:8b:
+5b:a8:2a:84:05:a3:d8:14:35:2e:49:7d:47:b6:80:52:90:37:ca:99:39:
+da:08:a4:f2:ef:f9:26:25:a9:4e:dd:44:57:df:43:3f:95:cd:cf:34:3f:
+41:58:e4:bc:19:63:ad:8f:b5:65:e3:3e:5e:d2:b3:19:f6:ca:ed:e5:a1:
+e7:cd:f1:9f:70:04:ea:66:a9:ad:77:cb:02:8d:c1:8d:45:89:39:07:b4:
+54:71:98:82:b0:55:39:c4:50:ad:24:3a:df:8f:df:fa:39:36:da:d9:98:
+65:1c:dd:4d:3f:d9:09:a7:5e:2d:de:cd:af:22:1e:25:b1:2e:d1:6d:74:
+e4:96:2f:2a:87:5a:c1:23:37:ff:38:ed:e1:f5:c5:20:fc:81:cf:cb:c7:
+1e:61:d1:77:6b:32:0d:6a:94:cb:8e:98:55:07:ea:09:f5:01:75:79:07:
+6e:f5:50:06:d0:1f:bd:11:94:85:86:c5:42:6f:76:e9:a9:fa:cf:db:91:
+13:92:c2:69:
+</pre>
+        </li>
+    </ul>
+
+    <p>For ease of use, depending on which tool you use, here is the public key in a PEM format:</p>
+<pre>
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAhFboiwS5HzsQAAerGOj8
+Zk6qvEf2QVarlm+c1fxd6f3OoQ9ezib1LjXitw+z2xcLG8lzaTmKOU0jw7KZp6WL
+W6gqhAWj2BQ1Lkl9R7aAUpA3ypk52gik8u/5JiWpTt1EV99DP5XNzzQ/QVjkvBlj
+rY+1ZeM+XtKzGfbK7eWh583xn3AE6maprXfLAo3BjUWJOQe0VHGYgrBVOcRQrSQ6
+34/f+jk22tmYZRzdTT/ZCadeLd7NryIeJbEu0W105JYvKodawSM3/zjt4fXFIPyB
+z8vHHmHRd2syDWqUy46YVQfqCfUBdXkHbvVQBtAfvRGUhYbFQm926an6z9uRE5LC
+aQIDAQAB
+-----END PUBLIC KEY-----
+</pre>
+</div>
+
+</body>
+</html>

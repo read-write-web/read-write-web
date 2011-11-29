@@ -160,7 +160,7 @@ object CreateWebIDSpec extends SecureFileSystemBased {
          keystore,
          "JKS",
          "secret",
-         "localhost"
+         "selfsigned"
        )
 
        val rsagen = KeyPairGenerator.getInstance("RSA")

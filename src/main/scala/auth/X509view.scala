@@ -34,6 +34,7 @@ import org.w3.readwriteweb.WebCache
 import unfiltered.scalate.Scalate
 import java.text.DateFormat
 import java.util.Date
+import scalaz.Validation
 
 /**
  * This plan just described the X509 WebID authentication information.
@@ -87,26 +88,26 @@ class X509Filler(x509: X509Claim)(implicit cache: WebCache) extends Transformer 
       }
       ff.flatten
   }
-  $(".webid_tests") { node =>
-    val ff = for (idclaim <- x509.webidclaims.toList) yield {
-      new Transform(node) {
-        $(".webid").contents = "Testing webid " +idclaim.webId
-        $(".webid_test") { n2 =>
-          idclaim.verified
-          val nn = for (tst <-idclaim.tests) yield {
-            new Transform(n2) {
-              $(".tst_question").contents = tst.of.title
-              $(".tst_txt").contents = tst.of.description
-              $(".tst_res").contents = tst.result.name
-              $(".tst_res_txt").contents = tst.msg
-            }.toNodes()
-          }
-          nn.flatten
-        }
-      }.toNodes()
-    }
-    ff.flatten
-  }
-  $(".certificate").contents = x509.cert.toString
+//  $(".webid_tests") { node =>
+//    val ff = for (idclaim <- x509.webidclaims) yield {
+//      new Transform(node) {
+//        $(".webid").contents = "Testing webid " +idclaim.webid
+//        $(".webid_test") { n2 =>
+//          val validation: Validation[WebIDClaimErr, WebID] = idclaim.verify
+//          val nn = for (tst <-idclaim.tests) yield {
+//            new Transform(n2) {
+//              $(".tst_question").contents = tst.of.title
+//              $(".tst_txt").contents = tst.of.description
+//              $(".tst_res").contents = tst.result.name
+//              $(".tst_res_txt").contents = tst.msg
+//            }.toNodes()
+//          }
+//          nn.flatten
+//        }
+//      }.toNodes()
+//    }
+//    ff.flatten
+//  }
+//  $(".certificate").contents = x509.cert.toString
 
 }

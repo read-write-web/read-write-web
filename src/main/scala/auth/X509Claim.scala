@@ -35,6 +35,10 @@ import java.util.concurrent.TimeUnit
 import com.google.common.cache.{CacheLoader, CacheBuilder, Cache}
 import javax.servlet.http.HttpServletRequest
 import unfiltered.request.HttpRequest
+import java.security.interfaces.RSAPublicKey
+import collection.immutable.List
+import scalaz.{Success, Validation}
+import collection.mutable.HashMap
 
 /**
  * @author hjs
@@ -44,15 +48,24 @@ import unfiltered.request.HttpRequest
 object X509Claim {
   final val logger = LoggerFactory.getLogger(classOf[X509Claim])
 
-  val idCache: Cache[X509Certificate, X509Claim] =
-     CacheBuilder.newBuilder()
-     .expireAfterWrite(30, TimeUnit.MINUTES)
-     .build(new CacheLoader[X509Certificate, X509Claim] {
-       def load(x509: X509Certificate) = new X509Claim(x509)
-     })
+  val idCache: HashMap[X509Certificate,X509Claim] = new HashMap
+
+// this is cool because it is not in danger of running out of memory but it makes it impossible to create the claim
+// with an implicit  WebCache...
+//  val idCache: Cache[X509Certificate, X509Claim] =
+//     CacheBuilder.newBuilder()
+//     .expireAfterWrite(30, TimeUnit.MINUTES)
+//     .build(new CacheLoader[X509Certificate, X509Claim] {
+//       def load(x509: X509Certificate) = new X509Claim(x509)
+//     })
 
   def unapply[T](r: HttpRequest[T])(implicit webCache: WebCache,m: Manifest[T]): Option[X509Claim] = r match {
-    case Certs(c1: X509Certificate, _*) => Some(idCache.get(c1))
+    case Certs(c1: X509Certificate, _*) =>
+      idCache.get(c1).orElse {
+        val claim = new X509Claim(c1)
+        idCache.put(c1,claim)
+        Some(claim)
+      }
     case _ => None
   }
 
@@ -65,16 +78,15 @@ object X509Claim {
    * @param cert X.509 certificate from which to extract the URIs.
    * @return Iterator of URIs as strings found in the subjectAltName extension.
    */
-  def getClaimedWebIds(cert: X509Certificate): Iterator[String] =
-    if (cert == null)
-      Iterator.empty
-    else cert.getSubjectAlternativeNames() match {
+  def getClaimedWebIds(cert: X509Certificate): List[String] =
+    if (cert == null) Nil
+    else cert.getSubjectAlternativeNames().toList match {
       case coll if (coll != null) => {
         for {
           sanPair <- coll if (sanPair.get(0) == 6)
         } yield sanPair(1).asInstanceOf[String]
-      }.iterator
-      case _ => Iterator.empty
+      }
+      case _ => Nil
     }
 
 }
@@ -91,7 +103,7 @@ object X509Claim {
  * @created: 30/03/2011
  */
 // can't be a case class as it then creates object which clashes with defined one
-class X509Claim(val cert: X509Certificate) extends Refreshable {
+class X509Claim(val cert: X509Certificate)(implicit cache: WebCache) extends Refreshable {
 
   import X509Claim._
   val claimReceivedDate = new Date()
@@ -99,15 +111,13 @@ class X509Claim(val cert: X509Certificate) extends Refreshable {
   lazy val tooEarly = claimReceivedDate.before(cert.getNotBefore())
 
   /* a list of unverified principals */
-  lazy val webidclaims = {
-    val claims = getClaimedWebIds(cert) map { webid => new WebIDClaim(webid, cert.getPublicKey) }
-    claims.toSet
-  }
+  //TODO WE ASSUME THIS IS AN RSA KEY!!
+  lazy val webidValidations: List[Validation[WebIDClaimErr, WebIDClaim]] =
+    getClaimedWebIds(cert) map { webid => WebIDClaim(webid, cert.getPublicKey.asInstanceOf[RSAPublicKey]) }
 
-  def verifiedClaims(implicit cache: WebCache) = for (
-    claim <- webidclaims if (claim.verified)
-  ) yield claim
+  lazy val webidclaims: List[WebIDClaim] = webidValidations.collect{ case Success(webIdClaim)=> webIdClaim }
 
+  val verifiedClaims: List[WebID] = webidclaims.flatMap(_.verify.toOption)
 
   //note could also implement Destroyable
   //

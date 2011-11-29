@@ -44,7 +44,7 @@ object AuthZ {
     val subject = new Subject()
     subject.getPublicCredentials.add(x509c)
     if (x509c.isCurrent()) {
-      val verified = x509c.verifiedClaims.map(claim => claim.principal)
+      val verified = x509c.verifiedClaims
       subject.getPrincipals.addAll(verified.asJava)
     }
     subject
@@ -149,10 +149,10 @@ class RDFAuthZ[Request, Response](val webCache: WebCache, rm: ResourceManager)
           else subj match {
             case Some(s) => {
               agentsAllowed.exists{
-                p =>  s.getPrincipals(classOf[WebIdPrincipal]).asScala.
+                p =>  s.getPrincipals(classOf[WebID]).asScala.
                   exists(id=> {
                   val ps = if (p._1 != null) p._1.toString else null;
-                  ps == id.webid
+                  ps == id.getName
                 })
               }
             }

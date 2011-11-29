@@ -70,7 +70,7 @@ trait Test {
 }
 
 /**
- * Public tests
+ * Test with extra information taken from the ontologies
  */
 class PubTest(val name: String) extends Test {
   import Tests._
@@ -94,28 +94,28 @@ class PubTest(val name: String) extends Test {
 
 //for X509Claim
 object certProvided extends PubTest("certificateProvided")   {
-  def test(cert: Option[X509Certificate]): Verification = cert match {
-    case Some(x509) => new Verification(this,passed,"got certificate") //the subject is the session
-    case None => new Verification(this,failed,"missing certificate")
+  def test(cert: Option[X509Certificate]): Assertion = cert match {
+    case Some(x509) => new Assertion(this,passed,"got certificate") //the subject is the session
+    case None => new Assertion(this,failed,"missing certificate")
   }
 }
 
 object certOk extends PubTest("certificateOk") {
-   def test(x509: X509Claim): List[Verification] = {
+   def test(x509: X509Claim): List[Assertion] = {
      val res = certDateOk.test(x509)::certProvidedSan.test(x509)::certPubKeyRecognized.test(x509)::Nil
      val problems = res.filter(v => v.result != passed)
-     new Verification(this,problems.length==0,
+     new Assertion(this,problems.length==0,
        if (problems.length==0) "There were no issues with the certificate"
        else "There were some issues with your certificate")::res
    }
 }
 object certProvidedSan extends PubTest("certificateProvidedSAN") {
-  def test(x509: X509Claim) = new Verification(this,x509.webidclaims.size >0,
+  def test(x509: X509Claim) = new Assertion(this,x509.webidclaims.size >0,
     " There are "+x509.webidclaims.size+" SANs in the certificate")
 }
 object certDateOk extends PubTest("certificateDateOk") {
   def test(x509: X509Claim) = 
-    new Verification(this, x509.isCurrent,
+    new Assertion(this, x509.isCurrent,
       "the x509certificate " + (
         if (x509.tooEarly) "is not yet valid "
         else if (x509.tooLate) " passed its validity date "
@@ -127,20 +127,21 @@ object certDateOk extends PubTest("certificateDateOk") {
 object certPubKeyRecognized extends PubTest("certificatePubkeyRecognised") {
   def test(claim: X509Claim) = {
     val pk = claim.cert.getPublicKey;
-    new Verification(this, pk.isInstanceOf[RSAPublicKey], "We only support RSA Keys at present. " )
+    new Assertion(this, pk.isInstanceOf[RSAPublicKey], "We only support RSA Keys at present. " )
   }
 }
 
 //for WebIDClaims
 object webidClaimTst extends PubTest("webidClaim")
 object pubkeyTypeTst extends PubTest("certificatePubkeyRecognised")
-object profileOkTst extends PubTest("profileWellFormed")
+object profileGetTst extends PubTest("profileGet")
+object profileParseTst extends PubTest("profileWellFormed")
+object profileOkTst extends PubTest("profileOk")
 object profileWellFormedKeyTst extends PubTest("profileWellFormedPubkey")
 
 
-
-/** short verification, that sits inside X509Claim or WebIdClaim and from which full verifications can be constituted */
-class Verification( val of: Test,
+/** Assertions on the success of a Test -- sits inside X509Claim or WebIdClaim and from which full verifications can be constituted */
+class Assertion( val of: Test,
              val result: Result = untested,
              val msg: String,
              val err: Option[Throwable] = None )
@@ -148,7 +149,7 @@ class Verification( val of: Test,
 
 sealed class Result(val name: String)  {
   val earl = "http://www.w3.org/ns/earl#"
-  def id = earl+name
+  val id = earl+name
 }
 
 object untested extends Result("untested")

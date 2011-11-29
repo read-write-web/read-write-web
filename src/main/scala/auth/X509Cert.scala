@@ -161,6 +161,10 @@ class X509CertSigner(
     return cert
   }
 
+  def signString(): String = {
+     return "todo"
+  }
+
 }
 
 
