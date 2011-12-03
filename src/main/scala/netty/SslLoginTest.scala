@@ -28,6 +28,8 @@ import unfiltered.request.Path
 import unfiltered.response.ResponseString
 
 /**
+ * TODO: This should be moved to an archive
+ *
  * A very light weight plan to test SSL login using TLS renegotiation in netty.
  * This shows how easy it is to to this, and can be useful to try out different browsers' implementations
  * The certificate should only be requested of the client on going to /test/login .

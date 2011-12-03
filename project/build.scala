@@ -8,11 +8,11 @@ object Dependencies {
   val specs2 = "org.specs2" %% "specs2" % "1.6.1"
   val specs2_scalaz =  "org.specs2" %% "specs2-scalaz-core" % "6.0.1" % "test"
   val dispatch_http = "net.databinder" %% "dispatch-http" % "0.8.5" 
-  val unfiltered_version = "0.5.1"
+  val unfiltered_version = "0.5.2"
   val unfiltered_filter = "net.databinder" %% "unfiltered-filter" % unfiltered_version 
   val unfiltered_jetty = "net.databinder" %% "unfiltered-jetty" % unfiltered_version 
   val unfiltered_netty = "net.databinder" %% "unfiltered-netty" % unfiltered_version 
-  val scalate = "net.databinder" %% "unfiltered-scalate" % unfiltered_version  
+  val scalate = "net.databinder" %% "unfiltered-scalate" % "0.5.1"
   // val unfiltered_spec = "net.databinder" %% "unfiltered-spec" % "0.4.1" % "test"
   val ivyUnfilteredSpec =
     <dependencies>

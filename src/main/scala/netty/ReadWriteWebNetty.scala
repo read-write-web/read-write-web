@@ -28,11 +28,9 @@ import scala.Console._
 import org.w3.readwriteweb.auth.{X509view, RDFAuthZ}
 import org.w3.readwriteweb._
 import org.jboss.netty.handler.codec.http.HttpResponse
-import unfiltered.jetty.ContextBuilder
-import util.ClasspathUtils
 import unfiltered.netty.{ServerErrorResponse, ReceivedMessage, cycle}
 import unfiltered.request.Path
-import java.io.{FileInputStream, File}
+import unfiltered.netty.async
 import unfiltered.response.{JsContent, NotFound, ResponseString, Ok}
 
 /**

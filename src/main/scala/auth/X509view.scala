@@ -34,7 +34,6 @@ import org.w3.readwriteweb.WebCache
 import unfiltered.scalate.Scalate
 import java.text.DateFormat
 import java.util.Date
-import scalaz.Validation
 
 /**
  * This plan just described the X509 WebID authentication information.

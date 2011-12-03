@@ -64,7 +64,7 @@ trait TrustAll extends Ssl with Server with DelayedInit {
 
   import scala.sys.SystemProperties._
 
-  val sslContextFactory = {
+  val patchedSslContextFactory = {
     val trustWrapper =
       new X509TrustManagerWrapper {
         def wrapTrustManager(trustManager: X509TrustManager) =
@@ -96,7 +96,7 @@ trait TrustAll extends Ssl with Server with DelayedInit {
   
   // not tested if ok, there was a problem anyway
   def delayedInit(x: ⇒ Unit): Unit = {
-    sslConn.setSslContext(sslContextFactory.buildSSLContext())
+    sslConn.setSslContext(patchedSslContextFactory.buildSSLContext())
     sslConn.setWantClientAuth(true)
   }
 

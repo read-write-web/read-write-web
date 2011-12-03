@@ -104,8 +104,12 @@ class Https(val port: Int,
     new SecureServerPipelineFactory(channels, handlers, this)
 
   type ServerBuilder = Https
-  def handler(h: => ChannelHandler) = new Https(port, host, { () => h } :: handlers, beforeStopBlock)
-  def plan(plan: => ChannelHandler) = handler(plan)
+  def handler(h: => ChannelHandler) = makePlan(h)
+
+  def makePlan(h: => ChannelHandler) =
+    new Https(port, host, { () => h } :: handlers, beforeStopBlock)
+
+
   def beforeStop(block: => Unit) = new Https(port, host, handlers, { () => beforeStopBlock(); block })
 
 }
