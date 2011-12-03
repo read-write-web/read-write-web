@@ -31,14 +31,13 @@ import org.w3.readwriteweb.WebCache
 import javax.security.auth.Refreshable
 import java.util.Date
 import collection.JavaConversions._
-import java.util.concurrent.TimeUnit
-import com.google.common.cache.{CacheLoader, CacheBuilder, Cache}
-import javax.servlet.http.HttpServletRequest
 import unfiltered.request.HttpRequest
 import java.security.interfaces.RSAPublicKey
 import collection.immutable.List
-import scalaz.{Success, Validation}
 import collection.mutable.HashMap
+import scalaz.{Scalaz, Success, Validation}
+import Scalaz._
+import java.security.PublicKey
 
 /**
  * @author hjs
@@ -110,12 +109,8 @@ class X509Claim(val cert: X509Certificate)(implicit cache: WebCache) extends Ref
   lazy val tooLate = claimReceivedDate.after(cert.getNotAfter())
   lazy val tooEarly = claimReceivedDate.before(cert.getNotBefore())
 
-  /* a list of unverified principals */
-  //TODO WE ASSUME THIS IS AN RSA KEY!!
-  lazy val webidValidations: List[Validation[WebIDClaimErr, WebIDClaim]] =
-    getClaimedWebIds(cert) map { webid => WebIDClaim(webid, cert.getPublicKey.asInstanceOf[RSAPublicKey]) }
 
-  lazy val webidclaims: List[WebIDClaim] = webidValidations.collect{ case Success(webIdClaim)=> webIdClaim }
+  lazy val webidclaims: List[WebIDClaim] = getClaimedWebIds(cert) map { webid => new WebIDClaim(webid, cert.getPublicKey.asInstanceOf[RSAPublicKey]) }
 
   val verifiedClaims: List[WebID] = webidclaims.flatMap(_.verify.toOption)
 

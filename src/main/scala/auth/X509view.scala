@@ -77,37 +77,39 @@ class NoX509() extends Transformer {
 class X509Filler(x509: X509Claim)(implicit cache: WebCache) extends Transformer {
   $(".date").contents = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.LONG).format( x509.claimReceivedDate)
   $(".cert_test") { node =>
-      val x509Tests = certOk.test(x509);
-      val ff = for (tst <- x509Tests) yield {
+      val x509Assertion = new Assertion(certOk,x509);
+      val x509Assertions = x509Assertion::x509Assertion.depends
+      val ff = for (ast <- x509Assertions) yield {
         new Transform(node) {
-          $(".tst_question").contents = tst.of.title
-          $(".tst_txt").contents = tst.of.description
-          $(".tst_res").contents = tst.result.name
-          $(".tst_res_txt").contents = tst.msg
+          $(".tst_question").contents = ast.test.title
+          $(".tst_txt").contents = ast.test.description
+          $(".tst_res").contents = ast.result.outcome.name
+          $(".tst_res_txt").contents = ast.result.description
         }.toNodes()
       }
       ff.flatten
   }
-//  $(".webid_tests") { node =>
-//    val ff = for (idclaim <- x509.webidclaims) yield {
-//      new Transform(node) {
-//        $(".webid").contents = "Testing webid " +idclaim.webid
-//        $(".webid_test") { n2 =>
-//          val validation: Validation[WebIDClaimErr, WebID] = idclaim.verify
-//          val nn = for (tst <-idclaim.tests) yield {
-//            new Transform(n2) {
-//              $(".tst_question").contents = tst.of.title
-//              $(".tst_txt").contents = tst.of.description
-//              $(".tst_res").contents = tst.result.name
-//              $(".tst_res_txt").contents = tst.msg
-//            }.toNodes()
-//          }
-//          nn.flatten
-//        }
-//      }.toNodes()
-//    }
-//    ff.flatten
-//  }
-//  $(".certificate").contents = x509.cert.toString
+  $(".no_webid") { node => if (x509.verifiedClaims.size==0) node else <span/> }
+  $(".webid_test") { node =>
+    val ff = for (idclaim <- x509.webidclaims) yield {
+      val idAsrt = new Assertion(webidClaimTst, idclaim)
+      new Transform(node) {
+        $(".webid").contents = idclaim.san
+        $(".tst_res_txt").contents = idAsrt.result.description
+        $(".webid_cause") { n2 =>
+          val nn = for (a <- idAsrt.depends) yield {
+            new Transform(n2) {
+              $(".cause_question").contents = a.test.title
+              $(".cause_txt").contents = a.test.description
+              $(".cause_res").contents = a.result.outcome.name
+            }.toNodes()
+          }
+          nn.flatten
+        }
+      }.toNodes()
+    }
+    ff.flatten
+  }
+  $(".certificate").contents = x509.cert.toString
 
 }

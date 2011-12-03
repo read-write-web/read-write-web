@@ -5,35 +5,29 @@
     </head>
 <body>
   <h1>WebID Authentication Report</h1>
-      
-  <p>This page describes in detail the state of your <a href="http://webid.info/spec">WebID authentication</a> session on <span class="date">Thu Nov 17 08:31:53 PST 2011.</span> </p>
-  <p><a href="" onclick="return logout()">logout (only works on IE and Firefox)</a></p>
+  <p>This page describes in detail the state of your <a href="http://webid.info/spec">WebID authentication</a> session
+      on <span class="date">Thu Nov 17 08:31:53 PST 2011.</span> </p>
 
-  <h2>WebIDs</h2>
+  <p><a href="" onclick="return logout()">logout</a> -- (only works on IE and Firefox)</p>
 
-
+  <h2>WebID</h2>
   <div class="webid_tests">
-      <h3 class="webid">WebID found: http://example.com/#me</h3>
-  <table class="webid_test" width="100%" rules="groups">
-      <caption class="tst_question">Could at least one WebID claim be verified?</caption>
-      <thead><tr><td>description</td><td class="tst_txt">At least one WebID claimed in the certificate has public key that verifies.</td></tr></thead>
-      <tbody>
-      <tr><td>subject</td><td><a href="#cert" class="tst_sub">the certificate sent by your browser</a></td></tr>
-      <tr><td>test result</td><td><font color="green" class="tst_res">passed</font></td></tr>
-      <tr><td>result description</td><td class="tst_res_txt">found 1 valid principals</td></tr>
+  <p class="no_webid">No Subject Alternative Names were found in your profile</p>
+  <table width="100%" rules="groups">
+      <tbody class="webid_test">
+      <tr><td colspan="2">Verification of Subject Alternative Name <span class="webid">http://bblfish.net/#me</span>?</td> </tr>
+      <tr><td class="tst_res">result</td><td class="tst_res_txt">found 1 valid principals</td></tr>
+      <tr class="webid_cause"><td>cause</td><td class="cause_txt"></td></tr>
       </tbody>
   </table>
   </div>
 
   <h2>Certificate</h2>
 
-  <table class="cert_test" width="100%" rules="groups">
-      <caption class="tst_question">Could at least one WebID claim be verified?</caption>
-      <thead><tr><td>description</td><td class="tst_txt">At least one WebID claimed in the certificate has public key that verifies.</td></tr></thead>
-      <tbody>
-      <tr><td>subject</td><td><a href="#cert" class="tst_sub">the certificate sent by your browser</a></td></tr>
-      <tr><td>test result</td><td><font color="green" class="tst_res">passed</font></td></tr>
-      <tr><td>result description</td><td class="tst_res_txt">found 1 valid principals</td></tr>
+  <table width="100%" rules="groups">
+      <tbody class="cert_test">
+      <tr><td colspan="2" class="tst_question">Could at least one WebID claim be verified?</td> </tr>
+      <tr><td class="tst_res">passed</td><td class="tst_res_txt">found 1 valid principals</td></tr>
       </tbody>
   </table>
 

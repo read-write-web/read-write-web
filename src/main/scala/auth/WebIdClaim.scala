@@ -29,7 +29,9 @@ import com.hp.hpl.jena.query.{QueryExecutionFactory, QueryExecution, QuerySoluti
 import com.hp.hpl.jena.datatypes.xsd.XSDDatatype
 import scalaz.{Scalaz, Validation}
 import Scalaz._
-import org.w3.readwriteweb.util.wrapValidation
+import java.net.URL
+import java.security.PublicKey
+import com.hp.hpl.jena.rdf.model.Model
 
 
 /**
@@ -52,24 +54,18 @@ object WebIDClaim {
 
   def hex(bytes: Array[Byte]): String = bytes.dropWhile(_ == 0).map("%02X" format _).mkString
 
-  def apply(san: String, rsakey: RSAPublicKey)(implicit cache: WebCache): Validation[WebIDClaimErr, WebIDClaim] =
-    for (id <- WebID(san) failMap {
-      case e => new WebIDClaimErr("Unsupported WebID", Some(e))
-    })
-    yield new WebIDClaim(id,rsakey)
 }
 
 /**
  * One has to construct a WebID using the object, that can do basic verifications
  */
-class WebIDClaim private (val webid: WebID, val rsakey: RSAPublicKey)(implicit cache: WebCache) {
+class WebIDClaim(val san: String, val key: PublicKey)(implicit cache: WebCache) {
+
   import WebIDClaim.hex
   import XSDDatatype._
 
-  lazy val verify: Validation[WebIDClaimErr,WebID] =
-    webid.getDefiningModel.failMap {
-      case e => new WebIDClaimErr("could not fetch model", Some(e))
-    }.flatMap { model =>
+  private def rsaTest(webid: WebID, rsakey: RSAPublicKey): (Model) => Validation[WebIDVerificationFailure, WebID] = {
+    model =>
       val initialBinding = new QuerySolutionMap();
       initialBinding.add("webid", model.createResource(webid.url.toString))
       initialBinding.add("m", model.createTypedLiteral(hex(rsakey.getModulus.toByteArray), XSDhexBinary))
@@ -77,27 +73,43 @@ class WebIDClaim private (val webid: WebID, val rsakey: RSAPublicKey)(implicit c
       val qe: QueryExecution = QueryExecutionFactory.create(WebIDClaim.askQuery, model, initialBinding)
       try {
         if (qe.execAsk()) webid.success
-        else new WebIDClaimErr("could not verify public key").fail
+        else new WebIDVerificationFailure("could not verify public key", None, this).fail
       } finally {
         qe.close()
       }
+  }
+
+  lazy val verify: Validation[WebIDClaimFailure, WebID] = key match {
+      case rsakey: RSAPublicKey =>
+        WebID(san).flatMap(webid=> webid.getDefiningModel.flatMap(rsaTest(webid, rsakey)) )
+      case _ => new UnsupportedKeyType("We only support RSA keys at present", key).fail
     }
-}
+  }
+
 
 trait Err {
+  type T <: AnyRef
   val msg: String
   val cause: Option[Throwable]=None
+  val subject: T
 }
 
-abstract class Failure extends Throwable with Err
+abstract class Fail extends Throwable with Err
 
-abstract class SANFailure extends Failure
-case class UnsupportedProtocol(val msg: String) extends SANFailure
-case class URISyntaxError(val msg: String) extends SANFailure
+abstract class WebIDClaimFailure extends Fail
 
-abstract class ProfileError extends Failure
-case class ProfileGetError(val msg: String,  override val cause: Option[Throwable]) extends ProfileError
-case class ProfileParseError(val msg: String, override val cause: Option[Throwable]) extends ProfileError
+class UnsupportedKeyType(val msg: String, val subject: PublicKey) extends WebIDClaimFailure { type T = PublicKey }
+
+
+abstract class SANFailure extends WebIDClaimFailure { type T = String }
+case class UnsupportedProtocol(val msg: String, subject: String) extends SANFailure
+case class URISyntaxError(val msg: String, subject: String) extends SANFailure
+
+//The subject could be more refined than the URL, especially in the paring error
+abstract class ProfileError extends WebIDClaimFailure  { type T = URL }
+case class ProfileGetError(val msg: String,  override val cause: Option[Throwable], subject: URL) extends ProfileError
+case class ProfileParseError(val msg: String, override val cause: Option[Throwable], subject: URL) extends ProfileError
 
 //it would be useful to pass the graph in
-class WebIDClaimErr(val msg: String, override val cause: Option[Throwable]=None) extends Failure
+class WebIDVerificationFailure(val msg: String, val caused: Option[Throwable], val subject: WebIDClaim)
+  extends WebIDClaimFailure { type T = WebIDClaim }

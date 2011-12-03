@@ -24,12 +24,12 @@
 package org.w3.readwriteweb.auth
 
 import java.security.Principal
-import java.net.URL
 import org.w3.readwriteweb.WebCache
 import com.hp.hpl.jena.rdf.model.Model
 import com.hp.hpl.jena.shared.WrappedIOException
 import scalaz.{Scalaz, Validation}
 import Scalaz._
+import java.net.{ConnectException, URL}
 
 /**
  * @author Henry Story from http://bblfish.net/
@@ -47,7 +47,7 @@ protected object WebID {
         val protocol = url.getProtocol
         if ("http".equals(protocol) || "https".equals(protocol)) {
           new WebID(url).success
-        } else UnsupportedProtocol("only http and https url supported at present").fail
+        } else UnsupportedProtocol("only http and https url supported at present",subjectAlternativeName).fail
     }
 
 
@@ -55,7 +55,7 @@ protected object WebID {
   def toUrl(urlStr: String): Validation[SANFailure,URL] = {
     try { new URL(urlStr).success } catch {
       // oops: should be careful, not all SANs are perhaps traditionally written out as a full URL.
-      case e => URISyntaxError("unparseable Subject Alternative Name: "+urlStr).fail
+      case e => URISyntaxError("unparseable Subject Alternative Name",urlStr).fail
     }
   }
 
@@ -77,8 +77,9 @@ case class WebID private (val url: URL) extends Principal {
 
   def getDefiningModel(implicit cache: WebCache): Validation[ProfileError, Model] =
     cache.resource(url).get() failMap {
-      case ioe: WrappedIOException => new ProfileGetError("error fetching profile", Some(ioe))
-      case other => new ProfileParseError("error parsing profile", Some(other))
+      case ioe: WrappedIOException => new ProfileGetError("error fetching profile", Some(ioe),url)
+      case connE : ConnectException => new ProfileGetError("error fetching profile", Some(connE),url)
+      case other => new ProfileParseError("error parsing profile", Some(other),url)
     }
 }
 

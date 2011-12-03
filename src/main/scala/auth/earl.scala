@@ -24,11 +24,11 @@
 package org.w3.readwriteweb.auth
 
 import com.hp.hpl.jena.vocabulary.DCTerms
-import java.security.cert.X509Certificate
 import java.security.interfaces.RSAPublicKey
 import org.w3.readwriteweb.util.trySome
 import java.lang.ref.WeakReference
 import com.hp.hpl.jena.rdf.model.{Model, Property, ModelFactory}
+import scalaz.{Failure, Success}
 
 /**
  * Classes for the tests in WebID Authentication.
@@ -36,10 +36,10 @@ import com.hp.hpl.jena.rdf.model.{Model, Property, ModelFactory}
  * The idea is to try to use the earl test cases we are defining at the WebID XG as
  * a way of collecting tests done to prove the X509Claim and the WebIDClaim.
  *
- * ( bblfish: theses classes feel very ad-hoc, and it is clearly a first pass:
- *  - we are at the point currently of verifying which tests we need
- *  - one gets the feeling these classes could even contain behavior
- *  - we have instances of one class failing but not necessarily succeeding )
+ * These tests are now very close to the way the code is working. So much so that one can get
+ * feeling that perhaps by adding the URIs of these tests directly to the error codes one
+ * could merge a few classes. So perhaps with a bit of tuning a few classes here could just
+ * disappear.
  *
  */
 
@@ -72,9 +72,9 @@ trait Test {
 /**
  * Test with extra information taken from the ontologies
  */
-class PubTest(val name: String) extends Test {
+abstract class OntTest(val name: String) extends Test {
   import Tests._
-  implicit def boolToResult(bool: Boolean): Result = if (bool) passed else failed
+  implicit def boolToResult(bool: Boolean): Outcome = if (bool) passed else failed
 
   private def value(p: Property) = trySome(resource.getProperty(p).getLiteral.getLexicalForm) getOrElse "-missing-"
   
@@ -85,6 +85,16 @@ class PubTest(val name: String) extends Test {
   private def resource = model.getResource(ns+"#"+name)
 }
 
+abstract class TestObj[T](name: String) extends OntTest(name) {
+  def apply(subj: T): Result
+  def depends(subj: T): List[Assert] =Nil
+}
+
+/**
+ * tests that we apply only to Exceptions
+ */
+class TestErr(name: String) extends OntTest(name)
+
 //todo: (bblfish:) I get the feeling that one could put the logic into the tests directly.
 //      would that make things easier or better?
 
@@ -93,67 +103,122 @@ class PubTest(val name: String) extends Test {
 //
 
 //for X509Claim
-object certProvided extends PubTest("certificateProvided")   {
-  def test(cert: Option[X509Certificate]): Assertion = cert match {
-    case Some(x509) => new Assertion(this,passed,"got certificate") //the subject is the session
-    case None => new Assertion(this,failed,"missing certificate")
-  }
-}
+//object certProvided[X509Certificate] extends OntTest("certificateProvided")   {
+//  def apply(cert: Option[X509Certificate]): Assertion = cert match {
+//    case Some(x509) => new Assertion(this,passed,"got certificate") //the subject is the session
+//    case None => new Assertion(this,failed,"missing certificate")
+//  }
+//}
 
-object certOk extends PubTest("certificateOk") {
-   def test(x509: X509Claim): List[Assertion] = {
-     val res = certDateOk.test(x509)::certProvidedSan.test(x509)::certPubKeyRecognized.test(x509)::Nil
-     val problems = res.filter(v => v.result != passed)
-     new Assertion(this,problems.length==0,
-       if (problems.length==0) "There were no issues with the certificate"
-       else "There were some issues with your certificate")::res
+object certOk extends TestObj[X509Claim]("certificateOk") {
+   val parts = List[TestObj[X509Claim]](certDateOk, certProvidedSan,certPubKeyRecognized)
+
+   def apply(x509: X509Claim): Result = {
+      val deps = depends(x509)
+      val res = deps.forall(_.result.outcome == passed)
+      new Result(if (res) "X509 Certificate Good" else "X509 Certificate had problems",
+        res,  deps)
    }
-}
-object certProvidedSan extends PubTest("certificateProvidedSAN") {
-  def test(x509: X509Claim) = new Assertion(this,x509.webidclaims.size >0,
-    " There are "+x509.webidclaims.size+" SANs in the certificate")
-}
-object certDateOk extends PubTest("certificateDateOk") {
-  def test(x509: X509Claim) = 
-    new Assertion(this, x509.isCurrent,
-      "the x509certificate " + (
-        if (x509.tooEarly) "is not yet valid "
-        else if (x509.tooLate) " passed its validity date "
-        else " is valid")
-    )
-  
+   override def depends(x509: X509Claim): List[Assert] = parts.map(test=>new Assertion[X509Claim](test,x509))
 }
 
-object certPubKeyRecognized extends PubTest("certificatePubkeyRecognised") {
-  def test(claim: X509Claim) = {
+object certProvidedSan extends TestObj[X509Claim]("certificateProvidedSAN") {
+  def apply(x509: X509Claim) = new Result(" There are "+x509.webidclaims.size+" SANs in the certificate",
+    x509.webidclaims.size >0)
+
+}
+
+object certDateOk extends TestObj[X509Claim]("certificateDateOk") {
+  def apply(x509: X509Claim) = 
+    new Result("the x509certificate " + (
+      if (x509.tooEarly) "is not yet valid "
+      else if (x509.tooLate) " passed its validity date "
+      else " is valid"),
+      x509.isCurrent)
+
+}
+
+object certPubKeyRecognized extends TestObj[X509Claim]("certificatePubkeyRecognised") {
+  def apply(claim: X509Claim) = {
     val pk = claim.cert.getPublicKey;
-    new Assertion(this, pk.isInstanceOf[RSAPublicKey], "We only support RSA Keys at present. " )
+    new Result("We only support RSA Keys at present. ",pk.isInstanceOf[RSAPublicKey] )
   }
 }
 
 //for WebIDClaims
-object webidClaimTst extends PubTest("webidClaim")
-object pubkeyTypeTst extends PubTest("certificatePubkeyRecognised")
-object profileGetTst extends PubTest("profileGet")
-object profileParseTst extends PubTest("profileWellFormed")
-object profileOkTst extends PubTest("profileOk")
-object profileWellFormedKeyTst extends PubTest("profileWellFormedPubkey")
+object webidClaimTst extends TestObj[WebIDClaim]("webidClaim") {
+  def apply(webIdclaim: WebIDClaim) : Result =
+    webIdclaim.verify match {
+      case Success(webId) => new Result("WebId successfully verified",passed)
+      case Failure(webIdClaimErr: WebIDVerificationFailure) => 
+        new Result("keys in certificate don't match key in profile for "+webIdClaimErr.subject,failed)
+      case Failure(e) => new Result("WebID verification failed",failed,cause=List(new AssertionErr(e)))
+    }
+  
+  override def depends(webIdclaim: WebIDClaim): List[Assert] =
+    webIdclaim.verify match {
+      case Failure(e) if  !e.isInstanceOf[WebIDVerificationFailure] => new AssertionErr(e)::Nil
+      case _ => Nil
+    }
+}
 
 
-/** Assertions on the success of a Test -- sits inside X509Claim or WebIdClaim and from which full verifications can be constituted */
-class Assertion( val of: Test,
-             val result: Result = untested,
-             val msg: String,
-             val err: Option[Throwable] = None )
+
+object profileGetTst extends TestErr("profileGet")
+object profileParseTst extends TestErr("profileWellFormed")
+object sanOk extends TestErr("sanOK")
+
+//object profileOkTst extends OntTest("profileOk") {
+//  def test(err: ProfileError): Assertion = new Assertion(this,err)::err match {
+//    case getError : ProfileGetError => profileGetTst.test(getError)
+//    case ProfileParseError(parseError: Fail) => new Assertion(profileParseTst,parseError)
+//  }
+//}
+//object profileWellFormedKeyTst extends OntTest("profileWellFormedPubkey")
+
+object Assertion {
+  def name(fail: WebIDClaimFailure): Test = {
+    fail match {
+      case e: UnsupportedProtocol => sanOk
+      case e: URISyntaxError => sanOk
+      case e: ProfileGetError =>  profileGetTst
+      case e: ProfileParseError => profileParseTst
+      case e: UnsupportedKeyType => certPubKeyRecognized
+    }
+  }
+}
+
+trait Assert {
+  val subject: AnyRef
+  val test: Test
+  val result: Result
+}
+
+class Assertion[T<:AnyRef]( val test: TestObj[T], val subject: T ) extends Assert {
+  override val result: Result =  test(subject)
+  val depends: List[Assert] = test.depends(subject)
+}
+
+class AssertionErr(val fail: WebIDClaimFailure) extends Assert {
+  import Assertion.name
+  val subject = fail.subject
+  val test = name(fail)
+  val result: Result = new Result(fail.msg,failed)
+}
+
+class Result (val description: String,
+              val outcome: Outcome,
+              val cause: List[Assert] = Nil)
 
 
-sealed class Result(val name: String)  {
+
+sealed class Outcome(val name: String)  {
   val earl = "http://www.w3.org/ns/earl#"
   val id = earl+name
 }
 
-object untested extends Result("untested")
-object passed extends Result("passed")
-object failed extends Result("failed")
+object untested extends Outcome("untested")
+object passed extends Outcome("passed")
+object failed extends Outcome("failed")
 
 

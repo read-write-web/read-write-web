@@ -24,11 +24,11 @@
 package org.w3.readwriteweb
 
 import com.hp.hpl.jena.rdf.model.Model
-import java.net.URL
 import org.apache.http.MethodNotSupportedException
 import org.w3.readwriteweb.util._
 import scalaz._
 import Scalaz._
+import java.net.{ConnectException, URL}
 
 /**
  * @author Henry Story
@@ -69,7 +69,11 @@ class WebCache extends ResourceManager {
 
         }
       })
-      http(handler)
+      try {
+         http(handler)
+      } catch {
+        case e: ConnectException => e.fail
+      }
 
     }
 
