@@ -9,8 +9,8 @@ object Dependencies {
   val specs2_scalaz =  "org.specs2" %% "specs2-scalaz-core" % "6.0.1" % "test"
   val dispatch_version = "0.8.6"
   val dispatch_http = "net.databinder" %% "dispatch-http" % dispatch_version 
-//  val dispatch_nio = "net.databinder" %% "dispatch-nio" % dispatch_version 
-  val unfiltered_version = "0.5.2"
+  val dispatch_nio = "net.databinder" %% "dispatch-nio" % dispatch_version 
+  val unfiltered_version = "0.5.3"
   val unfiltered_filter = "net.databinder" %% "unfiltered-filter" % unfiltered_version 
   val unfiltered_jetty = "net.databinder" %% "unfiltered-jetty" % unfiltered_version 
   val unfiltered_netty = "net.databinder" %% "unfiltered-netty" % unfiltered_version 
