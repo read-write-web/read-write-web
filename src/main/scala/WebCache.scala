@@ -26,9 +26,9 @@ package org.w3.readwriteweb
 import com.hp.hpl.jena.rdf.model.Model
 import org.apache.http.MethodNotSupportedException
 import org.w3.readwriteweb.util._
-import scalaz._
-import Scalaz._
 import java.net.{ConnectException, URL}
+import scalaz.{Scalaz, Validation}
+
 
 /**
  * @author Henry Story
@@ -36,10 +36,11 @@ import java.net.{ConnectException, URL}
  *
  * The WebCache currently does not cache
  */
-class WebCache extends ResourceManager {
+class WebCache extends ResourceManager  {
   import dispatch._
+  import Scalaz._
 
-  val http = new Http
+  val http = new Http with thread.Safety
   
   def basePath = null //should be cache dir?
 
@@ -70,7 +71,8 @@ class WebCache extends ResourceManager {
         }
       })
       try {
-         http(handler)
+         val future = http(handler)
+         future
       } catch {
         case e: ConnectException => e.fail
       }
@@ -83,4 +85,6 @@ class WebCache extends ResourceManager {
 
     def createDirectory(model: Model) =  throw new MethodNotSupportedException("not implemented")
   }
+
+   override def finalize() { http.shutdown() }
 }

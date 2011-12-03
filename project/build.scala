@@ -7,7 +7,9 @@ object Dependencies {
 //  val specs = "org.scala-tools.testing" %% "specs" % "1.6.9" % "test"
   val specs2 = "org.specs2" %% "specs2" % "1.6.1"
   val specs2_scalaz =  "org.specs2" %% "specs2-scalaz-core" % "6.0.1" % "test"
-  val dispatch_http = "net.databinder" %% "dispatch-http" % "0.8.5" 
+  val dispatch_version = "0.8.6"
+  val dispatch_http = "net.databinder" %% "dispatch-http" % dispatch_version 
+//  val dispatch_nio = "net.databinder" %% "dispatch-nio" % dispatch_version 
   val unfiltered_version = "0.5.2"
   val unfiltered_filter = "net.databinder" %% "unfiltered-filter" % unfiltered_version 
   val unfiltered_jetty = "net.databinder" %% "unfiltered-jetty" % unfiltered_version 
@@ -91,6 +93,7 @@ object YourProjectBuild extends Build {
 //      libraryDependencies += unfiltered_spec,
       ivyXML := ivyUnfilteredSpec,
       libraryDependencies += dispatch_http,
+      libraryDependencies += dispatch_nio,
       libraryDependencies += unfiltered_filter,
       libraryDependencies += unfiltered_jetty,
       libraryDependencies += unfiltered_netty,
