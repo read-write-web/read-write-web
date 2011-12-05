@@ -75,8 +75,10 @@ case class WebID private (val url: URL) extends Principal {
     case _ => false
   }
 
-  def getDefiningModel(implicit cache: WebCache): Validation[ProfileError, Model] =
-    cache.resource(url).get() failMap {
+  //TODO: now that we are no longer passing the WebCache around it's questionable whether we still need this method
+  //in this class
+  def getDefiningModel: Validation[ProfileError, Model] =
+    WebCache.resource(url).get() failMap {
       case ioe: WrappedIOException => new ProfileGetError("error fetching profile", Some(ioe),url)
       case connE : ConnectException => new ProfileGetError("error fetching profile", Some(connE),url)
       case other => new ProfileParseError("error parsing profile", Some(other),url)

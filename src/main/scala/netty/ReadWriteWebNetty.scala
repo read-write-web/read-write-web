@@ -23,6 +23,7 @@
 
 package org.w3.readwriteweb.netty
 
+import _root_.auth.WebIDSrvc
 import org.clapper.argot.ArgotUsageException
 import scala.Console._
 import org.w3.readwriteweb.auth.{X509view, RDFAuthZ}
@@ -60,7 +61,7 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
      val rww = new cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with ReadWriteWeb[ReceivedMessage,HttpResponse]{
           val rm = filesystem
           def manif = manifest[ReceivedMessage]
-          override val authz = new RDFAuthZ[ReceivedMessage,HttpResponse](webCache,filesystem)
+          override val authz = new RDFAuthZ[ReceivedMessage,HttpResponse](filesystem)
      }
 
      //this is incomplete: we should be able to start both ports.... not sure how to do this yet.
@@ -72,6 +73,7 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
      // configures and launches a Netty server
      service.plan(publicStatic).
        plan( x509v ).
+       plan( webidp ).
        plan( rww ).run()
      
    }
@@ -93,8 +95,12 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
   }
 
   object x509v extends  cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with X509view[ReceivedMessage,HttpResponse] {
-    def wc = webCache
     def manif = manifest[ReceivedMessage]
+  }
+  
+  object webidp extends cycle.Plan with cycle.ThreadPool with ServerErrorResponse with WebIDSrvc[ReceivedMessage, HttpResponse] {
+    def manif = manifest[ReceivedMessage]
+    val signer = ReadWriteWebNetty.signer
   }
 
 }

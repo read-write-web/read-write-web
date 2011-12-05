@@ -47,7 +47,6 @@ import java.util.Date
  */
 
 trait X509view[Req,Res]  {
-   implicit def wc: WebCache
    implicit def manif: Manifest[Req]
 
   val fileDir: File = new File(this.getClass.getResource("/template/").toURI)
@@ -73,7 +72,7 @@ class NoX509() extends Transformer {
   $(".date").contents = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.LONG).format(new Date)
 }
 
-class X509Filler(x509: X509Claim)(implicit cache: WebCache) extends Transformer {
+class X509Filler(x509: X509Claim) extends Transformer {
   $(".date").contents = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.LONG).format( x509.claimReceivedDate)
   $(".cert_test") { node =>
       val x509Assertion = new Assertion(certOk,x509);
@@ -88,7 +87,7 @@ class X509Filler(x509: X509Claim)(implicit cache: WebCache) extends Transformer 
       }
       ff.flatten
   }
-  $(".no_webid") { node => if (x509.verifiedClaims.size==0) node else <span/> }
+  $(".no_webid") { node => if (x509.verified.size==0) node else <span/> }
   $(".webid_test") { node =>
     val ff = for (idclaim <- x509.webidclaims) yield {
       val idAsrt = new Assertion(webidClaimTst, idclaim)

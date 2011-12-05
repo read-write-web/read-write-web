@@ -23,15 +23,14 @@
 
 package org.w3.readwriteweb.auth
 
-import org.w3.readwriteweb.WebCache
 import java.security.interfaces.RSAPublicKey
 import com.hp.hpl.jena.query.{QueryExecutionFactory, QueryExecution, QuerySolutionMap, QueryFactory}
 import com.hp.hpl.jena.datatypes.xsd.XSDDatatype
 import scalaz.{Scalaz, Validation}
 import Scalaz._
-import java.net.URL
 import java.security.PublicKey
 import com.hp.hpl.jena.rdf.model.Model
+import java.net.URL
 
 
 /**
@@ -59,7 +58,7 @@ object WebIDClaim {
 /**
  * One has to construct a WebID using the object, that can do basic verifications
  */
-class WebIDClaim(val san: String, val key: PublicKey)(implicit cache: WebCache) {
+class WebIDClaim(val san: String, val key: PublicKey) {
 
   import WebIDClaim.hex
   import XSDDatatype._
@@ -83,8 +82,8 @@ class WebIDClaim(val san: String, val key: PublicKey)(implicit cache: WebCache) 
       case rsakey: RSAPublicKey =>
         WebID(san).flatMap(webid=> webid.getDefiningModel.flatMap(rsaTest(webid, rsakey)) )
       case _ => new UnsupportedKeyType("We only support RSA keys at present", key).fail
-    }
   }
+}
 
 
 trait Err {

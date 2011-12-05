@@ -28,6 +28,10 @@ import org.apache.http.MethodNotSupportedException
 import org.w3.readwriteweb.util._
 import java.net.{ConnectException, URL}
 import scalaz.{Scalaz, Validation}
+import java.io.File
+import java.util.concurrent.TimeUnit
+import com.google.common.cache.{CacheLoader, CacheBuilder, Cache}
+import org.w3.readwriteweb.Lang._
 
 
 /**
@@ -36,9 +40,20 @@ import scalaz.{Scalaz, Validation}
  *
  * The WebCache currently does not cache
  */
-class WebCache extends ResourceManager  {
+object WebCache extends ResourceManager  {
   import dispatch._
   import Scalaz._
+
+  //this is a simple but quite stupid web cache so that graphs can stay in memory and be used a little
+  // bit across sessions
+  val cache: Cache[URL,Validation[Throwable,Model]] =
+       CacheBuilder.newBuilder()
+         .expireAfterAccess(5, TimeUnit.MINUTES)
+//         .softValues()
+//         .expireAfterWrite(30, TimeUnit.MINUTES)
+       .build(new CacheLoader[URL, Validation[Throwable,Model]] {
+         def load(url: URL) = getUrl(url)
+       })
 
   val http = new Http with thread.Safety
   
@@ -47,7 +62,17 @@ class WebCache extends ResourceManager  {
   def sanityCheck() = true  //cache dire exists? But is this needed for functioning?
 
   def resource(u : URL) = new org.w3.readwriteweb.Resource {
-    def get() = {
+    def get() = cache.get(u)
+
+    // when fetching information from the web creating directories does not make sense
+    //perhaps the resource manager should be split into read/write sections?
+    def save(model: Model) =  throw new MethodNotSupportedException("not implemented")
+
+    def createDirectory(model: Model) =  throw new MethodNotSupportedException("not implemented")
+  }
+
+  private def getUrl(u: URL) = {
+
       // note we prefer rdf/xml and turtle over html, as html does not always contain rdfa, and we prefer those over n3,
       // as we don't have a full n3 parser. Better would be to have a list of available parsers for whatever rdf framework is
       // installed (some claim to do n3 when they only really do turtle)
@@ -71,20 +96,14 @@ class WebCache extends ResourceManager  {
         }
       })
       try {
-         val future = http(handler)
-         future
+        val future = http(handler)
+        future
       } catch {
         case e: ConnectException => e.fail
       }
 
     }
 
-    // when fetching information from the web creating directories does not make sense
-    //perhaps the resource manager should be split into read/write sections?
-    def save(model: Model) =  throw new MethodNotSupportedException("not implemented")
-
-    def createDirectory(model: Model) =  throw new MethodNotSupportedException("not implemented")
-  }
 
    override def finalize() { http.shutdown() }
 }

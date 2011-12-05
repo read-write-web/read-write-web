@@ -1,6 +1,7 @@
 package org.w3.readwriteweb
 
-import auth.{RDFAuthZ, X509view}
+import auth.X509CertSigner._
+import auth.{X509CertSigner, RDFAuthZ, X509view}
 import org.w3.readwriteweb.util._
 
 import unfiltered.jetty._
@@ -11,6 +12,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.clapper.argot._
 import ArgotConverters._
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
+import java.security.KeyStore
 
 trait ReadWriteWebArgs {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
@@ -64,7 +66,12 @@ trait ReadWriteWebArgs {
     }
   }
 
-  val webCache = new WebCache()
+  val signer = {
+    val keystore = new File(System.getProperty( "netty.ssl.keyStore")).toURI.toURL
+    val ksTpe = System.getProperty("netty.ssl.keyStoreType","JKS")
+    val ksPass = System.getProperty("netty.ssl.keyStorePassword")
+    X509CertSigner( keystore, ksTpe, ksPass,  "selfsigned" )
+  }
 
   val baseURL = parser.parameter[String]("baseURL", "base URL", false)
 
@@ -93,7 +100,7 @@ object ReadWriteWebMain extends ReadWriteWebArgs {
     val rww = new ReadWriteWeb[HttpServletRequest,HttpServletResponse] {
       val rm = filesystem
       def manif = manifest[HttpServletRequest]
-      override implicit val authz = new RDFAuthZ[HttpServletRequest,HttpServletResponse](webCache,filesystem)
+      override implicit val authz = new RDFAuthZ[HttpServletRequest,HttpServletResponse](filesystem)
     }
 
 
@@ -116,7 +123,6 @@ object ReadWriteWebMain extends ReadWriteWebArgs {
 
 
   object x509v extends X509view[HttpServletRequest,HttpServletResponse] {
-    def wc = webCache
     def manif = manifest[HttpServletRequest]
   }
 

@@ -38,6 +38,9 @@ import collection.mutable.HashMap
 import scalaz.{Scalaz, Success, Validation}
 import Scalaz._
 import java.security.PublicKey
+import com.google.common.cache.{CacheLoader, CacheBuilder, Cache}
+import java.util.concurrent.TimeUnit
+import org.w3.readwriteweb.util.trySome
 
 /**
  * @author hjs
@@ -47,24 +50,18 @@ import java.security.PublicKey
 object X509Claim {
   final val logger = LoggerFactory.getLogger(classOf[X509Claim])
 
-  val idCache: HashMap[X509Certificate,X509Claim] = new HashMap
 
 // this is cool because it is not in danger of running out of memory but it makes it impossible to create the claim
 // with an implicit  WebCache...
-//  val idCache: Cache[X509Certificate, X509Claim] =
-//     CacheBuilder.newBuilder()
-//     .expireAfterWrite(30, TimeUnit.MINUTES)
-//     .build(new CacheLoader[X509Certificate, X509Claim] {
-//       def load(x509: X509Certificate) = new X509Claim(x509)
-//     })
+  val idCache: Cache[X509Certificate, X509Claim] =
+     CacheBuilder.newBuilder()
+     .expireAfterWrite(30, TimeUnit.MINUTES)
+     .build(new CacheLoader[X509Certificate, X509Claim] {
+       def load(x509: X509Certificate) = new X509Claim(x509)
+     })
 
-  def unapply[T](r: HttpRequest[T])(implicit webCache: WebCache,m: Manifest[T]): Option[X509Claim] = r match {
-    case Certs(c1: X509Certificate, _*) =>
-      idCache.get(c1).orElse {
-        val claim = new X509Claim(c1)
-        idCache.put(c1,claim)
-        Some(claim)
-      }
+  def unapply[T](r: HttpRequest[T])(implicit m: Manifest[T]): Option[X509Claim] = r match {
+    case Certs(c1: X509Certificate, _*) => trySome(idCache.get(c1))
     case _ => None
   }
 
@@ -102,7 +99,7 @@ object X509Claim {
  * @created: 30/03/2011
  */
 // can't be a case class as it then creates object which clashes with defined one
-class X509Claim(val cert: X509Certificate)(implicit cache: WebCache) extends Refreshable {
+class X509Claim(val cert: X509Certificate) extends Refreshable {
 
   import X509Claim._
   val claimReceivedDate = new Date()
@@ -112,7 +109,7 @@ class X509Claim(val cert: X509Certificate)(implicit cache: WebCache) extends Ref
 
   lazy val webidclaims: List[WebIDClaim] = getClaimedWebIds(cert) map { webid => new WebIDClaim(webid, cert.getPublicKey.asInstanceOf[RSAPublicKey]) }
 
-  val verifiedClaims: List[WebID] = webidclaims.flatMap(_.verify.toOption)
+  lazy val verified: List[WebID] = webidclaims.flatMap(_.verify.toOption)
 
   //note could also implement Destroyable
   //

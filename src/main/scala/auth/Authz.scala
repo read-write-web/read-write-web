@@ -40,11 +40,11 @@ import org.w3.readwriteweb.util.HttpMethod
 
 object AuthZ {
 
-  implicit def x509toSubject(x509c: X509Claim)(implicit cache: WebCache): Subject = {
+  implicit def x509toSubject(x509c: X509Claim): Subject = {
     val subject = new Subject()
     subject.getPublicCredentials.add(x509c)
     if (x509c.isCurrent()) {
-      val verified = x509c.verifiedClaims
+      val verified = x509c.verified
       subject.getPrincipals.addAll(verified.asJava)
     }
     subject
@@ -86,12 +86,11 @@ trait AuthZ[Request, Response] {
 }
 
 
-class RDFAuthZ[Request, Response](val webCache: WebCache, rm: ResourceManager)
-  (implicit val m: Manifest[Request]) extends AuthZ[Request,Response] {
+class RDFAuthZ[Request, Response](val rm: ResourceManager)(implicit val m: Manifest[Request])
+  extends AuthZ[Request,Response] {
 
   import AuthZ.x509toSubject
 
-  implicit val cache: WebCache = webCache
 
   def subject(req: Req) = req match {
     case X509Claim(claim) => Option(claim)

@@ -35,6 +35,8 @@ import interfaces.RSAPublicKey
 import unfiltered.util.IO
 import sun.security.x509._
 import org.w3.readwriteweb.util.trySome
+import actors.threadpool.TimeUnit
+import com.google.common.cache.{CacheLoader, CacheBuilder, Cache}
 
 object X509CertSigner {
 
@@ -60,6 +62,13 @@ class X509CertSigner(
     signingCert: X509Certificate,
     signingKey: PrivateKey ) {
   val WebID_DN="""O=FOAF+SSL, OU=The Community of Self Signers, CN=Not a Certification Authority"""
+
+  val sigAlg = signingKey.getAlgorithm match {
+    case "RSA" =>  "SHA1withRSA"
+    case "DSA" =>  "SHA1withDSA"
+    //else will throw a case exception
+  }
+
 
   /**
    * Adapted from http://bfo.com/blog/2011/03/08/odds_and_ends_creating_a_new_x_509_certificate.html
@@ -161,8 +170,21 @@ class X509CertSigner(
     return cert
   }
 
-  def signString(): String = {
-     return "todo"
+  val clonesig : Signature =  sig
+
+  def sig: Signature = {
+    if (clonesig != null && clonesig.isInstanceOf[Cloneable]) clonesig.clone().asInstanceOf[Signature]
+    else {
+      val signature = Signature.getInstance(sigAlg)
+      signature.initSign(signingKey)
+      signature
+    }
+  }
+
+  def sign(string: String): Array[Byte] = {
+      val signature = sig
+      signature.update(string.getBytes("UTF-8"))
+      signature.sign
   }
 
 }
