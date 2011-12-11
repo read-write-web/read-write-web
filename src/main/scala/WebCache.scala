@@ -62,6 +62,7 @@ object WebCache extends ResourceManager  {
   def sanityCheck() = true  //cache dire exists? But is this needed for functioning?
 
   def resource(u : URL) = new org.w3.readwriteweb.Resource {
+    def name() = u
     def get() = cache.get(u)
 
     // when fetching information from the web creating directories does not make sense

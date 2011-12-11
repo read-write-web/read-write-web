@@ -22,6 +22,7 @@ class Filesystem(
     baseDirectory.exists && baseDirectory.isDirectory
 
   def resource(url: URL): Resource = new Resource {
+    def name() = url
     val relativePath: String = url.getPath.replaceAll("^"+basePath.toString+"/?", "")
     val fileOnDisk = new File(baseDirectory, relativePath)
     
