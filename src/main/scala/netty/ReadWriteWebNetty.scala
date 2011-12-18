@@ -29,10 +29,12 @@ import scala.Console._
 import org.w3.readwriteweb.auth.{X509view, RDFAuthZ}
 import org.w3.readwriteweb._
 import org.jboss.netty.handler.codec.http.HttpResponse
-import unfiltered.netty.{ServerErrorResponse, ReceivedMessage, cycle}
 import unfiltered.request.Path
-import unfiltered.netty.async
-import unfiltered.response.{JsContent, NotFound, ResponseString, Ok}
+import java.io.{InputStream, OutputStream}
+import unfiltered.response._
+import unfiltered.netty._
+import collection.immutable.List
+import java.lang.String
 
 /**
  * ReadWrite Web for Netty server, allowing TLS renegotiation
@@ -78,19 +80,49 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
      
    }
 
-  object publicStatic extends  cycle.Plan  with cycle.ThreadPool with ServerErrorResponse {
-    def intent = {
-      case Path(path) if path.startsWith("/public") => {
-        try {
-          val in = publicStatic.getClass.getResourceAsStream(path)
-          val source = scala.io.Source.fromInputStream(in)
-          val lines = source.mkString
-          source.close()
-          Ok ~> ResponseString(lines) ~> JsContent //currently that's all I am interested in, but of course this is not right.
-        } catch {
-          case _ => NotFound
+
+  trait StaticFiles extends PartialFunction[String, ResponseFunction[Any]] {
+    /* override this if the local path is somehow different from the url path */
+    def toLocal(webpath: String): String = webpath
+    val extension = "([^\\.]*?)$".r
+    val extList: List[String] = List("css", "png")
+
+    private def toString(in: InputStream): String = {
+      val source = scala.io.Source.fromInputStream(in)
+      val lines = source.mkString
+      source.close()
+      lines
+    }
+
+    def isDefinedAt(path: String): Boolean = try {
+      val in = classOf[StaticFiles].getResourceAsStream(toLocal(path))
+      (in != null) & (extension.findFirstIn(path).exists(extList contains _))
+    } catch {
+      case _ => false
+    }
+
+    def apply(path: String): ResponseFunction[Any] = {
+      try {
+        val in = classOf[StaticFiles].getResourceAsStream(toLocal(path))
+        extension.findFirstIn(path).getOrElse("css") match {
+          case "css" => Ok ~> ResponseString(toString(in)) ~> CssContent
+          case "js" => Ok ~> ResponseString(toString(in)) ~> JsContent
+          case "png" => Ok ~> ResponseBin(in) ~> ContentType("image/png")
         }
+      } catch {
+        case _ => NotFound
       }
+
+    }
+
+
+  }
+
+  object publicStatic  extends  cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with StaticFiles {
+    val initialPath= "/public"
+
+    def intent = {
+      case Path(path) if path.startsWith(initialPath) => apply(path)
     }
   }
 
@@ -105,3 +137,14 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
 
 }
 
+
+case class ResponseBin(bis: InputStream) extends ResponseStreamer {
+  override def stream(out: OutputStream) {
+    var c=0
+    val buf = new Array[Byte](1024)
+    do {
+      c = bis.read(buf)
+      if (c > 0) out.write(buf,0,c)
+    } while (c > -1)
+  }
+}

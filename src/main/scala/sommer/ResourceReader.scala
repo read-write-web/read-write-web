@@ -28,10 +28,11 @@ import com.hp.hpl.jena.sparql.vocabulary.FOAF
 import java.lang.String
 import org.w3.readwriteweb.{Resource, WebCache}
 import scalaz.Validation
-import java.net.{URI, URL}
+import java.net.URL
 import collection._
-import com.hp.hpl.jena.rdf.model.{RDFNode, Literal, ResourceFactory, ModelFactory, Resource => JResource, Model}
 import collection.JavaConverters._
+import com.hp.hpl.jena.rdf.model.{Model, ResourceFactory, Resource => JResource}
+import java.security.cert.X509Certificate
 
 
 /**
@@ -42,40 +43,63 @@ import collection.JavaConverters._
  * @author Henry Story
  */
 
-case class GraphReader[A](extract: Resource => Validation[scala.Throwable,A]) {
-  def map[B](g: A => B) = GraphReader(r => extract(r).map(g(_)))
-  def flatMap[B](g: A => GraphReader[B]): GraphReader[B] = GraphReader(r => extract(r).map(g(_)).flatMap(_.extract(r)))
+
+/**
+ * Resource readers are Monads
+ * These function directly on types given by resources specified by URIs
+ * But the map from resource to validation, makes things a bit heavy.
+ */
+case class ResourceReader[A](extract: Resource => Validation[scala.Throwable,A]) {
+  def map[B](g: A => B) = ResourceReader(r => extract(r).map(g(_)))
+  def flatMap[B](g: A => ResourceReader[B]): ResourceReader[B] = ResourceReader(r => extract(r).map(g(_)).flatMap(_.extract(r)))
+}
+
+trait Agent {
+  def name: String
+  def foaf(attr: String): Iterator[AnyRef] = Iterator.empty
+  def depictions: Iterator[JResource] = Iterator.empty
+}
+
+object CertAgent {
+  val CNregex = "cn=(.*?),".r
+}
+
+/**
+ *Information about an agent gleaned from the certificate
+ *(One could generalise this by having a function from certificates to graphs)
+ **/
+class CertAgent(dn : String) extends Agent {
+  val name =  CertAgent.CNregex.findFirstMatchIn(dn).map(_.group(1)).getOrElse("(unnamed)")
+
+  override def foaf(attr: String) = if (attr == "name") Iterator(name) else Iterator.empty
+
 }
 
 case class Person(name: String)
 
-case class IdPerson(webid: JResource) {
 
-  // this map is no longer necessary if we use the graph mapped resource
-  val relations : mutable.MultiMap[JResource,RDFNode] = new mutable.HashMap[JResource, mutable.Set[RDFNode]] with  mutable.MultiMap[JResource,RDFNode]
-  cacheProp
+
+case class IdPerson(id: JResource) extends Agent {
+
 
   import Extractors.toProperty
   // a couple of useful methods for foaf relations. One could add a few others for other vocabs
-  def foafRel(p: String) = relations.get(toProperty(FOAF.NS+p))
+  override def foaf(attr: String) = id.listProperties(toProperty(FOAF.NS+attr)).asScala.map(_.getObject)
 
   //very very simple implementation, not taking account of first/last name, languages etc...
-  def name = {
-    foafRel("name").mkString(" ")
+  override def name = {
+    foaf("name").mkString(" ")
   }
+  
+  override def depictions = foaf("depiction").collect{case n if n.isURIResource => n.asResource()}
 
-  /**
-   * Notice how here the graph has been mapped into the object, via the webid JResource that still
-   * has a pointer to the graph.
-   */
-  def cacheProp {
-    for (s <- webid.listProperties().asScala
-         if (!s.getObject.isAnon)
-    ) {
-      relations.addBinding(s.getPredicate, s.getObject)
-    }
-  }
+}
 
+object ANONYMOUS extends Agent {
+  val pix = ResourceFactory.createResource("http://massivnews.com/wp-content/uploads/2011/07/Anonymous-000006.jpg")
+  override val name = "_ANONYMOUS_"
+  override def foaf(attr: String) = if (attr == "name") Iterator(name) else Iterator.empty
+  override val depictions = List(pix).iterator
 }
 
 
@@ -93,15 +117,28 @@ object Extractors {
      }.toSet
   }
 
+  def definedPeople(gr: Model, doc: URL): Iterator[IdPerson] = {
+    for (st <- gr.listStatements(null, RDF.`type`, FOAF.Person).asScala;
+         val subj = st.getSubject;
+         //todo: come up with a better definition of "is defined in"
+         if (subj.isURIResource && subj.toString.split("#")(0) == doc.toString.split("#")(0));
+         st2 <- gr.listStatements(subj, FOAF.name, null).asScala
+    ) yield {
+      new IdPerson(subj)
+    }
+  }
+
+  /**
+   * Argh. Jena does not make a good difference between read only models, and RW ones
+   * So one should verify the person exists before doing this if one does not want to create a RW model
+   */
+  def namedPerson(gr: Model, webid: URL): IdPerson = {
+      IdPerson(gr.createResource(webid.toString))
+  }
+
   def findDefinedPeople(m: Resource): Validation[scala.Throwable,Set[IdPerson]] = {
     for (gr<-m.get) yield {
-      for (st <- gr.listStatements(null,RDF.`type`,FOAF.Person).asScala;
-           val subj = st.getSubject;
-           if (subj.isURIResource && subj.toString.startsWith(m.name.toString));
-           st2 <- gr.listStatements(subj, FOAF.name,null).asScala
-      ) yield {
-        new IdPerson(subj)
-      }
+      definedPeople(gr, m.name)
     }.toSet
   }
   
@@ -128,14 +165,14 @@ object Test {
   implicit def urlToResource(u: URL) = WebCache.resource(u)
   import System._
 
-  val peopleRd = new GraphReader[Set[Person]](Extractors.findPeople)
-  val definedPeopleRd = new GraphReader[Set[IdPerson]](Extractors.findDefinedPeople)
-  val idPeopleRd = new GraphReader[Set[IdPerson]](Extractors.findIdPeople)
-  val definedPeopleFriends = definedPeopleRd.flatMap(people =>GraphReader[Set[IdPerson]]{
+  val peopleRd = new ResourceReader[Set[Person]](Extractors.findPeople)
+  val definedPeopleRd = new ResourceReader[Set[IdPerson]](Extractors.findDefinedPeople)
+  val idPeopleRd = new ResourceReader[Set[IdPerson]](Extractors.findIdPeople)
+  val definedPeopleFriends = definedPeopleRd.flatMap(people =>ResourceReader[Set[IdPerson]]{
     resource: Resource =>
        resource.get.map(gr=>
          for ( p <- people;
-               st <- gr.listStatements(p.webid, FOAF.knows, null).asScala ;
+               st <- gr.listStatements(p.id, FOAF.knows, null).asScala ;
               val friend = st.getObject;
               if (friend.isURIResource)
          ) yield IdPerson(friend.asInstanceOf[JResource])

@@ -192,11 +192,11 @@ class X509CertSigner(
 
 object Certs {
 
-  def unapplySeq[T](r: HttpRequest[T])(implicit m: Manifest[T]): Option[IndexedSeq[Certificate]] = {
+  def unapplySeq[T](r: HttpRequest[T])(implicit m: Manifest[T], fetch: Boolean=true): Option[IndexedSeq[Certificate]] = {
     if (m <:< manifest[HttpServletRequest])
       unapplyServletRequest(r.asInstanceOf[HttpRequest[HttpServletRequest]])
     else if (m <:< manifest[ReceivedMessage])
-      unapplyReceivedMessage(r.asInstanceOf[HttpRequest[ReceivedMessage]])
+      unapplyReceivedMessage(r.asInstanceOf[HttpRequest[ReceivedMessage]],fetch)
     else
       None //todo: should  throw an exception here?
   }
@@ -210,24 +210,27 @@ object Certs {
       case _ => None
     }
   
-  private def unapplyReceivedMessage[T <: ReceivedMessage](r: HttpRequest[T]): Option[IndexedSeq[Certificate]] = {
+  private def unapplyReceivedMessage[T <: ReceivedMessage](r: HttpRequest[T], fetch: Boolean): Option[IndexedSeq[Certificate]] = {
 
     import org.jboss.netty.handler.ssl.SslHandler
     
     val sslh = r.underlying.context.getPipeline.get(classOf[SslHandler])
     
     trySome(sslh.getEngine.getSession.getPeerCertificates.toIndexedSeq) orElse {
-      sslh.setEnableRenegotiation(true)
-      r match {
-        case UserAgent(agent) if needAuth(agent) => sslh.getEngine.setNeedClientAuth(true)
-        case _ => sslh.getEngine.setWantClientAuth(true)  
+      if (!fetch) None
+      else {
+        sslh.setEnableRenegotiation(true)
+        r match {
+          case UserAgent(agent) if needAuth(agent) => sslh.getEngine.setNeedClientAuth(true)
+          case _ => sslh.getEngine.setWantClientAuth(true)
+        }
+        val future = sslh.handshake()
+        future.await(30000) //that's certainly way too long.
+        if (future.isDone && future.isSuccess)
+          trySome(sslh.getEngine.getSession.getPeerCertificates.toIndexedSeq)
+        else
+          None
       }
-      val future = sslh.handshake()
-      future.await(30000) //that's certainly way too long.
-      if (future.isDone && future.isSuccess)
-        trySome(sslh.getEngine.getSession.getPeerCertificates.toIndexedSeq)
-      else
-        None
     }
 
   }

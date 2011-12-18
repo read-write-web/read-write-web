@@ -27,20 +27,15 @@ package org.w3.readwriteweb.auth
 
 import org.slf4j.LoggerFactory
 import java.security.cert.X509Certificate
-import org.w3.readwriteweb.WebCache
 import javax.security.auth.Refreshable
-import java.util.Date
 import collection.JavaConversions._
 import unfiltered.request.HttpRequest
 import java.security.interfaces.RSAPublicKey
 import collection.immutable.List
-import collection.mutable.HashMap
-import scalaz.{Scalaz, Success, Validation}
-import Scalaz._
-import java.security.PublicKey
 import com.google.common.cache.{CacheLoader, CacheBuilder, Cache}
 import java.util.concurrent.TimeUnit
 import org.w3.readwriteweb.util.trySome
+import java.util.Date
 
 /**
  * @author hjs
@@ -49,7 +44,7 @@ import org.w3.readwriteweb.util.trySome
 
 object X509Claim {
   final val logger = LoggerFactory.getLogger(classOf[X509Claim])
-
+  implicit val fetch = true //fetch the certificate if we don't have it
 
 // this is cool because it is not in danger of running out of memory but it makes it impossible to create the claim
 // with an implicit  WebCache...
@@ -66,7 +61,6 @@ object X509Claim {
   }
 
 
-
   /**
    * Extracts the URIs in the subject alternative name extension of an X.509
    * certificate
@@ -80,13 +74,42 @@ object X509Claim {
       case coll if (coll != null) => {
         for {
           sanPair <- coll if (sanPair.get(0) == 6)
-        } yield sanPair(1).asInstanceOf[String]
+        } yield sanPair(1).asInstanceOf[String].trim
       }
       case _ => Nil
     }
 
 }
 
+object ExistingClaim {
+  implicit val fetch = false //don't fetch the certificate if we don't have it -- ie, don't force the fetching of it
+
+  def unapply[T](r: HttpRequest[T])(implicit m: Manifest[T]): Option[X509Claim] = r match {
+    case Certs(c1: X509Certificate, _*) => trySome(X509Claim.idCache.get(c1))
+    case _ => None
+  }
+  
+}
+
+object XClaim {
+  implicit val fetch = false
+  def unapply[T](r: HttpRequest[T])(implicit m: Manifest[T]): Option[XClaim] = r match {
+    case Certs(c1: X509Certificate, _*) => trySome(X509Claim.idCache.get(c1))
+    case _ => Some(NoClaim)
+  }
+}
+
+
+
+/**
+ * This looks like something that could be abstracted into type perhaps XClaim[X509Certificate,WebIDClaim]
+ */
+sealed trait XClaim {
+   def cert: X509Certificate
+   def valid: Boolean
+   def claims: List[WebIDClaim]
+   def verified: List[WebID]
+}
 
 /**
  * An X509 Claim maintains information about the proofs associated with claims
@@ -99,7 +122,7 @@ object X509Claim {
  * @created: 30/03/2011
  */
 // can't be a case class as it then creates object which clashes with defined one
-class X509Claim(val cert: X509Certificate) extends Refreshable {
+class X509Claim(val cert: X509Certificate) extends Refreshable with XClaim {
 
   import X509Claim._
   val claimReceivedDate = new Date()
@@ -107,9 +130,11 @@ class X509Claim(val cert: X509Certificate) extends Refreshable {
   lazy val tooEarly = claimReceivedDate.before(cert.getNotBefore())
 
 
-  lazy val webidclaims: List[WebIDClaim] = getClaimedWebIds(cert) map { webid => new WebIDClaim(webid, cert.getPublicKey.asInstanceOf[RSAPublicKey]) }
+  lazy val claims: List[WebIDClaim] = getClaimedWebIds(cert) map { webid => 
+    new WebIDClaim(webid, cert.getPublicKey.asInstanceOf[RSAPublicKey]) 
+  }
 
-  lazy val verified: List[WebID] = webidclaims.flatMap(_.verify.toOption)
+  lazy val verified: List[WebID] = claims.flatMap(_.verify.toOption)
 
   //note could also implement Destroyable
   //
@@ -125,7 +150,7 @@ class X509Claim(val cert: X509Certificate) extends Refreshable {
   /* The certificate is currently within the valid time zone */
   override def isCurrent(): Boolean = ! (tooLate || tooEarly)
 
-  def canEqual(other: Any) = other.isInstanceOf[X509Claim]
+  protected def canEqual(other: Any) = other.isInstanceOf[X509Claim]
 
   override def equals(other: Any): Boolean = other match {
     case that: X509Claim => (that eq this) || (that.canEqual(this) && cert == that.cert)
@@ -135,5 +160,18 @@ class X509Claim(val cert: X509Certificate) extends Refreshable {
   override lazy val hashCode: Int =
     41 * (41 + (if (cert != null) cert.hashCode else 0))
 
+  def valid = isCurrent()
 }
 
+/**
+ *  A bit like a None for X509Claims
+ */
+case object NoClaim extends XClaim {
+  override def cert = throw new NoSuchElementException("None.get")
+
+  def valid = false
+
+  def claims = List.empty
+
+  def verified = List.empty
+}

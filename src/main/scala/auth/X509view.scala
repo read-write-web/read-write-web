@@ -89,7 +89,7 @@ class X509Filler(x509: X509Claim) extends Transformer {
   }
   $(".no_webid") { node => if (x509.verified.size==0) node else <span/> }
   $(".webid_test") { node =>
-    val ff = for (idclaim <- x509.webidclaims) yield {
+    val ff = for (idclaim <- x509.claims) yield {
       val idAsrt = new Assertion(webidClaimTst, idclaim)
       new Transform(node) {
         $(".webid").contents = idclaim.san

@@ -123,8 +123,8 @@ object certOk extends TestObj[X509Claim]("certificateOk") {
 }
 
 object certProvidedSan extends TestObj[X509Claim]("certificateProvidedSAN") {
-  def apply(x509: X509Claim) = new Result(" There are "+x509.webidclaims.size+" SANs in the certificate",
-    x509.webidclaims.size >0)
+  def apply(x509: X509Claim) = new Result(" There are "+x509.claims.size+" SANs in the certificate",
+    x509.claims.size >0)
 
 }
 

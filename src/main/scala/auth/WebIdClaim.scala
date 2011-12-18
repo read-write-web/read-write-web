@@ -35,8 +35,7 @@ import java.net.URL
 
 /**
  * @author Henry Story
- * @created: 13/10/2011
- */
+ **/
 
 /**
  * One can only construct a WebID via the WebIDClaim apply
