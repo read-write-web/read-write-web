@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<!--
+  ~ Copyright (c) 2011 Henry Story (bblfish.net)
+  ~ under the MIT licence defined at
+  ~    http://www.opensource.org/licenses/mit-license.html
+  -->
+<html>
+<head>
+<title>WebID Authentication Service</title>
+<link rel="stylesheet" type="text/css" href="idp/production.min.css"/>
+</head>
+
+<body class="form">
+
+<div id="wrapper">
+<header id="header" class="cf">
+	<div class="wrapper">
+        		<img id="logo" src="idp/icon.png"/>
+    </div>
+</header>
+ 
+
+<div id="content">
+    <section id="formWrap">
+        <form class="webidform" novalidate="" action="WebIdService.badcert.html" method="POST">
+            <div id="favicon">
+                <div class="vertical">
+                    <a class="response" href="http://webid.fcns.eu/"><strong class="sitename" id="sitename">webid.fcns.eu</strong></a>
+                </div>
+            </div>
+            <div id="signIn">
+                <div class="arrow"></div>
+                <div class="table">
+                    <div class="vertical contents">
+                        <img class="depiction" src="idp/profile_anonymous.png"/>
+                        <div class="form_section">
+                            <div class="submit cf">
+                                <input type="submit" class="button" tabindex="3" value="sign in"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </section>
+
+
+    <section id="wait" style="display: none; ">
+        <div class="table">
+            <div class="vertical contents">
+                <h2>Communicating with server</h2>
+                <p>Just a moment while we talk with the server.</p>
+            </div>
+        </div>
+    </section>
+
+
+    <section id="error">
+        <div class="table">
+            <div class="vertical contents">
+            </div>
+        </div>
+    </section>
+
+</div>
+
+</div>  <!-- END OF SITE_WRAPPER -->
+
+	<footer>
+    	 WebID ready for the Secure Social Web
+	</footer> <!-- END OF FOOTER -->
+
+
+</body>
+</html>

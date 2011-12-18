@@ -1,0 +1,806 @@
+/* ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Original Code is Mozilla BrowserID.
+ *
+ * The Initial Developer of the Original Code is Mozilla.
+ * Portions created by the Initial Developer are Copyright (C) 2011
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *   Lloyd Hilaiel <lloyd@hilaiel.com>
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the GPL or the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of either the GPL or the LGPL, and not to allow others to
+ * use your version of this file under the terms of the MPL, indicate your
+ * decision by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL or the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL, the GPL or the LGPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
+
+/** Adapted for WebID, by Henry Story */
+
+* {
+    margin: 0;
+    padding: 0;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -o-box-sizing: border-box;
+    box-sizing: border-box
+}
+
+html, body {
+    height: 100%
+}
+
+body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    line-height: 21px;
+    background-image: url('bg.png');
+    overflow-y: scroll
+}
+
+.cf:after {
+    content: ".";
+    display: block;
+    clear: both;
+    visibility: hidden;
+    line-height: 0;
+    height: 0
+}
+
+html[xmlns] .cf {
+    display: block
+}
+
+* html .cf {
+    height: 1%
+}
+
+.sans {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif
+}
+
+.serif {
+    font-family: 'Droid Serif', Georgia, serif
+}
+
+.mono {
+    font-family: 'Monaco', monospace
+}
+
+.tooltip {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: #000;
+    background: rgba(0, 0, 0, .7);
+    color: #fff;
+    border-radius: 5px;
+    padding: 2px 15px;
+    border: 2px solid #000;
+    font-weight: bold;
+    display: none;
+    max-width: 275px;
+    z-index: 5
+}
+
+a {
+    color: #222;
+    text-decoration: none
+}
+
+a:hover, button:hover {
+    text-decoration: underline
+}
+
+p:last-child {
+    margin-bottom: 0 !important
+}
+
+input[type=email], input[type=password] {
+    width: 100%;
+    font-size: 14px;
+    padding: 5px;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #a3a29d #c6c3b4 #c6c3b4 #a3a29d;
+    outline: 0;
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    -o-border-radius: 3px;
+    border-radius: 3px;
+    -webkit-box-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5);
+    -moz-box-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5);
+    -o-box-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5);
+    box-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5)
+}
+
+input[type=email]:focus, input[type=password]:focus {
+    border: 1px solid #549fdc;
+    -webkit-border-radius: 0;
+    -moz-border-radius: 0;
+    -o-border-radius: 0;
+    border-radius: 0;
+    -webkit-box-shadow: 0 0 0 1px #549fdc inset;
+    -moz-box-shadow: 0 0 0 1px #549fdc inset;
+    -o-box-shadow: 0 0 0 1px #549fdc inset;
+    box-shadow: 0 0 0 1px #549fdc inset
+}
+
+input[type=email]:disabled, input[type=password]:disabled {
+    background-color: #f0f0f0;
+    color: #4f4f4f
+}
+
+input[type=radio], input[type=checkbox] {
+    cursor: pointer
+}
+
+img.depiction {
+    float: left;
+}
+
+a.auth {
+    text-decoration: none;
+}
+
+span[class~="sitename"] {
+    text-decoration: none;
+    font-size: 28px;
+    height: 52px;
+    padding: 7px 25px;
+    float: none;
+    vertical-align: middle;
+    border: 1px solid #37a6ff;
+    font-family: 'Droid Serif', Georgia, serif;
+    color: #fff;
+    text-shadow: -1px -1px 0 #37a6ff;
+    text-transform: lowercase;
+    cursor: pointer;
+    -webkit-box-shadow: 0 0 0 1px #76c2ff inset;
+    -moz-box-shadow: 0 0 0 1px #76c2ff inset;
+    -o-box-shadow: 0 0 0 1px #76c2ff inset;
+    box-shadow: 0 0 0 1px #76c2ff inset;
+    -webkit-border-radius: 8px;
+    -moz-border-radius: 8px;
+    -o-border-radius: 8px;
+    border-radius: 8px;
+    background-color: #37a6ff;
+    background-image: -moz-linear-gradient(center top, #76c2ff 0, #37a6ff 100%);
+    background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #76c2ff), color-stop(100%, #37a6ff))
+}
+
+
+button, .button {
+    font-size: 14px;
+    height: 28px;
+    padding: 0 10px;
+    float: right;
+    vertical-align: middle;
+    border: 1px solid #37a6ff;
+    font-family: 'Droid Serif', Georgia, serif;
+    color: #fff;
+    text-shadow: -1px -1px 0 #37a6ff;
+    text-transform: lowercase;
+    cursor: pointer;
+    -webkit-box-shadow: 0 0 0 1px #76c2ff inset;
+    -moz-box-shadow: 0 0 0 1px #76c2ff inset;
+    -o-box-shadow: 0 0 0 1px #76c2ff inset;
+    box-shadow: 0 0 0 1px #76c2ff inset;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    -o-border-radius: 5px;
+    border-radius: 5px;
+    background-color: #37a6ff;
+    background-image: -moz-linear-gradient(center top, #76c2ff 0, #37a6ff 100%);
+    background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #76c2ff), color-stop(100%, #37a6ff))
+}
+
+button:hover, button:focus, .button:hover, .button:focus {
+    background-color: #76c2ff;
+    background-image: -moz-linear-gradient(center top, #76c2ff 50%, #37a6ff 100%);
+    background-image: -webkit-gradient(linear, left top, left bottom, color-stop(50%, #76c2ff), color-stop(100%, #37a6ff))
+}
+
+button:active, .button:active {
+    background-color: #006ec6;
+    border: 1px solid #003e70;
+    color: #eee;
+    text-shadow: -1px -1px 0 #006ec6;
+    -webkit-box-shadow: 0 0 5px #003763 inset;
+    -moz-box-shadow: 0 0 5px #003763 inset;
+    -o-box-shadow: 0 0 5px #003763 inset;
+    box-shadow: 0 0 5px #003763 inset;
+    background-image: -moz-linear-gradient(center top, #3aa7ff 0, #006ec6 100%);
+    background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #3aa7ff), color-stop(100%, #006ec6))
+}
+
+button::-moz-focus-inner, .button::-moz-focus-inner {
+    padding: 0;
+    border: 0
+}
+
+
+button[disabled] {
+    opacity: .5
+}
+
+hr {
+    height: 1px;
+    border: 0;
+    background-color: #eee;
+    width: 700px
+}
+
+.right {
+    text-align: right
+}
+
+h1 {
+    font-size: 24px;
+    font-weight: normal;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5)
+}
+
+header ul li {
+    display: inline-block;
+    float: left
+}
+
+header a {
+    color: #222
+}
+
+header a.home {
+    width: 80px;
+    height: 21px;
+    background-image: url('icon.png');
+    display: block;
+    background-position: left 4px;
+    background-repeat: no-repeat
+}
+
+footer {
+    color: #aaa
+}
+
+footer a {
+    color: #aaa
+}
+
+footer ul li {
+    display: inline-block;
+    float: left;
+    margin: 0 10px 0 0
+}
+
+footer .help {
+    float: right;
+    color: #62615f;
+    cursor: help
+}
+
+.cancelVerify {
+    font-weight: bold
+}
+
+h2 {
+    margin-bottom: 20px;
+    font-size: 150%;
+    color: #222;
+    font-weight: bold
+}
+
+#wrapper {
+    min-width: 640px;
+    position: relative
+}
+
+.table {
+    display: table;
+    width: 100%
+}
+
+.vertical {
+    height: 250px;
+    display: table-cell;
+    vertical-align: middle;
+    width: 100%
+}
+
+#content {
+    position: relative;
+    height: 250px;
+    overflow: hidden
+}
+
+section {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    z-index: 0
+}
+
+section>.contents {
+    display: table-cell;
+    vertical-align: middle;
+    height: 250px
+}
+
+#wait {
+    text-align: center;
+    z-index: 1;
+    background-image: url("bg.png")
+}
+
+#error {
+    position: absolute;
+    text-align: center;
+    display: none;
+    z-index: 2;
+    background-color: #fff
+}
+
+#error ul, #error li {
+    list-style-type: none
+}
+
+#wait strong, #error strong {
+    color: #222;
+    font-weight: bold
+}
+
+#error.unsupported .vertical {
+    width: 630px;
+    margin: 0 auto;
+    display: block
+}
+
+#error.unsupported .vertical>div {
+    display: table-cell;
+    vertical-align: middle;
+    padding: 0 10px;
+    height: 250px
+}
+
+#error #moreInfo {
+    display: none
+}
+
+#error a {
+    color: #549fdc;
+    text-decoration: underline
+}
+
+#error #borderbox {
+    border-left: 1px solid #777;
+    padding: 20px 0
+}
+
+#error #borderbox img {
+    border: 0
+}
+
+#error #alternative .lighter {
+    color: #777
+}
+
+#formWrap {
+    background-color: #fff;
+    background-image: none;
+    display: block
+}
+
+#signIn {
+    background-image: url('bg.png');
+    position: absolute;
+    left: 0;
+    top: 0
+}
+
+#signIn .table {
+    width: 325px;
+    margin-right: 40px
+}
+
+.arrow {
+    width: 40px;
+    height: 250px;
+    display: block;
+    position: absolute;
+    right: 0;
+    top: 0;
+    background-image: url('auth_arrow.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-color: #fff
+}
+
+#favicon {
+    position: absolute;
+    left: 375px;
+    top: 0;
+    right: 0;
+    z-index: 10
+}
+
+#favicon strong {
+    font-size: 1.5em
+}
+
+#favicon img {
+    display: block;
+    margin: 0 auto 10px
+}
+
+#favicon .vertical {
+    display: block;
+    line-height: 250px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis
+}
+
+div#required_email {
+    padding-top: .7em;
+    font-size: 1.2em;
+    font-weight: bold
+}
+
+#signIn .vertical {
+    padding: 0 20px
+}
+
+#signIn .vertical ul {
+    list-style-type: none;
+    position: relative
+}
+
+#signIn .vertical ul li {
+    margin-top: 10px
+}
+
+#signIn .vertical ul li:first-child {
+    margin-top: 0
+}
+
+#signIn .submit {
+    line-height: 28px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0
+}
+
+#signIn .submit>p {
+    line-height: 13px;
+    clear: right;
+    text-align: center
+}
+
+#signIn label.half, .half {
+    width: 50%;
+    display: inline-block;
+    float: left
+}
+
+#forgotPassword {
+    color: #888784;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5);
+    font-size: 11px
+}
+
+#signIn button.create {
+    font-size: 14px;
+    height: 28px;
+    padding: 0 10px;
+    float: right
+}
+
+label {
+    display: block;
+    color: #62615f;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5)
+}
+
+label.selectable {
+    cursor: pointer
+}
+
+.inputs>li>label {
+    color: #333
+}
+
+.inputs>li>label.preselected {
+    font-weight: bold
+}
+
+.inputs>li:only-child>label.selectable {
+    cursor: default
+}
+
+.learn {
+    display: inline-block;
+    font-size: 12px;
+    color: #62615f;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5)
+}
+
+footer .learn a {
+    color: #549fdc
+}
+
+.checkregistration p {
+    color: #62615f;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5)
+}
+
+header {
+    padding: 20px;
+    font-weight: bold;
+    background-color: rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+    -webkit-box-shadow: 0 -5px 5px -5px rgba(0, 0, 0, 0.1) inset;
+    -moz-box-shadow: 0 -5px 5px -5px rgba(0, 0, 0, 0.1) inset;
+    -o-box-shadow: 0 -5px 5px -5px rgba(0, 0, 0, 0.1) inset;
+    box-shadow: 0 -5px 5px -5px rgba(0, 0, 0, 0.1) inset
+}
+
+header ul {
+    display: block;
+    float: left
+}
+
+header ul li {
+    margin: 0 10px 0 0;
+    color: #222;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5)
+}
+
+header, footer {
+    display: block;
+    width: 100%;
+    border-top: 1px solid rgba(0, 0, 0, 0.05)
+}
+
+footer {
+    padding: 20px
+}
+
+.inputs {
+    margin: 1em 0 .5em;
+    padding: 0 1em;
+    line-height: 18px
+}
+
+.pickemail .inputs {
+    max-height: 110px;
+    overflow-y: auto;
+    position: relative
+}
+
+.form_section {
+    height: 176px;
+    position: relative
+}
+
+.add {
+    font-size: 80%
+}
+
+.inputs>li:only-child input[type=radio] {
+    display: none
+}
+
+label[for=remember] {
+    display: inline;
+    margin-left: 13px
+}
+
+#thisIsNotMe {
+    margin-right: 10px;
+    float: right
+}
+
+#useNewEmail {
+    margin-left: .8em
+}
+
+.pickemail .vertical a {
+    background-color: #f0efed;
+    color: #4e4e4e;
+    font-size: .75em;
+    padding: 0 5px;
+    display: inline-block;
+    line-height: 18px
+}
+
+.submit>button {
+    margin: 0 5px 0 0
+}
+
+#newEmail {
+    -moz-box-flex: 1
+}
+
+.newuser, .forgot, .returning {
+    display: none
+}
+
+#create_text_section {
+    color: #222
+}
+
+#checkemail {
+    text-align: center
+}
+
+@media screen and (max-width:640px) {
+    #wrapper {
+        min-width: 320px;
+        width: 100%;
+        margin: 0 auto
+    }
+
+    header, footer {
+        padding: 5px 20px
+    }
+
+    header ul li:nth-child(2) {
+        display: none
+    }
+
+    button {
+        height: 40px;
+        font-size: 18px
+    }
+
+    input[type=email], input[type=password] {
+        font-size: 17px
+    }
+
+    section {
+        position: static;
+        overflow: visible
+    }
+
+    .inputs>li>label {
+        font-size: 18px
+    }
+
+    .vertical>strong {
+        font-size: 20px
+    }
+
+    #signIn, #favicon {
+        display: block;
+        width: 100%;
+        position: relative;
+        padding: 10px
+    }
+
+    #signIn {
+        max-width: none;
+        padding: 10px
+    }
+
+    #signIn .table {
+        width: 100%;
+        margin: 0
+    }
+
+    #signIn form {
+        padding: 0
+    }
+
+    #favicon {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        background-image: url('bg.png');
+        text-align: center;
+        left: 0
+    }
+
+    #favicon img {
+        width: 32px;
+        height: auto;
+        display: inline;
+        margin: 0;
+        vertical-align: middle
+    }
+
+    #favicon .vertical {
+        height: auto;
+        line-height: 20px
+    }
+
+    #formWrap {
+        background-color: transparent
+    }
+
+    .error #formWrap, .error #wait, .waiting #formWrap {
+        display: none
+    }
+
+    .arrow {
+        display: none
+    }
+
+    #checkemail p {
+        height: 250px
+    }
+
+    #signIn .vertical {
+        padding-bottom: 0
+    }
+
+    #signIn .vertical ul li {
+        margin-top: 20px
+    }
+
+    #signIn .submit {
+        position: static
+    }
+
+    #signIn .submit>p {
+        font-size: 14px
+    }
+
+    label[for=remember] {
+        display: block;
+        font-size: 15px;
+        margin: 13px
+    }
+
+    #content, .form_section, .pickemail .inputs, .vertical {
+        height: auto;
+        max-height: none;
+        overflow: visible
+    }
+
+    .pickemail .vertical a {
+        font-size: 1.2em
+    }
+
+    #useNewEmail {
+        margin-top: 18px
+    }
+
+    #error .vertical, #wait .vertical {
+        height: 250px
+    }
+
+    #error .vertical {
+        width: auto
+    }
+
+    #error .vertical>div {
+        display: block;
+        height: auto;
+        padding: 10px
+    }
+
+    #error #borderbox {
+        border-left: none;
+        padding: 0
+    }
