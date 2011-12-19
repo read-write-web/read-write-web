@@ -24,13 +24,14 @@
 package org.w3.readwriteweb.auth
 
 import java.security.interfaces.RSAPublicKey
-import com.hp.hpl.jena.query.{QueryExecutionFactory, QueryExecution, QuerySolutionMap, QueryFactory}
-import com.hp.hpl.jena.datatypes.xsd.XSDDatatype
 import scalaz.{Scalaz, Validation}
 import Scalaz._
 import java.security.PublicKey
 import com.hp.hpl.jena.rdf.model.Model
 import java.net.URL
+import com.hp.hpl.jena.query._
+import java.math.BigInteger
+import com.hp.hpl.jena.datatypes.xsd.XSDDatatype
 
 
 /**
@@ -42,10 +43,12 @@ import java.net.URL
  */
 object WebIDClaim {
   final val cert: String = "http://www.w3.org/ns/auth/cert#"
-
-  val askQuery = QueryFactory.create("""
+  val numericDataTypes = List(XSDDatatype.XSDinteger, XSDDatatype.XSDint, XSDDatatype.XSDpositiveInteger, XSDDatatype.XSDdecimal)
+  //we cannot do the simpler ask query as Jena does not do Sparql d-entailment on xsd:hexBinary
+  val query = QueryFactory.create("""
       PREFIX : <http://www.w3.org/ns/auth/cert#>
-      ASK {
+      SELECT ?m ?e
+      WHERE {
           ?webid :key [ :modulus ?m ;
                         :exponent ?e ].
       }""")
@@ -59,18 +62,33 @@ object WebIDClaim {
  */
 class WebIDClaim(val san: String, val key: PublicKey) {
 
-  import WebIDClaim.hex
+  import WebIDClaim._
   import XSDDatatype._
 
   private def rsaTest(webid: WebID, rsakey: RSAPublicKey): (Model) => Validation[WebIDVerificationFailure, WebID] = {
     model =>
       val initialBinding = new QuerySolutionMap();
       initialBinding.add("webid", model.createResource(webid.url.toString))
-      initialBinding.add("m", model.createTypedLiteral(hex(rsakey.getModulus.toByteArray), XSDhexBinary))
-      initialBinding.add("e", model.createTypedLiteral(rsakey.getPublicExponent.toString, XSDinteger))
-      val qe: QueryExecution = QueryExecutionFactory.create(WebIDClaim.askQuery, model, initialBinding)
+      //      initialBinding.add("m", model.createTypedLiteral(hex(rsakey.getModulus.toByteArray), XSDhexBinary))
+      //      initialBinding.add("e", model.createTypedLiteral(rsakey.getPublicExponent.toString, XSDinteger))
+      val qe: QueryExecution = QueryExecutionFactory.create(WebIDClaim.query, model, initialBinding)
       try {
-        if (qe.execAsk()) webid.success
+        def matches: Boolean = {
+          import scala.collection.JavaConversions._
+          val resultset = qe.execSelect().toSet
+          resultset.exists {
+            sol: QuerySolution => try {
+              val mod = sol.getLiteral("m")
+              if (mod.getDatatype == XSDDatatype.XSDhexBinary && new BigInteger(mod.getLexicalForm.trim(), 16) == rsakey.getModulus) {
+                val exp = sol.getLiteral("e")
+                numericDataTypes.contains(exp.getDatatype) && new BigInteger(exp.getLexicalForm) == rsakey.getPublicExponent
+              } else false
+            } catch {
+              case _ => false
+            }
+          }
+        }
+        if (matches) webid.success
         else new WebIDVerificationFailure("could not verify public key", None, this).fail
       } finally {
         qe.close()

@@ -93,7 +93,7 @@ trait SecureResourceManaged extends Specification with SecureServed {
 
 
 
-  val webCache = new WebCache()
+  val webCache = WebCache
   val serverSslContext = javax.net.ssl.SSLContext.getInstance("TLS");
 
 
@@ -110,7 +110,7 @@ trait SecureResourceManaged extends Specification with SecureServed {
   val rww = new cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with ReadWriteWeb[ReceivedMessage,HttpResponse] {
     val rm = resourceManager
     def manif = manifest[ReceivedMessage]
-    override val authz = new RDFAuthZ[ReceivedMessage,HttpResponse](webCache,resourceManager)
+    override val authz = new RDFAuthZ[ReceivedMessage,HttpResponse](resourceManager)
   }
 
   def setup = { _.plan(rww) }
