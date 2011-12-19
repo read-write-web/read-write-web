@@ -6,8 +6,9 @@
   -->
 <html>
 <head>
-<title>WebID Authentication Service</title>
-<link rel="stylesheet" type="text/css" href="idp/production.min.css"/>
+    <title>WebID Authentication Service</title>
+    <link rel="stylesheet" type="text/css" href="idp/production.min.css"/>
+    <script src="/public/logout.js" type="text/javascript"></script>
 </head>
 
 <body class="form">
@@ -35,7 +36,7 @@
                         <img class="depiction" src="idp/profile_anonymous.png"/>
                         <div class="form_section">
                             <div class="submit cf">
-                                <input type="submit" class="button" tabindex="3" value="sign in"/>
+                                <input type="submit" class="button" tabindex="3" value="sign in" onclick="logout()"/>
                             </div>
                         </div>
                     </div>

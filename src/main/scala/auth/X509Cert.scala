@@ -59,7 +59,7 @@ object X509CertSigner {
 }
 
 class X509CertSigner(
-    signingCert: X509Certificate,
+    val signingCert: X509Certificate,
     signingKey: PrivateKey ) {
   val WebID_DN="""O=FOAF+SSL, OU=The Community of Self Signers, CN=Not a Certification Authority"""
 
@@ -82,9 +82,9 @@ class X509CertSigner(
    *
    * Create a self-signed X.509 Certificate
    * @param subjectDN the X.509 Distinguished Name, eg "CN=Test, L=London, C=GB"
-   * @param pair the KeyPair
+   * @param subjectKey the public key for the subject
    * @param days how many days from now the Certificate is valid for
-   * @param algorithm the signing algorithm, eg "SHA1withRSA"
+   * @param webId a WebID to place in the Subject Alternative Name field of the Cert to be generated
    */
   def generate(
       subjectDN: String,

@@ -41,6 +41,7 @@ import org.w3.readwriteweb.netty.ReadWriteWebNetty.StaticFiles
 import java.lang.String
 import xml._
 import unfiltered.response._
+import java.security.interfaces.RSAPublicKey
 
 object WebIDSrvc {
   val dateFormat: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ")
@@ -82,23 +83,29 @@ trait WebIDSrvc[Req,Res] {
   lazy val profilePg: Elem = XML.loadFile(new File(fileDir, "WebIdService.entry.html"))
 
   def intent : Cycle.Intent[Req,Res] = {
-    case req @ Path(Seg("srv" :: "idp":: file :: Nil)) => srvStaticFiles(file)
-    case req @ Path("/srv/idp") & Params(RelyingParty(rp))  => req match {
-          // we authenticate the user only if he has agreed to be authenticated on the page, which we know if the
-          // request is a POST
-          case POST(_) & X509Claim(claim: X509Claim) => { //repetition because of intellij scala 0.5.273 bug
-            val pg = if ( claim.verified.size > 0 ) authenticatedPg else errorPg 
-            Ok ~> Html5(new ServiceTrans(rp,claim).apply(pg))
-          }
-          // nevertheless the user may have authenticated allready
+    case req @ Path(Seg("srv" :: "idp" :: next))  => { //easy partial function entry match
+      if (next!=Nil && next.size==1) srvStaticFiles(next.head)
+      else req match {
+        case Params(RelyingParty(rp)) => req match {
+          //GET=>The user just arrived on the page. We recuperated the X509 claim in case he has authenticated already
           case GET(_) & XClaim(claim: XClaim) => {
             val pg = claim match {
               case NoClaim => profilePg
-              case claim: X509Claim => if ( claim.verified.size > 0 ) authenticatedPg else errorPg
+              case claim: X509Claim => if (claim.verified.size > 0) authenticatedPg else errorPg
             }
-            Ok ~> Html5(new ServiceTrans(rp,claim).apply(pg))
+            Ok ~> Html5(new ServiceTrans(rp, claim).apply(pg))
+          }
+          //POST=> we authenticate the user because he has agreed to be authenticated on the page, which we know if the
+          // request is a POST
+          case POST(_) & X509Claim(claim: X509Claim) => {
+            //repetition because of intellij scala 0.5.273 bug
+            val pg = if (claim.verified.size > 0) authenticatedPg else errorPg
+            Ok ~> Html5(new ServiceTrans(rp, claim).apply(pg))
+          }
+          case _ => Ok ~> Html5(new ServiceTrans(rp, NoClaim).apply(errorPg))
+        }
+        case _ => Ok ~> Html5(aboutTransform.apply(aboutPg))
       }
-      case _ => Ok ~> Html5(aboutTransform(aboutPg))
     }
 
   }
@@ -123,7 +130,11 @@ trait WebIDSrvc[Req,Res] {
     override def toLocal(file: String) = "/template/webidp/idp/"+file
   }
   
-  object aboutTransform extends Transformer //todo: need to change public keys in template
+  object aboutTransform extends Transformer {
+    val key = signer.signingCert.getPublicKey.asInstanceOf[RSAPublicKey]
+    $(".modulus").contents = key.getModulus.toString(16)
+    $(".exponent").contents = key.getPublicExponent.toString
+  }
 
   class ServiceTrans(relyingParty: URL, claim: XClaim) extends Transformer {
     $(".webidform") { node =>
