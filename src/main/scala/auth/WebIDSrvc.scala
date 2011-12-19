@@ -83,8 +83,7 @@ trait WebIDSrvc[Req,Res] {
 
   def intent : Cycle.Intent[Req,Res] = {
     case req @ Path(Seg("srv" :: "idp":: file :: Nil)) => srvStaticFiles(file)
-    case req @ Path("/srv/idp")  => req match {
-      case Params(RelyingParty(rp)) => req match {
+    case req @ Path("/srv/idp") & Params(RelyingParty(rp))  => req match {
           // we authenticate the user only if he has agreed to be authenticated on the page, which we know if the
           // request is a POST
           case POST(_) & X509Claim(claim: X509Claim) => { //repetition because of intellij scala 0.5.273 bug
@@ -98,13 +97,11 @@ trait WebIDSrvc[Req,Res] {
               case claim: X509Claim => if ( claim.verified.size > 0 ) authenticatedPg else errorPg
             }
             Ok ~> Html5(new ServiceTrans(rp,claim).apply(pg))
-          }
       }
       case _ => Ok ~> Html5(aboutTransform(aboutPg))
     }
 
   }
-
 
 
   object TransUtils {
