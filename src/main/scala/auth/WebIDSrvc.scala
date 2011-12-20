@@ -88,10 +88,10 @@ trait WebIDSrvc[Req,Res] {
       else req match {
         case Params(RelyingParty(rp)) => req match {
           case Params(DoIt(_)) & XClaim(claim: XClaim) => {
-            val answer = if (claim == NoClaim) "error=nocert"
-            else if (claim.claims.size == 0) "error=noWebID"
-            else if (claim.verified.size == 0) "error=noVerifiedWebID" +
-              claim.claims.map(claim => claim.verify.failMap(e => e.getMessage)).mkString("&cause=")
+            val answer = if (claim == NoClaim) "error=nocert&"
+            else if (claim.claims.size == 0) "error=noWebID&"
+            else if (claim.verified.size == 0) "error=noVerifiedWebID&" +
+              claim.claims.map(claim => claim.verify.failMap(e => "cause="+e.getMessage)).mkString("&")+"&"
             else claim.verified.slice(0, 3).foldRight("") {
               (wid, str) => "webid=" + URLEncoder.encode(wid.url.toExternalForm, "UTF-8") + "&"
             }
