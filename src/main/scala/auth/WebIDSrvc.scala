@@ -87,6 +87,17 @@ trait WebIDSrvc[Req,Res] {
       if (next!=Nil && next.size==1) srvStaticFiles(next.head)
       else req match {
         case Params(RelyingParty(rp)) => req match {
+          case Params(DoIt(_)) & XClaim(claim: XClaim) => {
+            val answer = if (claim == NoClaim) "error=nocert"
+            else if (claim.claims.size == 0) "error=noWebID"
+            else if (claim.verified.size == 0) "error=noVerifiedWebID" +
+              claim.claims.map(claim => claim.verify.failMap(e => e.getMessage)).mkString("&cause=")
+            else claim.verified.slice(0, 3).foldRight("") {
+              (wid, str) => "webid=" + URLEncoder.encode(wid.url.toExternalForm, "UTF-8") + "&"
+            }
+            val signedAnswer = sign(rp.toExternalForm + "?" + answer).toExternalForm
+            Redirect(signedAnswer)
+          }
           //GET=>The user just arrived on the page. We recuperated the X509 claim in case he has authenticated already
           case GET(_) & XClaim(claim: XClaim) => {
             val pg = claim match {
@@ -171,16 +182,8 @@ trait WebIDSrvc[Req,Res] {
         $(".response") { nodeRes =>
           val elemRes = nodeRes.asInstanceOf[scala.xml.Elem]
           val newElem = elemRes.copy(attributes=for(attr <- elemRes.attributes) yield attr match {
-            case attr@Attribute("href", _, _) => attr.goodcopy(value= {
-              val answer = if (claim == NoClaim) "error=nocert"
-              else if (claim.claims.size == 0) "error=noWebID"
-              else if (claim.verified.size == 0) "error=noVerifiedWebID" +
-                claim.claims.map(claim => claim.verify.failMap(e => e.getMessage)).mkString("&cause=")
-              else claim.verified.slice(0, 3).foldRight("") {
-                (wid, str) => "webid=" + URLEncoder.encode(wid.url.toExternalForm, "UTF-8") + "&"
-              }
-              sign(relyingParty.toExternalForm + "?" + answer).toExternalForm
-            })
+            case attr@Attribute("href", _, _) =>
+              attr.goodcopy(value= "/srv/idp?rs="+URLEncoder.encode(relyingParty.toExternalForm,"UTF-8") + "&doit=true" )
             case other => other
           })
           new Transform(newElem) {
@@ -218,4 +221,4 @@ class ExtractN[E,T](f: Map => Option[T]) extends Params.Extract[E,T](f) {
 
 object urlMap extends ParamMapper(_.flatMap(u=>trySome{new URL(u)}).headOption)
 object RelyingParty extends ExtractN(List("rs","authreqissuer"), urlMap )
-object Login extends Params.Extract("login",_=>Some(true))
+object DoIt extends Params.Extract("doit", Params.first)
