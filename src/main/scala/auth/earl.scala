@@ -151,7 +151,7 @@ object webidClaimTst extends TestObj[WebIDClaim]("webidClaim") {
     webIdclaim.verify match {
       case Success(webId) => new Result("WebId successfully verified",passed)
       case Failure(webIdClaimErr: WebIDVerificationFailure) => 
-        new Result("keys in certificate don't match key in profile for "+webIdClaimErr.subject,failed)
+        new Result("keys in profile don't match key in certificate for "+webIdClaimErr.subject.san,failed)
       case Failure(e) => new Result("WebID verification failed",failed,cause=List(new AssertionErr(e)))
     }
   

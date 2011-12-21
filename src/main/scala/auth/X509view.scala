@@ -59,7 +59,7 @@ trait X509view[Req,Res]  {
   lazy val noX509: Elem = XML.loadFile(new File(fileDir, "NoWebId.xhtml"))
   
   def intent : Cycle.Intent[Req,Res] = {
-    case req @ Path("/test/auth/webid")  => req match {
+    case req @ Path("/test/WebId")  => req match {
       case X509Claim(claim) => Ok ~> Html( new X509Filler(claim).apply(webidTst) )
       case _ => Ok ~> Html (new NoX509().apply(noX509))
     }
@@ -73,6 +73,13 @@ class NoX509() extends Transformer {
 }
 
 class X509Filler(x509: X509Claim) extends Transformer {
+  def pretty(res: Outcome) = {
+    res match {
+      case org.w3.readwriteweb.auth.passed => <span class="outcome_passed">passed</span>
+      case org.w3.readwriteweb.auth.failed => <span class="outcome_failed">failed</span>
+      case org.w3.readwriteweb.auth.untested => <span class="outcome_untested">untested</span>
+    }
+  }
   $(".date").contents = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.LONG).format( x509.claimReceivedDate)
   $(".cert_test") { node =>
       val x509Assertion = new Assertion(certOk,x509);
@@ -81,19 +88,26 @@ class X509Filler(x509: X509Claim) extends Transformer {
         new Transform(node) {
           $(".tst_question").contents = ast.test.title
           $(".tst_txt").contents = ast.test.description
-          $(".tst_res").contents = ast.result.outcome.name
+          $(".tst_res").contents = pretty(ast.result.outcome)
           $(".tst_res_txt").contents = ast.result.description
         }.toNodes()
       }
       ff.flatten
   }
-  $(".no_webid") { node => if (x509.verified.size==0) node else <span/> }
+  $(".san_number").contents = if (x509.claims.size == 0) "No" else x509.claims.size.toString
+  $(".san_verified") { node => if (x509.claims.size==0) <span/> else
+    new Transform(node) {
+      $(".san_verified_no").contents = x509.verified.size.toString
+    }.toNodes()
+  }
+
   $(".webid_test") { node =>
     val ff = for (idclaim <- x509.claims) yield {
       val idAsrt = new Assertion(webidClaimTst, idclaim)
       new Transform(node) {
         $(".webid").contents = idclaim.san
         $(".tst_res_txt").contents = idAsrt.result.description
+        $(".tst_res").contents = pretty(idAsrt.result.outcome)
         $(".webid_cause") { n2 =>
           val nn = for (a <- idAsrt.depends) yield {
             new Transform(n2) {

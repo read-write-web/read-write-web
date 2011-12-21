@@ -2,6 +2,11 @@
 	<head id="head">
 	<title>WebId Tests</title>
     <script src="/public/logout.js" type="text/javascript"/>
+        <style type="text/css">
+            .outcome_passed {color: green}
+            .outcome_failed { color: red}
+            .outcome_untested {color: orange}
+        </style>
     </head>
 <body>
   <h1>WebID Authentication Report</h1>
@@ -12,11 +17,12 @@
 
   <h2>WebID</h2>
   <div class="webid_tests">
-  <p class="no_webid">No Subject Alternative Names were found in your Certificate.</p>
+  <p><span class="san_number">2</span> Subject Alternative Names were found in your Certificate. <span class="san_verified">Of these we verified
+  <span class="san_verified_no">245</span>.</span></p>
   <table width="100%" rules="groups">
       <tbody class="webid_test">
-      <tr><td colspan="2">Verification of Subject Alternative Name <span class="webid">http://bblfish.net/#me</span>?</td> </tr>
-      <tr><td class="tst_res">result</td><td class="tst_res_txt">found 1 valid principals</td></tr>
+      <tr><td colspan="2">Verification of <span class="webid">http://bblfish.net/#me</span>?</td> </tr>
+      <tr><td class="tst_res">result</td><td class="tst_res_txt">found 1 valid ID</td></tr>
       <tr class="webid_cause"><td>cause</td><td class="cause_txt"></td></tr>
       </tbody>
   </table>
