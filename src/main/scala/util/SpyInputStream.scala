@@ -41,6 +41,7 @@ class SpyInputStream(val in: InputStream, val out: OutputStream) extends InputSt
        in.read()
    } catch {
       case ioe: IOException => {
+        out.flush()
         out.close()
         stopOut=true
         throw ioe;

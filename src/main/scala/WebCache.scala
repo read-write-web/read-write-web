@@ -28,10 +28,10 @@ import org.apache.http.MethodNotSupportedException
 import org.w3.readwriteweb.util._
 import java.net.{ConnectException, URL}
 import scalaz.{Scalaz, Validation}
-import java.io.File
 import java.util.concurrent.TimeUnit
 import com.google.common.cache.{CacheLoader, CacheBuilder, Cache}
 import org.w3.readwriteweb.Lang._
+import java.io.{FileOutputStream, File}
 
 
 /**
@@ -85,7 +85,9 @@ object WebCache extends ResourceManager  {
       val handler: Handler[Validation[Throwable, Model]] = request.>+>[Validation[Throwable, Model]](res =>  {
         res >:> { headers =>
           val encoding = headers("Content-Type").headOption match {
-            case Some(mime) => Lang(mime) getOrElse Lang.default
+            case Some(mime) => {
+              Lang(mime.split(";")(0)) getOrElse Lang.default
+            }
             case None => RDFXML  //todo: it would be better to try to do a bit of guessing in this case by looking at content
           }
           val loc = headers("Content-Location").headOption match {

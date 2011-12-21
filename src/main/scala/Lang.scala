@@ -54,7 +54,7 @@ object Lang {
   val default = RDFXML
   
   def apply(contentType: String): Option[Lang] =
-    contentType match {
+    contentType.trim.toLowerCase match {
       case "text/n3" => Some(N3)
       case "text/turtle" => Some(TURTLE)
       case "application/rdf+xml" => Some(RDFXML)
