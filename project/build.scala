@@ -23,6 +23,8 @@ object Dependencies {
       </dependency>
     </dependencies>
   val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.6.4"
+  val slf4japi = "org.slf4j" % "slf4j-api" % "1.6.4"
+  val slf4jlog = "org.slf4j" % "slf4j-log4j12" % "1.6.4"
   val antiXML = "com.codecommit" %% "anti-xml" % "0.4-SNAPSHOT" % "test"
   val jena = "com.hp.hpl.jena" % "jena" % "2.6.4"
   val rdfa = "net.rootdev" % "java-rdfa" % "0.4.2-RC2"
@@ -68,6 +70,7 @@ object YourProjectBuild extends Build {
   import ProguardPlugin._
   import sbtassembly.Plugin._
   import sbtassembly.Plugin.AssemblyKeys._
+
   
 
   def keepUnder(pakage:String):String = "-keep class %s.**" format pakage
@@ -98,6 +101,9 @@ object YourProjectBuild extends Build {
       libraryDependencies += unfiltered_jetty,
       libraryDependencies += unfiltered_netty,
       libraryDependencies += slf4jSimple,
+      libraryDependencies += slf4japi,
+      libraryDependencies += slf4jlog,
+
       libraryDependencies += jena,
       libraryDependencies += arq,
       libraryDependencies += antiXML,
@@ -110,7 +116,8 @@ object YourProjectBuild extends Build {
       libraryDependencies += rdfa,
       libraryDependencies += htmlparser,
 
-      jarName in assembly := "read-write-web.jar"
+      jarName in assembly := "read-write-web.jar",
+      mainClass in assembly := Some("org.w3.readwriteweb.netty.ReadWriteWebNetty")
     )
 
 

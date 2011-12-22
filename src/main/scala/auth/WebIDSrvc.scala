@@ -70,17 +70,17 @@ trait WebIDSrvc[Req,Res] {
   }
 
 
-  val fileDir: File = new File(this.getClass.getResource("/template/webidp/").toURI)
+  val fileDir ="/template/webidp/"
 
   /**
    * using three different templates uses up more memory for the moment, and could be more maintenance work
    * if all three templates require similar changes, but it makes it easier to visualise the result without
    * needing a web server. 
    */
-  lazy val errorPg: Elem = XML.loadFile(new File(fileDir, "WebIdService.badcert.html"))
-  lazy val authenticatedPg: Elem = XML.loadFile(new File(fileDir, "WebIdService.auth.html"))
-  lazy val aboutPg: Elem = XML.loadFile(new File(fileDir, "WebIdService.about.html"))
-  lazy val profilePg: Elem = XML.loadFile(new File(fileDir, "WebIdService.entry.html"))
+  lazy val errorPg: Elem = XML.load(this.getClass.getResourceAsStream(fileDir+ "WebIdService.badcert.html"))
+  lazy val authenticatedPg: Elem = XML.load(this.getClass.getResourceAsStream(fileDir+ "WebIdService.auth.html"))
+  lazy val aboutPg: Elem = XML.load(this.getClass.getResourceAsStream(fileDir+ "WebIdService.about.html"))
+  lazy val profilePg: Elem = XML.load(this.getClass.getResourceAsStream(fileDir+ "WebIdService.entry.html"))
 
   def intent : Cycle.Intent[Req,Res] = {
     case req @ Path(Seg("srv" :: "idp" :: next))  => { //easy partial function entry match

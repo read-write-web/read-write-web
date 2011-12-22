@@ -49,14 +49,10 @@ import java.util.Date
 trait X509view[Req,Res]  {
    implicit def manif: Manifest[Req]
 
-  val fileDir: File = new File(this.getClass.getResource("/template/").toURI)
-  val templateDirs = List(fileDir)
-  implicit val engine = new TemplateEngine(templateDirs)
-  implicit val bindings: List[Binding] = List(Binding(name = "title", className = "String"))
-  implicit val additionalAttributes = List(("title", "My First Title"))
+  val fileDir = "/template/"
 
-  lazy val webidTst: Elem = XML.loadFile(new File(fileDir, "WebId.xhtml"))
-  lazy val noX509: Elem = XML.loadFile(new File(fileDir, "NoWebId.xhtml"))
+  lazy val webidTst: Elem = XML.load(this.getClass.getResourceAsStream(fileDir+"WebId.xhtml"))
+  lazy val noX509: Elem = XML.load(this.getClass.getResourceAsStream(fileDir+"NoWebId.xhtml"))
   
   def intent : Cycle.Intent[Req,Res] = {
     case req @ Path("/test/WebId")  => req match {
