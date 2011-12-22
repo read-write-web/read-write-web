@@ -70,7 +70,8 @@ trait ReadWriteWebArgs {
     val keystore = new File(System.getProperty( "netty.ssl.keyStore")).toURI.toURL
     val ksTpe = System.getProperty("netty.ssl.keyStoreType","JKS")
     val ksPass = System.getProperty("netty.ssl.keyStorePassword")
-    X509CertSigner( keystore, ksTpe, ksPass,  "selfsigned" )
+    val alias = System.getProperty("netty.ssl.keyAlias","selfsigned")
+    X509CertSigner( keystore, ksTpe, ksPass,  alias )
   }
 
   val baseURL = parser.parameter[String]("baseURL", "base URL", false)
