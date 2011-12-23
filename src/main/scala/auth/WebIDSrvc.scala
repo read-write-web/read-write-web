@@ -23,7 +23,6 @@
 
 package auth
 
-import java.io.File
 import unfiltered.Cycle
 import java.net.{URLEncoder, URL}
 import java.util.Calendar

@@ -9,9 +9,14 @@
     <title>WebID Authentication Service</title>
     <link rel="stylesheet" type="text/css" href="idp/production.min.css"/>
     <script src="/public/logout.js" type="text/javascript"></script>
+    <script src="idp/jquery.1.7.1.min.js"></script>
+    <script>
+        $(needyLogin);
+    </script>
 </head>
 
 <body class="form">
+
 
 <div id="wrapper">
     <header id="header" class="cf">
@@ -46,7 +51,6 @@
                 </div>
             </form>
         </section>
-
 
         <section id="wait" style="display: none; ">
             <div class="table">

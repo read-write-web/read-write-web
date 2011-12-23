@@ -30,8 +30,6 @@ import java.net.{ConnectException, URL}
 import scalaz.{Scalaz, Validation}
 import java.util.concurrent.TimeUnit
 import com.google.common.cache.{CacheLoader, CacheBuilder, Cache}
-import org.w3.readwriteweb.Lang._
-import java.io.{FileOutputStream, File}
 
 
 /**

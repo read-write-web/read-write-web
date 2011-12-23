@@ -244,7 +244,7 @@ object Certs {
   *
   */
   def needAuth(agent: String): Boolean =
-    agent contains "Java"
+    (agent contains "Java")  | (agent contains "AppleWebKit")  |  (agent contains "Opera")
   
 }
 
