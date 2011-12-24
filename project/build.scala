@@ -78,13 +78,24 @@ object YourProjectBuild extends Build {
   val proguardSettings:Seq[Setting[_]] =
     ProguardPlugin.proguardSettings ++ Seq[Setting[_]](
       minJarPath := new File("readwriteweb.jar"),
-      proguardOptions += keepMain("org.w3.readwriteweb.ReadWriteWebMain"),
+      proguardOptions += keepMain("org.w3.readwriteweb.netty.ReadWriteWebNetty"),
       proguardOptions += keepUnder("org.w3.readwriteweb"),
+      proguardOptions += keepUnder("org.apache.xerces"),
       proguardOptions += keepUnder("unfiltered"),
       proguardOptions += keepUnder("org.apache.log4j"),
       proguardOptions += keepUnder("com.hp.hpl.jena"),
-      proguardOptions += "-keep class com.hp.hpl.jena.rdf.model.impl.ModelCom"
+      proguardOptions += "-keep class com.hp.hpl.jena.rdf.model.impl.ModelCom",
+      makeInJarFilter <<= (makeInJarFilter) {
+        (makeInJarFilter) => {
+          (file) => file match {
+            case "slf4j-simple-1.6.4.jar" => makeInJarFilter(file) + ",!org/slf4j/**"
+            case _ => makeInJarFilter(file)
+          }
+        }
+      }
     )
+
+
 
   val projectSettings =
     Seq(

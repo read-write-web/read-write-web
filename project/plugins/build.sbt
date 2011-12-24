@@ -6,7 +6,7 @@ addSbtPlugin("com.typesafe.sbteclipse" % "sbteclipse" % "1.4.0")
 
 resolvers += "Proguard plugin repo" at "http://siasia.github.com/maven2"
 
-addSbtPlugin("com.github.siasia" % "xsbt-proguard-plugin" % "0.1")
+addSbtPlugin("com.github.siasia" % "xsbt-proguard-plugin" % "0.1-SNAPSHOT")
 
 resolvers += "sbt-idea-repo" at "http://mpeltonen.github.com/maven/"
 
