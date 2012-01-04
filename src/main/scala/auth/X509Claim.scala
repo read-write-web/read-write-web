@@ -92,6 +92,8 @@ object ExistingClaim {
 }
 
 object XClaim {
+  //warning: it turns out that one nearly never recuperates the client certificate
+  //see http://stackoverflow.com/questions/8731157/netty-https-tls-session-duration-why-is-renegotiation-needed
   implicit val fetch = false
   def unapply[T](r: HttpRequest[T])(implicit m: Manifest[T]): Option[XClaim] = r match {
     case Certs(c1: X509Certificate, _*) => trySome(X509Claim.idCache.get(c1))

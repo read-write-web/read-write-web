@@ -23,17 +23,14 @@
 
 package org.w3.readwriteweb.auth
 
-import java.io.File
-import unfiltered.response.{Ok, Html}
 import unfiltered.Cycle
-import org.fusesource.scalate.{Binding, TemplateEngine}
 import xml.{Elem, XML}
 import unfiltered.request.Path
 import org.fusesource.scalate.scuery.{Transform, Transformer}
-import org.w3.readwriteweb.WebCache
 import unfiltered.scalate.Scalate
 import java.text.DateFormat
 import java.util.Date
+import unfiltered.response.{CacheControl, Expires, Ok, Html}
 
 /**
  * This plan just described the X509 WebID authentication information.
@@ -56,8 +53,8 @@ trait X509view[Req,Res]  {
   
   def intent : Cycle.Intent[Req,Res] = {
     case req @ Path("/test/WebId")  => req match {
-      case X509Claim(claim) => Ok ~> Html( new X509Filler(claim).apply(webidTst) )
-      case _ => Ok ~> Html (new NoX509().apply(noX509))
+      case X509Claim(claim) => Ok ~> Html( new X509Filler(claim).apply(webidTst) ) ~> Expires("0") ~> CacheControl("no-cache")
+      case _ => Ok ~> Html (new NoX509().apply(noX509)) ~> Expires("0") ~> CacheControl("no-cache")
     }
     case req @ Path("/test/WebIdAuth2") => Ok ~> Scalate(req, "hello.ssp")
   }

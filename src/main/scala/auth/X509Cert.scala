@@ -217,9 +217,11 @@ object Certs {
     val sslh = r.underlying.context.getPipeline.get(classOf[SslHandler])
     
     trySome(sslh.getEngine.getSession.getPeerCertificates.toIndexedSeq) orElse {
+      //it seems that the jvm does not keep a very good cache of remote certificates in a session. But
+      //see http://stackoverflow.com/questions/8731157/netty-https-tls-session-duration-why-is-renegotiation-needed
       if (!fetch) None
       else {
-        sslh.setEnableRenegotiation(true)
+        sslh.setEnableRenegotiation(true) // todo: does this have to be done on every request?
         r match {
           case UserAgent(agent) if needAuth(agent) => sslh.getEngine.setNeedClientAuth(true)
           case _ => sslh.getEngine.setWantClientAuth(true)
