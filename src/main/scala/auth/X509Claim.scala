@@ -47,7 +47,7 @@ object X509Claim {
   implicit val fetch = true //fetch the certificate if we don't have it
 
 // this is cool because it is not in danger of running out of memory but it makes it impossible to create the claim
-// with an implicit  WebCache...
+// with an implicit  GraphCache...
   val idCache: Cache[X509Certificate, X509Claim] =
      CacheBuilder.newBuilder()
      .expireAfterWrite(30, TimeUnit.MINUTES)
@@ -136,7 +136,7 @@ class X509Claim(val cert: X509Certificate) extends Refreshable with XClaim {
     new WebIDClaim(webid, cert.getPublicKey.asInstanceOf[RSAPublicKey]) 
   }
 
-  lazy val verified: List[WebID] = claims.flatMap(_.verify.toOption)
+  def verified: List[WebID] = claims.flatMap(_.verify.toOption)
 
   //note could also implement Destroyable
   //

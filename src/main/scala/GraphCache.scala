@@ -29,25 +29,28 @@ import org.w3.readwriteweb.util._
 import java.net.{ConnectException, URL}
 import scalaz.{Scalaz, Validation}
 import java.util.concurrent.TimeUnit
-import com.google.common.cache.{CacheLoader, CacheBuilder, Cache}
+import com.google.common.cache.{LoadingCache, CacheLoader, CacheBuilder, Cache}
+
 
 
 /**
+ * Fetch resources on the Web and cache them
+ * ( at a later point this would include saving them to an indexed quad store )
+ *
  * @author Henry Story
  * @created: 12/10/2011
  *
- * The WebCache currently does not cache
  */
-object WebCache extends ResourceManager  {
+object GraphCache extends ResourceManager  {
   import dispatch._
   import Scalaz._
 
   //this is a simple but quite stupid web cache so that graphs can stay in memory and be used a little
   // bit across sessions
-  val cache: Cache[URL,Validation[Throwable,Model]] =
+  val cache: LoadingCache[URL,Validation[Throwable,Model]] =
        CacheBuilder.newBuilder()
          .expireAfterAccess(5, TimeUnit.MINUTES)
-//         .softValues()
+         .softValues()
 //         .expireAfterWrite(30, TimeUnit.MINUTES)
        .build(new CacheLoader[URL, Validation[Throwable,Model]] {
          def load(url: URL) = getUrl(url)
@@ -60,9 +63,21 @@ object WebCache extends ResourceManager  {
   def sanityCheck() = true  //cache dire exists? But is this needed for functioning?
 
   def resource(u : URL) = new org.w3.readwriteweb.Resource {
+    import CacheControl._
     def name() = u
-    def get() = cache.get(u)
-
+    def get(cacheControl: CacheControl.Value = CacheControl.CacheOnly) = cacheControl match {
+      case CacheOnly => {
+        val res = cache.getIfPresent(u)
+        if (null==res) NoCachEntry.fail
+        else res
+      }
+      case CacheFirst => cache.get(u)
+      case NoCache => {
+        val res = getUrl(u)
+        cache.put(u,res) //todo: should this only be done if say the returned value is not an error?
+        res
+      }
+    }
     // when fetching information from the web creating directories does not make sense
     //perhaps the resource manager should be split into read/write sections?
     def save(model: Model) =  throw new MethodNotSupportedException("not implemented")
@@ -108,3 +123,5 @@ object WebCache extends ResourceManager  {
 
    override def finalize() { http.shutdown() }
 }
+
+ object NoCachEntry extends Exception

@@ -30,7 +30,7 @@ import java.net.URL
 import com.hp.hpl.jena.query.{QueryExecutionFactory, QuerySolutionMap, QueryFactory}
 import unfiltered.response.{ResponseFunction, Unauthorized}
 import com.hp.hpl.jena.rdf.model.ResourceFactory
-import org.w3.readwriteweb.{Authoritative, Resource, ResourceManager, WebCache}
+import org.w3.readwriteweb.{Authoritative, Resource, ResourceManager, GraphCache}
 import org.w3.readwriteweb.util.HttpMethod
 
 /**

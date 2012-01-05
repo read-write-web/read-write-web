@@ -166,7 +166,7 @@ trait WebIDSrvc[Req,Res] {
           claim match {
             case NoClaim => <span/>
             case _ => new Transform(node) {
-              val union = claim.verified.flatMap(_.getDefiningModel.toOption).fold(ModelFactory.createDefaultModel()) {
+              val union = claim.verified.flatMap(_.getDefiningModel().toOption).fold(ModelFactory.createDefaultModel()) {
                 (m1, m2) => m1.add(m2)
               }
               //this works because we have verified before

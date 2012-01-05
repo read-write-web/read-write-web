@@ -93,7 +93,7 @@ trait SecureResourceManaged extends Specification with SecureServed {
 
 
 
-  val webCache = WebCache
+  val webCache = GraphCache
   val serverSslContext = javax.net.ssl.SSLContext.getInstance("TLS");
 
 

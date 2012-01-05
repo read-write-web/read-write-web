@@ -32,6 +32,8 @@ import java.net.URL
 import com.hp.hpl.jena.query._
 import java.math.BigInteger
 import com.hp.hpl.jena.datatypes.xsd.XSDDatatype
+import org.w3.readwriteweb.CacheControl
+import scalaz.{Failure, Scalaz, Validation}
 
 
 /**
@@ -95,9 +97,15 @@ class WebIDClaim(val san: String, val key: PublicKey) {
       }
   }
 
-  lazy val verify: Validation[WebIDClaimFailure, WebID] = key match {
+  def verify: Validation[WebIDClaimFailure, WebID] = key match {
       case rsakey: RSAPublicKey =>
-        WebID(san).flatMap(webid=> webid.getDefiningModel.flatMap(rsaTest(webid, rsakey)) )
+        WebID(san).flatMap(webid=> {
+          webid.getDefiningModel(CacheControl.CacheOnly).flatMap(rsaTest(webid, rsakey)) match {
+            case Failure(_) => webid.getDefiningModel(CacheControl.NoCache).flatMap(rsaTest(webid, rsakey))
+            case o => o
+          }
+        }
+        )
       case _ => new UnsupportedKeyType("We only support RSA keys at present", key).fail
   }
 }

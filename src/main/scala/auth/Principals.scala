@@ -24,12 +24,12 @@
 package org.w3.readwriteweb.auth
 
 import java.security.Principal
-import org.w3.readwriteweb.WebCache
 import com.hp.hpl.jena.rdf.model.Model
 import com.hp.hpl.jena.shared.WrappedIOException
 import scalaz.{Scalaz, Validation}
 import Scalaz._
 import java.net.{ConnectException, URL}
+import org.w3.readwriteweb.{CacheControl, GraphCache}
 
 /**
  * @author Henry Story from http://bblfish.net/
@@ -75,10 +75,10 @@ case class WebID private (val url: URL) extends Principal {
     case _ => false
   }
 
-  //TODO: now that we are no longer passing the WebCache around it's questionable whether we still need this method
+  //TODO: now that we are no longer passing the GraphCache around it's questionable whether we still need this method
   //in this class
-  def getDefiningModel: Validation[ProfileError, Model] =
-    WebCache.resource(url).get() failMap {
+  def getDefiningModel(cacheControl: CacheControl.Value = CacheControl.CacheFirst): Validation[ProfileError, Model] =
+    GraphCache.resource(url).get(cacheControl) failMap {
       case ioe: WrappedIOException => new ProfileGetError("error fetching profile", Some(ioe),url)
       case connE : ConnectException => new ProfileGetError("error fetching profile", Some(connE),url)
       case other => new ProfileParseError("error parsing profile", Some(other),url)

@@ -45,7 +45,7 @@ class Filesystem(
       logger.debug("%s successfully created: %s" format (fileOnDisk.getAbsolutePath, r.toString))
     }
     
-    def get(): Validation[Throwable, Model] = {
+    def get(unused: CacheControl.Value = CacheControl.CacheFirst): Validation[Throwable, Model] = {
       val model = ModelFactory.createDefaultModel()
       val guessLang = fileOnDisk.getName match {
         case Authoritative.r(_,suffix) => Representation.fromSuffix(suffix) match {

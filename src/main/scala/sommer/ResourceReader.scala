@@ -26,7 +26,7 @@ package sommer
 import com.hp.hpl.jena.vocabulary.RDF
 import com.hp.hpl.jena.sparql.vocabulary.FOAF
 import java.lang.String
-import org.w3.readwriteweb.{Resource, WebCache}
+import org.w3.readwriteweb.{Resource, GraphCache}
 import scalaz.Validation
 import java.net.URL
 import collection._
@@ -107,7 +107,7 @@ object Extractors {
   type Val[A] = Validation[scala.Throwable,A]
  
   def findPeople(m: Resource): Validation[scala.Throwable,Set[Person]] = {
-     for (gr<-m.get) yield {
+     for (gr<-m.get()) yield {
        for (st <- gr.listStatements(null,RDF.`type`,FOAF.Person).asScala;
         val subj = st.getSubject;
         st2 <- gr.listStatements(subj, FOAF.name,null).asScala
@@ -137,13 +137,13 @@ object Extractors {
   }
 
   def findDefinedPeople(m: Resource): Validation[scala.Throwable,Set[IdPerson]] = {
-    for (gr<-m.get) yield {
+    for (gr<-m.get()) yield {
       definedPeople(gr, m.name)
     }.toSet
   }
   
   def findIdPeople(m: Resource): Val[Set[IdPerson]] = {
-    for (gr<-m.get) yield {
+    for (gr<-m.get()) yield {
       for (st <- gr.listStatements(null,RDF.`type`,FOAF.Person).asScala;
            val subj = st.getSubject;
            if (subj.isURIResource)
@@ -162,7 +162,7 @@ object Extractors {
 }
 
 object Test {
-  implicit def urlToResource(u: URL) = WebCache.resource(u)
+  implicit def urlToResource(u: URL) = GraphCache.resource(u)
   import System._
 
   val peopleRd = new ResourceReader[Set[Person]](Extractors.findPeople)
@@ -170,7 +170,7 @@ object Test {
   val idPeopleRd = new ResourceReader[Set[IdPerson]](Extractors.findIdPeople)
   val definedPeopleFriends = definedPeopleRd.flatMap(people =>ResourceReader[Set[IdPerson]]{
     resource: Resource =>
-       resource.get.map(gr=>
+       resource.get().map(gr=>
          for ( p <- people;
                st <- gr.listStatements(p.id, FOAF.knows, null).asScala ;
               val friend = st.getObject;

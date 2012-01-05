@@ -33,7 +33,7 @@ object Dependencies {
   val grizzled = "org.clapper" %% "grizzled-scala" % "1.0.8" % "test"
   val scalaz = "org.scalaz" %% "scalaz-core" % "6.0.3"
   val argot =  "org.clapper" %% "argot" % "0.3.5"
-  val guava =  "com.google.guava" % "guava" % "10.0.1"
+  val guava =  "com.google.guava" % "guava" % "11.0"
 //  val restlet = "org.restlet.dev" % "org.restlet" % "2.1-SNAPSHOT"
 //  val restlet_ssl = "org.restlet.dev" % "org.restlet.ext.ssl" % "2.1-SNAPSHOT"
   val jsslutils = "org.jsslutils" % "jsslutils" % "1.0.5"
