@@ -34,7 +34,7 @@ import java.io.{IOException, OutputStream, InputStream}
 
 class SpyInputStream(val in: InputStream, val out: OutputStream) extends InputStream {
   var stopOut = false
-  
+
   def read() ={
 
     val i = try {

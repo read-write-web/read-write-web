@@ -16,7 +16,6 @@ import java.security.KeyStore
 
 trait ReadWriteWebArgs {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  new net.rootdev.javardfa.jena.RDFaReader  //import rdfa parser
 
   val postUsageMsg= Some("""
   |PROPERTIES

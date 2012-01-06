@@ -59,7 +59,7 @@ object Lang {
       case "text/turtle" => Some(TURTLE)
       case "application/rdf+xml" => Some(RDFXML)
       case "text/html" => Some(HTML)
-      case "text/xhtml" => Some(XHTML)
+      case "application/xhtml+xml" => Some(XHTML)
       case _ => None
   }    
   

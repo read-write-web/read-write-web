@@ -30,7 +30,7 @@ import java.net.{ConnectException, URL}
 import scalaz.{Scalaz, Validation}
 import java.util.concurrent.TimeUnit
 import com.google.common.cache.{LoadingCache, CacheLoader, CacheBuilder, Cache}
-
+import java.io.{File, FileOutputStream}
 
 
 /**
@@ -45,6 +45,10 @@ object GraphCache extends ResourceManager  {
   import dispatch._
   import Scalaz._
 
+  //use shellac's rdfa parser
+  new net.rootdev.javardfa.jena.RDFaReader  //import rdfa parser
+
+
   //this is a simple but quite stupid web cache so that graphs can stay in memory and be used a little
   // bit across sessions
   val cache: LoadingCache[URL,Validation[Throwable,Model]] =
@@ -56,7 +60,11 @@ object GraphCache extends ResourceManager  {
          def load(url: URL) = getUrl(url)
        })
 
-  val http = new Http with thread.Safety
+  val http = new Http with thread.Safety {
+    import org.apache.http.params.CoreConnectionPNames
+    client.getParams.setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, 3000)
+    client.getParams.setParameter(CoreConnectionPNames.SO_TIMEOUT, 15000)
+  }
   
   def basePath = null //should be cache dir?
 
@@ -65,7 +73,7 @@ object GraphCache extends ResourceManager  {
   def resource(u : URL) = new org.w3.readwriteweb.Resource {
     import CacheControl._
     def name() = u
-    def get(cacheControl: CacheControl.Value = CacheControl.CacheOnly) = cacheControl match {
+    def get(cacheControl: CacheControl.Value) = cacheControl match {
       case CacheOnly => {
         val res = cache.getIfPresent(u)
         if (null==res) NoCachEntry.fail

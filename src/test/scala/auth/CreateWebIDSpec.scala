@@ -39,7 +39,7 @@ import org.apache.commons.codec.binary.Hex
 
 /**
  * A key manager that can contain multiple keys, but where the client can take one of a number of identities
- * One at a time - so this is not sychronised. It also assumes that the server will accept all CAs, which in
+ * One at a time - so this is not synchronised. It also assumes that the server will accept all CAs, which in
  * these test cases it does.
  */
 class FlexiKeyManager extends X509ExtendedKeyManager {
