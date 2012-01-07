@@ -31,6 +31,7 @@ import scalaz.{Scalaz, Validation}
 import java.util.concurrent.TimeUnit
 import com.google.common.cache.{LoadingCache, CacheLoader, CacheBuilder, Cache}
 import java.io.{File, FileOutputStream}
+import com.weiglewilczek.slf4s.Logging
 
 
 /**
@@ -41,7 +42,7 @@ import java.io.{File, FileOutputStream}
  * @created: 12/10/2011
  *
  */
-object GraphCache extends ResourceManager  {
+object GraphCache extends ResourceManager with Logging {
   import dispatch._
   import Scalaz._
 
@@ -101,6 +102,7 @@ object GraphCache extends ResourceManager  {
       // we can't currently accept */* as we don't have GRDDL implemented
       val request = url(u.toString) <:< Map("Accept"->
         "application/rdf+xml,text/turtle,application/xhtml+xml;q=0.8,text/html;q=0.7,text/n3;q=0.6")
+      logger.info("fetching "+u.toExternalForm)
 
       //we need to tell the model about the content type
       val handler: Handler[Validation[Throwable, Model]] = request.>+>[Validation[Throwable, Model]](res =>  {
@@ -123,7 +125,10 @@ object GraphCache extends ResourceManager  {
         val future = http(handler)
         future
       } catch {
-        case e: ConnectException => e.fail
+        case e: ConnectException => {
+          logger.info("failed to connect to "+u.getHost,e)
+          e.fail
+        }
       }
 
     }

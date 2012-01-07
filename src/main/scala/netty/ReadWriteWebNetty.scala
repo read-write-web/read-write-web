@@ -23,6 +23,7 @@
 
 package org.w3.readwriteweb.netty
 
+
 import _root_.auth.WebIDSrvc
 import org.clapper.argot.ArgotUsageException
 import scala.Console._
@@ -34,7 +35,7 @@ import java.io.{InputStream, OutputStream}
 import unfiltered.response._
 import unfiltered.netty._
 import collection.immutable.List
-import java.lang.String
+import util.{NetworkLoggingSM, AllowAllSecurityManager}
 
 /**
  * ReadWrite Web for Netty server, allowing TLS renegotiation
@@ -72,6 +73,7 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
        case None => new KeyAuth_Https(httpPort.value.get)
      }
 
+
      // configures and launches a Netty server
      service.plan(publicStatic).
        plan( x509v ).
@@ -79,6 +81,7 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
        plan( rww ).run()
      
    }
+
 
 
   trait StaticFiles extends PartialFunction[String, ResponseFunction[Any]] {

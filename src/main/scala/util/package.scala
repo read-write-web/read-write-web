@@ -5,9 +5,9 @@ import com.hp.hpl.jena.rdf.model._
 import scalaz._
 import Scalaz._
 import java.net.URL
-import com.hp.hpl.jena.shared.WrappedIOException
+import com.weiglewilczek.slf4s.Logging
 
-package object util {
+package object util extends Logging {
   
   def modelFromInputStream(
       is: InputStream,
@@ -18,7 +18,10 @@ package object util {
       m.getReader(lang.jenaLang).read(m, is, base.toString)
       m.success
     } catch {
-      case t => t.fail
+      case t =>  {
+        logger.info("cought exception turning stream into model ",t)
+        t.fail
+      }
     }
   
   def modelFromString(
