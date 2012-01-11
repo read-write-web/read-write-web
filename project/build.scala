@@ -22,21 +22,19 @@ object Dependencies {
         <exclude org="net.databinder" module="dispatch-mime_2.9.0-1"/>
       </dependency>
     </dependencies>
-  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.6.4"
-  val slf4japi = "org.slf4j" % "slf4j-api" % "1.6.4"
-  val slf4jlog = "org.slf4j" % "slf4j-log4j12" % "1.6.4"
   val antiXML = "com.codecommit" %% "anti-xml" % "0.4-SNAPSHOT" % "test"
-  val jena = "com.hp.hpl.jena" % "jena" % "2.6.4"
+  val jena = "org.apache.jena" % "jena-core" % "2.7.0-incubating"
+  val arq = "org.apache.jena" % "jena-arq" % "2.9.0-incubating"
   val rdfa = "net.rootdev" % "java-rdfa" % "0.4.2-RC2"
   val htmlparser = "nu.validator.htmlparser" % "htmlparser" % "1.2.1"
-  val arq = "com.hp.hpl.jena" % "arq" % "2.8.8"
   val grizzled = "org.clapper" %% "grizzled-scala" % "1.0.8" % "test"
   val scalaz = "org.scalaz" %% "scalaz-core" % "6.0.3"
   val argot =  "org.clapper" %% "argot" % "0.3.5"
-  val guava =  "com.google.guava" % "guava" % "10.0.1"
+  val guava =  "com.google.guava" % "guava" % "11.0"
 //  val restlet = "org.restlet.dev" % "org.restlet" % "2.1-SNAPSHOT"
 //  val restlet_ssl = "org.restlet.dev" % "org.restlet.ext.ssl" % "2.1-SNAPSHOT"
   val jsslutils = "org.jsslutils" % "jsslutils" % "1.0.5"
+  val slf4s = "com.weiglewilczek.slf4s" %% "slf4s" % "1.0.7"
 }
 
 // some usefull repositories
@@ -111,9 +109,6 @@ object YourProjectBuild extends Build {
       libraryDependencies += unfiltered_filter,
       libraryDependencies += unfiltered_jetty,
       libraryDependencies += unfiltered_netty,
-      libraryDependencies += slf4jSimple,
-      libraryDependencies += slf4japi,
-      libraryDependencies += slf4jlog,
 
       libraryDependencies += jena,
       libraryDependencies += arq,
@@ -126,6 +121,7 @@ object YourProjectBuild extends Build {
       libraryDependencies += scalate,
       libraryDependencies += rdfa,
       libraryDependencies += htmlparser,
+      libraryDependencies += slf4s,
 
       jarName in assembly := "read-write-web.jar",
       mainClass in assembly := Some("org.w3.readwriteweb.netty.ReadWriteWebNetty")

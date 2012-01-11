@@ -32,10 +32,11 @@ import collection.JavaConversions._
 import unfiltered.request.HttpRequest
 import java.security.interfaces.RSAPublicKey
 import collection.immutable.List
-import com.google.common.cache.{CacheLoader, CacheBuilder, Cache}
 import java.util.concurrent.TimeUnit
 import org.w3.readwriteweb.util.trySome
 import java.util.Date
+import com.weiglewilczek.slf4s.Logging
+import com.google.common.cache.{LoadingCache, CacheLoader, CacheBuilder, Cache}
 
 /**
  * @author hjs
@@ -47,8 +48,8 @@ object X509Claim {
   implicit val fetch = true //fetch the certificate if we don't have it
 
 // this is cool because it is not in danger of running out of memory but it makes it impossible to create the claim
-// with an implicit  WebCache...
-  val idCache: Cache[X509Certificate, X509Claim] =
+// with an implicit  GraphCache...
+  val idCache: LoadingCache[X509Certificate, X509Claim] =
      CacheBuilder.newBuilder()
      .expireAfterWrite(30, TimeUnit.MINUTES)
      .build(new CacheLoader[X509Certificate, X509Claim] {
@@ -92,6 +93,8 @@ object ExistingClaim {
 }
 
 object XClaim {
+  //warning: it turns out that one nearly never recuperates the client certificate
+  //see http://stackoverflow.com/questions/8731157/netty-https-tls-session-duration-why-is-renegotiation-needed
   implicit val fetch = false
   def unapply[T](r: HttpRequest[T])(implicit m: Manifest[T]): Option[XClaim] = r match {
     case Certs(c1: X509Certificate, _*) => trySome(X509Claim.idCache.get(c1))
@@ -122,19 +125,19 @@ sealed trait XClaim {
  * @created: 30/03/2011
  */
 // can't be a case class as it then creates object which clashes with defined one
-class X509Claim(val cert: X509Certificate) extends Refreshable with XClaim {
+class X509Claim(val cert: X509Certificate) extends Refreshable with XClaim with Logging {
 
   import X509Claim._
   val claimReceivedDate = new Date()
   lazy val tooLate = claimReceivedDate.after(cert.getNotAfter())
   lazy val tooEarly = claimReceivedDate.before(cert.getNotBefore())
-
+  logger.debug("X509 Claim for certificate with DN="+cert.getSubjectDN)
 
   lazy val claims: List[WebIDClaim] = getClaimedWebIds(cert) map { webid => 
     new WebIDClaim(webid, cert.getPublicKey.asInstanceOf[RSAPublicKey]) 
   }
 
-  lazy val verified: List[WebID] = claims.flatMap(_.verify.toOption)
+  def verified: List[WebID] = claims.flatMap(_.verify.toOption)
 
   //note could also implement Destroyable
   //

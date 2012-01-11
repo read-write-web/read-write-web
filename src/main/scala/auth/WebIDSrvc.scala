@@ -33,7 +33,6 @@ import unfiltered.request.Params.ParamMapper
 import com.hp.hpl.jena.rdf.model.ModelFactory
 import sommer.{CertAgent, Extractors}
 import org.w3.readwriteweb.util._
-import org.w3.readwriteweb.auth._
 import unfiltered.request._
 import org.fusesource.scalate.scuery.{Transform, Transformer}
 import org.w3.readwriteweb.netty.ReadWriteWebNetty.StaticFiles
@@ -41,6 +40,7 @@ import java.lang.String
 import xml._
 import unfiltered.response._
 import java.security.interfaces.RSAPublicKey
+import org.w3.readwriteweb.auth._
 
 object WebIDSrvc {
   val dateFormat: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ")
@@ -86,16 +86,23 @@ trait WebIDSrvc[Req,Res] {
       if (next!=Nil && next.size==1) srvStaticFiles(next.head)
       else req match {
         case Params(RelyingParty(rp)) => req match {
-          case Params(DoIt(_)) & XClaim(claim: XClaim) => {
-            val answer = if (claim == NoClaim) "error=nocert&"
-            else if (claim.claims.size == 0) "error=noWebID&"
-            else if (claim.verified.size == 0) "error=noVerifiedWebID&" +
-              claim.claims.map(claim => claim.verify.failMap(e => "cause="+e.getMessage)).mkString("&")+"&"
-            else claim.verified.slice(0, 3).foldRight("") {
-              (wid, str) => "webid=" + URLEncoder.encode(wid.url.toExternalForm, "UTF-8") + "&"
+          //&doit => we redirect to the relying party with the identity answer
+          //TODO: here I would have liked to go with what the user decided without forcing him to login,
+          //ie by using XClaim(claim) in the match,
+          //but http://stackoverflow.com/questions/8731157/netty-https-tls-session-duration-why-is-renegotiation-needed
+          case Params(DoIt(_))  => {
+            val answer = X509Claim.unapply(req) match {
+              case None => "error=nocert&"
+              case Some(claim) =>
+                if (claim.claims.size == 0) "error=noWebID&"
+                else if (claim.verified.size == 0) "error=noVerifiedWebID&" +
+                  claim.claims.map(claim => claim.verify.failMap(e => "cause=" + e.getMessage)).mkString("&") + "&"
+                else claim.verified.slice(0, 3).foldRight("") {
+                  (wid, str) => "webid=" + URLEncoder.encode(wid.url.toExternalForm, "UTF-8") + "&"
+                }
             }
             val signedAnswer = sign(rp.toExternalForm + "?" + answer).toExternalForm
-            Redirect(signedAnswer)
+            Redirect(signedAnswer) ~> Expires("0") ~> CacheControl("no-cache")
           }
           //GET=>The user just arrived on the page. We recuperated the X509 claim in case he has authenticated already
           case GET(_) & XClaim(claim: XClaim) => {
@@ -103,7 +110,7 @@ trait WebIDSrvc[Req,Res] {
               case NoClaim => profilePg
               case claim: X509Claim => if (claim.verified.size > 0) authenticatedPg else errorPg
             }
-            Ok ~> Html5(new ServiceTrans(rp, claim).apply(pg))
+            Ok ~> Html5(new ServiceTrans(rp, claim).apply(pg)) ~> Expires("0") ~> CacheControl("no-cache")
           }
           //POST=> we authenticate the user because he has agreed to be authenticated on the page, which we know if the
           // request is a POST
@@ -159,7 +166,7 @@ trait WebIDSrvc[Req,Res] {
           claim match {
             case NoClaim => <span/>
             case _ => new Transform(node) {
-              val union = claim.verified.flatMap(_.getDefiningModel.toOption).fold(ModelFactory.createDefaultModel()) {
+              val union = claim.verified.flatMap(_.getDefiningModel().toOption).fold(ModelFactory.createDefaultModel()) {
                 (m1, m2) => m1.add(m2)
               }
               //this works because we have verified before

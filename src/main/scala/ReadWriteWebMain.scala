@@ -5,18 +5,20 @@ import auth.{X509CertSigner, RDFAuthZ, X509view}
 import org.w3.readwriteweb.util._
 
 import unfiltered.jetty._
-import java.io.File
 import Console.err
 import org.slf4j.{Logger, LoggerFactory}
 
 import org.clapper.argot._
 import ArgotConverters._
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
-import java.security.KeyStore
+import com.weiglewilczek.slf4s.Logging
+import java.lang.{Class, String}
+import java.net.InetAddress
+import java.io.{FileDescriptor, File}
+import java.security.{Permission, KeyStore}
 
 trait ReadWriteWebArgs {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  new net.rootdev.javardfa.jena.RDFaReader  //import rdfa parser
 
   val postUsageMsg= Some("""
   |PROPERTIES
@@ -79,6 +81,7 @@ trait ReadWriteWebArgs {
 }
 
 
+
 object ReadWriteWebMain extends ReadWriteWebArgs {
 
   import unfiltered.filter.Planify
@@ -91,6 +94,7 @@ object ReadWriteWebMain extends ReadWriteWebArgs {
     } catch {
       case e: ArgotUsageException => err.println(e.message); sys.exit(1)
     }
+
 
     val filesystem =
       new Filesystem(

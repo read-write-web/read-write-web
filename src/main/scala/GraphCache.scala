@@ -29,40 +29,64 @@ import org.w3.readwriteweb.util._
 import java.net.{ConnectException, URL}
 import scalaz.{Scalaz, Validation}
 import java.util.concurrent.TimeUnit
-import com.google.common.cache.{CacheLoader, CacheBuilder, Cache}
+import com.google.common.cache.{LoadingCache, CacheLoader, CacheBuilder, Cache}
+import java.io.{File, FileOutputStream}
+import com.weiglewilczek.slf4s.Logging
 
 
 /**
+ * Fetch resources on the Web and cache them
+ * ( at a later point this would include saving them to an indexed quad store )
+ *
  * @author Henry Story
  * @created: 12/10/2011
  *
- * The WebCache currently does not cache
  */
-object WebCache extends ResourceManager  {
+object GraphCache extends ResourceManager with Logging {
   import dispatch._
   import Scalaz._
 
+  //use shellac's rdfa parser
+  new net.rootdev.javardfa.jena.RDFaReader  //import rdfa parser
+
+
   //this is a simple but quite stupid web cache so that graphs can stay in memory and be used a little
   // bit across sessions
-  val cache: Cache[URL,Validation[Throwable,Model]] =
+  val cache: LoadingCache[URL,Validation[Throwable,Model]] =
        CacheBuilder.newBuilder()
          .expireAfterAccess(5, TimeUnit.MINUTES)
-//         .softValues()
+         .softValues()
 //         .expireAfterWrite(30, TimeUnit.MINUTES)
        .build(new CacheLoader[URL, Validation[Throwable,Model]] {
          def load(url: URL) = getUrl(url)
        })
 
-  val http = new Http with thread.Safety
+  val http = new Http with thread.Safety {
+    import org.apache.http.params.CoreConnectionPNames
+    client.getParams.setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, 3000)
+    client.getParams.setParameter(CoreConnectionPNames.SO_TIMEOUT, 15000)
+  }
   
   def basePath = null //should be cache dir?
 
   def sanityCheck() = true  //cache dire exists? But is this needed for functioning?
 
   def resource(u : URL) = new org.w3.readwriteweb.Resource {
+    import CacheControl._
     def name() = u
-    def get() = cache.get(u)
-
+    def get(cacheControl: CacheControl.Value) = cacheControl match {
+      case CacheOnly => {
+        val res = cache.getIfPresent(u)
+        if (null==res) NoCachEntry.fail
+        else res
+      }
+      case CacheFirst => cache.get(u)
+      case NoCache => {
+        val res = getUrl(u)
+        cache.put(u,res) //todo: should this only be done if say the returned value is not an error?
+        res
+      }
+    }
     // when fetching information from the web creating directories does not make sense
     //perhaps the resource manager should be split into read/write sections?
     def save(model: Model) =  throw new MethodNotSupportedException("not implemented")
@@ -78,6 +102,7 @@ object WebCache extends ResourceManager  {
       // we can't currently accept */* as we don't have GRDDL implemented
       val request = url(u.toString) <:< Map("Accept"->
         "application/rdf+xml,text/turtle,application/xhtml+xml;q=0.8,text/html;q=0.7,text/n3;q=0.6")
+      logger.info("fetching "+u.toExternalForm)
 
       //we need to tell the model about the content type
       val handler: Handler[Validation[Throwable, Model]] = request.>+>[Validation[Throwable, Model]](res =>  {
@@ -100,7 +125,10 @@ object WebCache extends ResourceManager  {
         val future = http(handler)
         future
       } catch {
-        case e: ConnectException => e.fail
+        case e: ConnectException => {
+          logger.info("failed to connect to "+u.getHost,e)
+          e.fail
+        }
       }
 
     }
@@ -108,3 +136,5 @@ object WebCache extends ResourceManager  {
 
    override def finalize() { http.shutdown() }
 }
+
+ object NoCachEntry extends Exception
