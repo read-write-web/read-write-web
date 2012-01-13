@@ -35,7 +35,6 @@ import java.io.{InputStream, OutputStream}
 import unfiltered.response._
 import unfiltered.netty._
 import collection.immutable.List
-import util.{NetworkLoggingSM, AllowAllSecurityManager}
 
 /**
  * ReadWrite Web for Netty server, allowing TLS renegotiation
