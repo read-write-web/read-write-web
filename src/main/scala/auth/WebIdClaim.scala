@@ -1,4 +1,4 @@
-/*
+/
  * Copyright (c) 2011 Henry Story (bblfish.net)
  * under the MIT licence defined
  *    http://www.opensource.org/licenses/mit-license.html
@@ -34,6 +34,7 @@ import java.math.BigInteger
 import com.hp.hpl.jena.datatypes.xsd.XSDDatatype
 import org.w3.readwriteweb.CacheControl
 import scalaz.{Failure, Scalaz, Validation}
+import unfiltered.request.&
 
 
 /**
@@ -46,7 +47,10 @@ import scalaz.{Failure, Scalaz, Validation}
 object WebIDClaim {
   final val cert: String = "http://www.w3.org/ns/auth/cert#"
   val numericDataTypes = List(XSDDatatype.XSDinteger, XSDDatatype.XSDint, XSDDatatype.XSDpositiveInteger, XSDDatatype.XSDdecimal)
+
   //we cannot do the simpler ask query as Jena does not do Sparql d-entailment on xsd:hexBinary
+  //There is also the problem that most parsers will not be very lenient and fail on spaces in the hex
+  //( as required for little gain by xsd:hexBinary spec)
   val query = QueryFactory.create("""
       PREFIX : <http://www.w3.org/ns/auth/cert#>
       SELECT ?m ?e
@@ -55,7 +59,12 @@ object WebIDClaim {
                         :exponent ?e ].
       }""")
 
+  /*
+   * Useful when converting the bytes from a BigInteger to a hex for inclusion in rdf
+   **/
   def hex(bytes: Array[Byte]): String = bytes.dropWhile(_ == 0).map("%02X" format _).mkString
+
+  def stripSpace(hex: String): String = hex.filter(c => !Character.isWhitespace(c))
 
 }
 
@@ -81,7 +90,8 @@ class WebIDClaim(val san: String, val key: PublicKey) {
           resultset.exists {
             sol: QuerySolution => try {
               val mod = sol.getLiteral("m")
-              if (mod.getDatatype == XSDDatatype.XSDhexBinary && new BigInteger(mod.getLexicalForm.trim(), 16) == rsakey.getModulus) {
+              if (mod.getDatatype == XSDDatatype.XSDhexBinary &&
+                new BigInteger(stripSpace(mod.getLexicalForm), 16) == rsakey.getModulus) {
                 val exp = sol.getLiteral("e")
                 numericDataTypes.contains(exp.getDatatype) && new BigInteger(exp.getLexicalForm) == rsakey.getPublicExponent
               } else false
