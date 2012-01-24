@@ -1,4 +1,4 @@
-/
+/*
  * Copyright (c) 2011 Henry Story (bblfish.net)
  * under the MIT licence defined
  *    http://www.opensource.org/licenses/mit-license.html
@@ -24,7 +24,7 @@
 package org.w3.readwriteweb.auth
 
 import java.security.interfaces.RSAPublicKey
-import scalaz.{Scalaz, Validation}
+import scalaz.Scalaz
 import Scalaz._
 import java.security.PublicKey
 import com.hp.hpl.jena.rdf.model.Model
@@ -33,13 +33,8 @@ import com.hp.hpl.jena.query._
 import java.math.BigInteger
 import com.hp.hpl.jena.datatypes.xsd.XSDDatatype
 import org.w3.readwriteweb.CacheControl
-import scalaz.{Failure, Scalaz, Validation}
-import unfiltered.request.&
+import scalaz.{Failure, Validation}
 
-
-/**
- * @author Henry Story
- **/
 
 /**
  * One can only construct a WebID via the WebIDClaim apply
