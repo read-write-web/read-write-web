@@ -20,9 +20,10 @@ import java.security.{Permission, KeyStore}
 trait ReadWriteWebArgs {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  // in Order to be receptive to DNS changes the DNS cache must be set
-  java.security.Security.setProperty("networkaddress.cache.ttl" , ""+60*10); //3 minutes
-  java.security.Security.setProperty("networkaddress.cache.negative.ttl",""+60*3)
+  // in Order to be receptive to DNS changes the DNS cache properties below must be set
+  // please tune them to see what works best
+  java.security.Security.setProperty("networkaddress.cache.ttl" , ""+60*10);
+  java.security.Security.setProperty("networkaddress.cache.negative.ttl",""+60*3) //3 minutes
 
 
   val postUsageMsg= Some("""
