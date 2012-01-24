@@ -101,7 +101,7 @@ object GraphCache extends ResourceManager with Logging {
       // installed (some claim to do n3 when they only really do turtle)
       // we can't currently accept */* as we don't have GRDDL implemented
       val request = url(u.toString) <:< Map("Accept"->
-        "application/rdf+xml,text/turtle,application/xhtml+xml;q=0.8,text/html;q=0.7,text/n3;q=0.6")
+        "application/rdf+xml,text/turtle,application/xhtml+xml;q=0.8,text/html;q=0.7,text/n3;q=0.2")
       logger.info("fetching "+u.toExternalForm)
 
       //we need to tell the model about the content type
