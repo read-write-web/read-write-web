@@ -28,19 +28,27 @@ object Dependencies {
   val rdfa = "net.rootdev" % "java-rdfa" % "0.4.2-RC2"
   val htmlparser = "nu.validator.htmlparser" % "htmlparser" % "1.2.1"
   val grizzled = "org.clapper" %% "grizzled-scala" % "1.0.8" % "test"
-  val scalaz = "org.scalaz" %% "scalaz-core" % "6.0.3"
+  val scalaz = "org.scalaz" %% "scalaz-core" % "6.0.4"
   val argot =  "org.clapper" %% "argot" % "0.3.5"
   val guava =  "com.google.guava" % "guava" % "11.0"
 //  val restlet = "org.restlet.dev" % "org.restlet" % "2.1-SNAPSHOT"
 //  val restlet_ssl = "org.restlet.dev" % "org.restlet.ext.ssl" % "2.1-SNAPSHOT"
   val jsslutils = "org.jsslutils" % "jsslutils" % "1.0.5"
   val slf4s = "com.weiglewilczek.slf4s" %% "slf4s" % "1.0.7"
+//  val akka_actor = "com.typesafe.akka" % "akka-actor" % "2.0-M3"
+  val async_http_client = "com.ning" % "async-http-client" % "1.7.0"
+  val aalto_xml = "com.fasterxml" % "aalto-xml" % "0.9.7"
+//  val akka_remote = "com.typesafe.akka" % "akka-remote" % "2.0-M3"
+//  val finagle_http = "com.twitter" %% "finagle-http" % "1.9.12"
 }
 
 // some usefull repositories
 object Resolvers {
   val novus = "repo.novus snaps" at "http://repo.novus.com/snapshots/"
   val mavenLocal = "Local Maven Repository" at "file://" + (Path.userHome / ".m2" / "repository").absolutePath
+//  val typesafe = "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
+  val sonatype = "Sonatype Release" at "http://oss.sonatype.org/content/repositories/releases"
+//  val twitter = "Twitter Repository" at "http://maven.twttr.com/"
 }
 
 // general build settings
@@ -98,6 +106,8 @@ object YourProjectBuild extends Build {
   val projectSettings =
     Seq(
       resolvers += mavenLocal,
+      resolvers += sonatype,
+ //     resolvers += typesafe,
       resolvers += ScalaToolsReleases,
       resolvers += ScalaToolsSnapshots,
       libraryDependencies += specs2,
@@ -122,6 +132,8 @@ object YourProjectBuild extends Build {
       libraryDependencies += rdfa,
       libraryDependencies += htmlparser,
       libraryDependencies += slf4s,
+      libraryDependencies += async_http_client,
+      libraryDependencies += aalto_xml,
 
       jarName in assembly := "read-write-web.jar",
       mainClass in assembly := Some("org.w3.readwriteweb.netty.ReadWriteWebNetty")
