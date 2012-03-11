@@ -22,7 +22,7 @@ object Dependencies {
         <exclude org="net.databinder" module="dispatch-mime_2.9.0-1"/>
       </dependency>
     </dependencies>
-  val antiXML = "com.codecommit" %% "anti-xml" % "0.4-SNAPSHOT" % "test"
+//  val antiXML = "com.codecommit" %% "anti-xml" % "0.4-SNAPSHOT" % "test"
   val jena = "org.apache.jena" % "jena-core" % "2.7.0-incubating"
   val arq = "org.apache.jena" % "jena-arq" % "2.9.0-incubating"
   val rdfa = "net.rootdev" % "java-rdfa" % "0.4.2-RC2"
@@ -122,7 +122,6 @@ object YourProjectBuild extends Build {
 
       libraryDependencies += jena,
       libraryDependencies += arq,
-      libraryDependencies += antiXML,
       libraryDependencies += grizzled,
       libraryDependencies += scalaz,
       libraryDependencies += jsslutils,
