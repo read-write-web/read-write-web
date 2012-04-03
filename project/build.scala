@@ -22,7 +22,7 @@ object Dependencies {
         <exclude org="net.databinder" module="dispatch-mime_2.9.0-1"/>
       </dependency>
     </dependencies>
-//  val antiXML = "com.codecommit" %% "anti-xml" % "0.4-SNAPSHOT" % "test"
+  val antiXML = "com.codecommit" %% "anti-xml" % "0.3" % "test"
   val jena = "org.apache.jena" % "jena-core" % "2.7.0-incubating"
   val arq = "org.apache.jena" % "jena-arq" % "2.9.0-incubating"
   val rdfa = "net.rootdev" % "java-rdfa" % "0.4.2-RC2"
@@ -46,7 +46,7 @@ object Dependencies {
 object Resolvers {
   val novus = "repo.novus snaps" at "http://repo.novus.com/snapshots/"
   val mavenLocal = "Local Maven Repository" at "file://" + (Path.userHome / ".m2" / "repository").absolutePath
-//  val typesafe = "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
+  val typesafeSnap = "Typesafe Repository" at "http://repo.typesafe.com/typesafe/snapshots/"
   val sonatype = "Sonatype Release" at "http://oss.sonatype.org/content/repositories/releases"
 //  val twitter = "Twitter Repository" at "http://maven.twttr.com/"
 }
@@ -105,34 +105,24 @@ object YourProjectBuild extends Build {
 
   val projectSettings =
     Seq(
-      resolvers += mavenLocal,
-      resolvers += sonatype,
- //     resolvers += typesafe,
-      resolvers += ScalaToolsReleases,
-      resolvers += ScalaToolsSnapshots,
+      resolvers ++= Seq( mavenLocal, sonatype, typesafeSnap, ScalaToolsReleases, ScalaToolsSnapshots ) ,
       libraryDependencies += specs2,
       libraryDependencies += specs2_scalaz,
 //      libraryDependencies += unfiltered_spec,
       ivyXML := ivyUnfilteredSpec,
-      libraryDependencies += dispatch_http,
-      libraryDependencies += dispatch_nio,
-      libraryDependencies += unfiltered_filter,
-      libraryDependencies += unfiltered_jetty,
-      libraryDependencies += unfiltered_netty,
-
-      libraryDependencies += jena,
-      libraryDependencies += arq,
-      libraryDependencies += grizzled,
-      libraryDependencies += scalaz,
-      libraryDependencies += jsslutils,
-      libraryDependencies += argot,
-      libraryDependencies += guava,
-      libraryDependencies += scalate,
-      libraryDependencies += rdfa,
-      libraryDependencies += htmlparser,
-      libraryDependencies += slf4s,
-      libraryDependencies += async_http_client,
-      libraryDependencies += aalto_xml,
+      libraryDependencies ++= Seq(dispatch_http, dispatch_nio, unfiltered_filter,
+        unfiltered_jetty, unfiltered_netty,
+        jena, arq, rdfa,
+        grizzled,
+        scalaz,
+        jsslutils,
+        argot,
+        guava,
+        scalate,
+        htmlparser,
+        slf4s,
+        async_http_client,
+        aalto_xml, antiXML) ,
 
       jarName in assembly := "read-write-web.jar",
       mainClass in assembly := Some("org.w3.readwriteweb.netty.ReadWriteWebNetty")

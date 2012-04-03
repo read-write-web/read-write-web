@@ -81,7 +81,7 @@ trait SecureResourceManaged extends Specification with SecureServed {
 
     val  sslContext = javax.net.ssl.SSLContext.getInstance("TLS");
   
-    sslContext.init(Array(km.asInstanceOf[KeyManager]), Array(AcceptAllTrustManager),null); // we are not trying to test our trust of localhost server
+    sslContext.init(Array[KeyManager](km), Array(AcceptAllTrustManager),null); // we are not trying to test our trust of localhost server
 
     import org.apache.http.conn.ssl._
     val sf = new SSLSocketFactory(sslContext, SSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER)
