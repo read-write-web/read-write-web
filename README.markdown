@@ -71,16 +71,32 @@ Options:
 
  *   --relax   All documents exist as empty RDF files (like a wiki).
  *   --strict  Documents must be created using PUT else they return 404
+
+To run with WebID see next section.
     
     
 HTTPS with WebID 
 ----------------
 
 ### to run on https with WebID
-    1. make a directory called tmp 
-    2. lauch
-    > java -Djetty.ssl.keyStoreType=JKS -Djetty.ssl.keyStore=/Users/hjs/tmp/cert/KEYSTORE.jks -Djetty.ssl.keyStorePassword=secret -jar target/read-write-web.jar --https 8443 tmp /2011/09
+    
+    Wether you run the binary from the command line as described below or run it directly inside sbt you need to set the following parameters to java
+ * -Djetty.ssl.keyStoreType=JKS                              - the keystore type (usually JKS)
+ * -Djetty.ssl.keyStore=src/test/resources/KEYSTORE.jks      - the path to the keystore  
+ * -Djetty.ssl.keyStorePassword=secret                       - the secret password for the keystore
+ * -Dsun.security.ssl.allowUnsafeRenegotiation=true          - to allow unsafe TLS renegotiation
+ * -Dsun.security.ssl.allowLegacyHelloMessages=true          - to allow legacy TLS hello Messages
 
+The sun.security options are described in more detail http://download.oracle.com/javase/7/docs/technotes/guides/security/jsse/JSSERefGuide.html#workarounds
+So to run the compiled jar you can use
+
+   > java -Djetty.ssl.keyStoreType=JKS -Djetty.ssl.keyStore=/Users/hjs/tmp/cert/KEYSTORE.jks -Djetty.ssl.keyStorePassword=secret -jar target/read-write-web.jar --https 8443 www_test /2011/09
+
+or to run sbt use the shorthand options in the bin/rwsbt.sh shell script eg
+
+  > bin/rwsbt.sh -n -sslUnsafe -sslLegacy
+
+(exercise: improve the script so that all options can be set with it)
 ### to enable debug add the following parameters after 'java'
 
      -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005
