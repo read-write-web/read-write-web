@@ -25,6 +25,7 @@ class Filesystem(
     def name() = url
     val relativePath: String = url.getPath.replaceAll("^"+basePath.toString+"/?", "")
     val fileOnDisk = new File(baseDirectory, relativePath)
+    lazy val parent = fileOnDisk.getParentFile
     
     private def parentMustExist(): Unit = {
       val parent = fileOnDisk.getParentFile
@@ -74,7 +75,7 @@ class Filesystem(
     
     def save(model: Model): Validation[Throwable, Unit] =
       try {
-        createFileOnDisk()
+        parent.mkdirs()
         val fos = new FileOutputStream(fileOnDisk)
         val writer = model.getWriter(lang.jenaLang)
         writer.write(model, fos, url.toString)
