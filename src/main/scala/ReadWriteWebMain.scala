@@ -125,9 +125,10 @@ object ReadWriteWebMain extends ReadWriteWebArgs {
     service.filter(new FilterLogger(logger)).
       context("/public"){ ctx:ContextBuilder =>
         ctx.resources(ClasspathUtils.fromClasspath("public/").toURI.toURL)
-    }.filter(Planify(rww.intent)).
+    }.filter(Planify(JettyEchoPlan.intent)).
+      filter(Planify(rww.intent)).
       filter(Planify(x509v.intent)).
-      filter(new EchoPlan().plan).run()
+      run()
     
   }
 

@@ -66,6 +66,8 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
           override val authz = new RDFAuthZ[ReceivedMessage,HttpResponse](filesystem)
      }
 
+     val echo =  new cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with NettyEchoPlan
+
      //this is incomplete: we should be able to start both ports.... not sure how to do this yet.
      val service = httpsPort.value match {
        case Some(port) => new KeyAuth_Https(port)
@@ -75,6 +77,7 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
 
      // configures and launches a Netty server
      service.plan(publicStatic).
+       plan( echo ).
        plan( x509v ).
        plan( webidp ).
        plan( rww ).run()

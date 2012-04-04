@@ -23,31 +23,59 @@
 
 package org.w3.readwriteweb
 
-import unfiltered.request.Path
-import unfiltered.response.{ResponseString, PlainTextContent, ContentType, Ok}
 import io.BufferedSource
+import unfiltered.Cycle
+import unfiltered.netty.ReceivedMessage
+import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
+import unfiltered.request.{HttpRequest, Path}
+import org.jboss.netty.handler.codec.http.HttpResponse
+import unfiltered.response.{Ok, PlainTextContent, ResponseString}
 
 
 /**
+ * Useful Echo Server, for debugging
+ *
  * @author hjs
  * @created: 19/10/2011
  */
+trait EchoPlan[Req,Res] {
+    import collection.JavaConversions._
 
-class EchoPlan {
-  import collection.JavaConversions._
+  /**
+   * unfiltered is missing a method to get the header names from the request, so this method is required
+   * @param req
+   * @return
+   */
+  def headers(req: HttpRequest[Req]): Iterator[String]
 
-  lazy val plan = unfiltered.filter.Planify({
+  def intent : Cycle.Intent[Req, Res] = {
     case req@Path(path) if path startsWith "/test/http/echo" => {
       Ok ~> PlainTextContent ~> {
-        val headers = req.underlying.getHeaderNames()
-        val result = for (name <- headers ;
-             val nameStr = name.asInstanceOf[String]
+        val header = for (headerName <- headers(req);
+                          headerValue <- req.headers(headerName)
         ) yield {
-          nameStr + ": " + req.underlying.getHeader(nameStr)+"\r\n"
+          headerName + ": " + headerValue +"\r\n"
         }
-        ResponseString(result.mkString+ "\r\n" + new BufferedSource(req.inputStream).mkString)
+        ResponseString(header.mkString+ "\r\n" + new BufferedSource(req.inputStream).mkString)
       }
     }
+  }
+}
 
-  })
+/**
+ * this is a trait so that it can be mixed in with different threading policies
+ */
+trait NettyEchoPlan extends EchoPlan[ReceivedMessage,HttpResponse] {
+  import scala.collection.JavaConverters.collectionAsScalaIterableConverter
+
+  def headers(req: HttpRequest[ReceivedMessage]) = req.underlying.request.getHeaderNames.asScala.toIterator
+}
+
+
+object JettyEchoPlan extends EchoPlan[HttpServletRequest,HttpServletResponse] {
+  import scala.collection.JavaConverters.enumerationAsScalaIteratorConverter
+  import java.util.Enumeration
+  def headers(req: HttpRequest[HttpServletRequest]) = Option(req.underlying.getHeaderNames).
+    map(enum=> enumerationAsScalaIteratorConverter[String](enum.asInstanceOf[Enumeration[String]]).asScala).
+    get
 }
