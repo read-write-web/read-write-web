@@ -162,6 +162,10 @@ trait ReadWriteWeb[Req, Res] {
             }
             case POST(_) =>
               BadRequest ~> ResponseString("Content-Type MUST be one of: " + Post.supportedAsString)
+            case DELETE(_) => {
+              for { _ <- r.delete failMap { t => NotFound ~> ResponseString("Error found"+t.toString)}
+              } yield NoContent
+            }
             case _ => MethodNotAllowed ~> Allow("GET", "PUT", "POST")
           }
           res

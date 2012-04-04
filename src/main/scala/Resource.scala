@@ -20,6 +20,7 @@ object CacheControl extends Enumeration {
 trait Resource {
   def name: URL
   def get(policy: CacheControl.Value = CacheControl.CacheFirst): Validation[Throwable, Model]
+  def delete: Validation[Throwable, Unit]
   def save(model:Model):Validation[Throwable, Unit]
   def createDirectory(model: Model): Validation[Throwable, Unit]
 }

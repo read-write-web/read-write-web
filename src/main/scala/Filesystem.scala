@@ -10,6 +10,7 @@ import scalaz.{Resource => _, _}
 import Scalaz._
 
 import scala.sys
+import java.nio.file.Files
 
 class Filesystem(
   baseDirectory: File,
@@ -95,6 +96,11 @@ class Filesystem(
         case t => t.fail
       }
 
+    def delete : Validation[Throwable, Unit]= try {
+       Files.delete(fileOnDisk.toPath).success
+    } catch {
+      case e: IOException => e.fail
+    }
   }
   
 }
