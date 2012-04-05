@@ -20,9 +20,9 @@ object PostBouleshitSpec extends SomeDataInStore {
 object DeleteResourceSpec extends SomeDataInStore {
 
   """a DELETE request""" should {
-    "not be supported yet" in {
-      val statusCode = Http.when(_ == 405)(uri.copy(method="DELETE") get_statusCode)
-      statusCode must_== 405
+    "not delete the resource" in {
+      val statusCode = Http.when(_ == 204)(uri.copy(method="DELETE") get_statusCode)
+      statusCode must_== 204
     }
   }
 
