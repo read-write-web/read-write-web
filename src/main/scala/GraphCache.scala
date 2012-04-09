@@ -33,8 +33,10 @@ import com.google.common.cache.{LoadingCache, CacheLoader, CacheBuilder, Cache}
 import java.io.{File, FileOutputStream}
 import com.weiglewilczek.slf4s.Logging
 import javax.net.ssl.SSLContext
-import org.apache.http.conn.ssl.SSLSocketFactory
 import org.apache.http.conn.scheme.Scheme
+import java.security.NoSuchAlgorithmException
+import org.apache.http.conn.ssl.{TrustStrategy, SSLSocketFactory}
+import java.security.cert.X509Certificate
 
 
 /**
@@ -70,17 +72,21 @@ object GraphCache extends ResourceManager with Logging {
     client.getParams.setParameter(CoreConnectionPNames.SO_TIMEOUT, 15000)
   }
 
-  val sslClientSecure = Option(System.getProperty("rww.clientTLSsecurity")).map{
+  lazy val sslClientSecure = Option(System.getProperty("rww.clientTLSsecurity")).map{
     case "secure" => true
     case _ => false
   }.getOrElse(false)
 
 
-  if (!sslClientSecure) {
-    val ssl = SSLContext.getInstance("TLS");
-    val sf = new SSLSocketFactory(ssl, SSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+  if (!sslClientSecure) try {
+    val sf = new SSLSocketFactory(new TrustStrategy {
+      def isTrusted(chain: Array[X509Certificate], authType: String) = true
+    });
     val scheme = new Scheme("https", 443, sf);
     http.client.getConnectionManager().getSchemeRegistry().register(scheme);
+  } catch {
+    case e: NoSuchAlgorithmException => logger.error("missing alogrithm ",e)
+    case other => logger.error("cought an error setting client",other); throw other;
   }
 
   def basePath = null //should be cache dir?
