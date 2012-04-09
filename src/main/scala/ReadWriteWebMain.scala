@@ -1,6 +1,5 @@
 package org.w3.readwriteweb
 
-import auth.X509CertSigner._
 import auth.{X509CertSigner, RDFAuthZ, X509view}
 import org.w3.readwriteweb.util._
 
@@ -11,11 +10,8 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.clapper.argot._
 import ArgotConverters._
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
-import com.weiglewilczek.slf4s.Logging
-import java.lang.{Class, String}
-import java.net.InetAddress
-import java.io.{FileDescriptor, File}
-import java.security.{Permission, KeyStore}
+import java.lang.String
+import java.io.File
 
 trait ReadWriteWebArgs {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
@@ -30,14 +26,25 @@ trait ReadWriteWebArgs {
   |PROPERTIES
   |
   | * Keystore properties that need to be set if https is started
-  |  -Djetty.ssl.keyStoreType=type : the type of the keystore, JKS by default usually
-  |  -Djetty.ssl.keyStore=path : specify path to key store (for https server certificate)
-  |  -Djetty.ssl.keyStorePassword=password : specify password for keystore store (optional)
+  |  -Dnetty.ssl.keyStoreType=type : the type of the keystore, JKS by default usually
+  |  -Dnetty.ssl.keyStore=path : specify path to key store (for https server certificate)
+  |  -Dnetty.ssl.keyStorePassword=password : specify password for keystore store (optional)
+  |  (for jetty, replace "netty" with "jetty")
+  |
+  | * application arguments:
+  |  --http  start server as plain http server
+  |  --https start server as in secured mode using https (TLS)
+  |  --language [turtle, rdfxml] save RDF in one of the given formats on disk
+  |  --clientTLS [secure, insecure] client connections abide by CA verification
+  |   * secure : if server certificate is not signed by well known CA don't accept
+  |   * insecure: if the server certificate is not signed by well known CA ignore and continue
+  |   * [todo: add more flexible server certificate verification mechanisms]
   |
   |NOTES
   |
   |  - Trust stores are not needed because we use the WebID protocol, and client certs are nearly never signed by CAs
   |  - one of --http or --https must be selected
+  |
      """.stripMargin);
 
   val parser = new ArgotParser("read-write-web",postUsage=postUsageMsg)
@@ -61,8 +68,24 @@ trait ReadWriteWebArgs {
       }
   }
 
-    val httpPort = parser.option[Int]("http", "Port","start the http server on port")
-    val httpsPort = parser.option[Int]("https","port","start the https server on port")
+  val clientTLSsecurity = parser.option[Boolean](List("clientTLS"),"c","client TLS connection security level") {
+    (sValue, opt) =>
+      sValue match {
+        case "insecure" => {
+          //todo: work with system property as a hack for the moment, as passing around conexts is going to require
+          //      a lot of rewriting
+          System.setProperty("rww.clientTLSsecurity","insecure")
+          false
+        }
+        case _ => {
+          System.setProperty("rww.clientTLSsecurity","secure")
+          true
+        }
+      }
+  }
+
+  val httpPort = parser.option[Int]("http", "Port","start the http server on port")
+  val httpsPort = parser.option[Int]("https","port","start the https server on port")
 
   val rootDirectory = parser.parameter[File]("rootDirectory", "root directory", false) {
     (sValue, opt) => {

@@ -32,6 +32,9 @@ import java.util.concurrent.TimeUnit
 import com.google.common.cache.{LoadingCache, CacheLoader, CacheBuilder, Cache}
 import java.io.{File, FileOutputStream}
 import com.weiglewilczek.slf4s.Logging
+import javax.net.ssl.SSLContext
+import org.apache.http.conn.ssl.SSLSocketFactory
+import org.apache.http.conn.scheme.Scheme
 
 
 /**
@@ -66,7 +69,20 @@ object GraphCache extends ResourceManager with Logging {
     client.getParams.setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, 3000)
     client.getParams.setParameter(CoreConnectionPNames.SO_TIMEOUT, 15000)
   }
-  
+
+  val sslClientSecure = Option(System.getProperty("rww.clientTLSsecurity")).map{
+    case "secure" => true
+    case _ => false
+  }.getOrElse(false)
+
+
+  if (!sslClientSecure) {
+    val ssl = SSLContext.getInstance("TLS");
+    val sf = new SSLSocketFactory(ssl, SSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+    val scheme = new Scheme("https", 443, sf);
+    http.client.getConnectionManager().getSchemeRegistry().register(scheme);
+  }
+
   def basePath = null //should be cache dir?
 
   def sanityCheck() = true  //cache dire exists? But is this needed for functioning?

@@ -117,10 +117,7 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
       } catch {
         case _ => NotFound
       }
-
     }
-
-
   }
 
   object publicStatic  extends  cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with StaticFiles {

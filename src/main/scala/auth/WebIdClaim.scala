@@ -28,12 +28,12 @@ import scalaz.Scalaz
 import Scalaz._
 import java.security.PublicKey
 import com.hp.hpl.jena.rdf.model.Model
-import java.net.URL
 import com.hp.hpl.jena.query._
 import java.math.BigInteger
 import com.hp.hpl.jena.datatypes.xsd.XSDDatatype
-import org.w3.readwriteweb.CacheControl
 import scalaz.{Failure, Validation}
+import org.w3.readwriteweb.CacheControl
+import java.net.URL
 
 
 /**
@@ -69,7 +69,6 @@ object WebIDClaim {
 class WebIDClaim(val san: String, val key: PublicKey) {
 
   import WebIDClaim._
-  import XSDDatatype._
 
   private def rsaTest(webid: WebID, rsakey: RSAPublicKey): (Model) => Validation[WebIDVerificationFailure, WebID] = {
     model =>
