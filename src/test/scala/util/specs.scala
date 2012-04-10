@@ -89,8 +89,10 @@ trait SomeRDF extends SomeURI {
 trait SomeURI extends FilesystemBased {
   
   val emptyModel = com.hp.hpl.jena.rdf.model.ModelFactory.createDefaultModel()
-  
-  lazy val dirUri = host / "wiki/people/"
+
+  val peopleDirPath = "wiki/people/"
+
+  lazy val dirUri = host / peopleDirPath
   
   lazy val uri = host / "wiki/people/JoeLambda"
   

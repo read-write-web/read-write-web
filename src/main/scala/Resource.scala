@@ -22,6 +22,9 @@ trait Resource {
   def get(policy: CacheControl.Value = CacheControl.CacheFirst): Validation[Throwable, Model]
   def delete: Validation[Throwable, Unit]
   def save(model:Model):Validation[Throwable, Unit]
+
+  //These two methods only work when called on directories
   def createDirectory(model: Model): Validation[Throwable, Unit]
+  def create(): Validation[Throwable, Resource]
 }
 

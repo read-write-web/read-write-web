@@ -15,7 +15,8 @@ import Query.{QueryTypeSelect => SELECT,
               QueryTypeConstruct => CONSTRUCT,
               QueryTypeDescribe => DESCRIBE}
 
-import scalaz.{Resource => _}
+import scalaz.{Scalaz, Resource => _}
+import Scalaz._
 import unfiltered.request._
 import unfiltered.Cycle
 import unfiltered.response._
@@ -111,6 +112,23 @@ trait ReadWriteWeb[Req, Res] {
               } yield Created
             case PUT(_) =>
               BadRequest ~> ResponseString("Content-Type MUST be one of: " + Lang.supportedAsString)
+            case POST(_) & RequestContentType(ct) if representation == DirectoryRepr =>
+              r.create() failMap { t => NotFound ~> ResponseString(t.getStackTraceString)} flatMap { rNew =>
+                Post.parse(Body.stream(req), rNew.name, ct) match {
+                  case PostRDF(model) => {
+                    logger.info("RDF content:\n" + model.toString())
+                    for {
+                      model <- rNew.save(model) failMap {
+                        t => InternalServerError ~> ResponseString(t.getStackTraceString)
+                      }
+                    } yield Created ~> ResponseHeader("Location",Seq(rNew.name.toString))
+                  }
+                  case _ => {
+                    logger.info("Couldn't parse the request")
+                    (BadRequest ~> ResponseString("You MUST provide valid content for given Content-Type: " + ct)).success
+                  }
+                }
+              }
             case POST(_) & RequestContentType(ct) if Post.supportContentTypes contains ct => {
               Post.parse(Body.stream(req), uri, ct) match {
                 case PostUnknown => {

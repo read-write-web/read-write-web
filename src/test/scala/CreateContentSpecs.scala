@@ -4,6 +4,8 @@ import org.w3.readwriteweb.util._
 import org.w3.readwriteweb.utiltest._
 
 import dispatch._
+import java.net.URL
+import java.io.File
 
 object PutRDFXMLSpec extends SomePeopleDirectory {
 
@@ -66,6 +68,28 @@ object PostRDFSpec extends SomeDataInStore {
     "append the diff graph to the initial graph" in {
       val model = Http(uri as_model(uriBase, RDFXML))
       model must beIsomorphicWith (expectedFinalModel)
+    }
+  }
+
+  "POSTing an RDF document to a Joe's directory/collection" should {
+    "succeed and create a resource on disk" in {
+      val handler = dirUri.post(diffRDF, RDFXML) >+ { req =>
+          val loc: Handler[String] = req.get_header("Location")
+          val status_code: Handler[Int] = req.get_statusCode
+          (status_code,loc)
+      }
+      val (code, head) = Http(handler)
+      System.out.println("code="+code)
+      System.out.println("head="+head)
+      code must_== 201
+      val headURI = new URL(head.trim)
+      System.out.println("root="+root)
+      val file = new File(root, headURI.getPath.substring(baseURL.size))
+      file must exist
+    }
+
+    "create a resource on disk" in {
+//      joeProfileOnDisk must be file
     }
   }
   

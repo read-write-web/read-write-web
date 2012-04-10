@@ -6,6 +6,14 @@
 package org.w3.readwriteweb
 
 sealed trait Lang {
+
+  def suffix = this match {
+    case RDFXML => ".rdf"
+    case TURTLE => ".ttl"
+    case N3 => ".n3"
+    case XHTML => ".xhtml"
+    case HTML => ".html"
+  }
   
   def contentType = this match {
     case RDFXML => "application/rdf+xml"

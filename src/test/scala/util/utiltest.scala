@@ -59,7 +59,7 @@ package object utiltest {
     def get_statusCode: Handler[Int] = new Handler(req, (c, r, e) => c, { case t => () })
     
     def get_header(header: String): Handler[String] = req >:> { _(header).head }
-    
+
     def get: Request = req.copy(method="GET")
     
     def >++ [A, B, C] (block:  Request => (Handler[A], Handler[B], Handler[C])) = {

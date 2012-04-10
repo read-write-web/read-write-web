@@ -7,7 +7,7 @@ object Dependencies {
 //  val specs = "org.scala-tools.testing" %% "specs" % "1.6.9" % "test"
   val specs2 = "org.specs2" %% "specs2" % "1.6.1"
   val specs2_scalaz =  "org.specs2" %% "specs2-scalaz-core" % "6.0.1" % "test"
-  val dispatch_version = "0.8.6"
+  val dispatch_version = "0.8.8"
   val dispatch_http = "net.databinder" %% "dispatch-http" % dispatch_version 
   val dispatch_nio = "net.databinder" %% "dispatch-nio" % dispatch_version 
   val unfiltered_version = "0.6.1"

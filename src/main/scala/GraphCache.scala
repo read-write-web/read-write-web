@@ -116,6 +116,9 @@ object GraphCache extends ResourceManager with Logging {
     def createDirectory(model: Model) =  throw new MethodNotSupportedException("not implemented")
 
     def delete = throw new MethodNotSupportedException("not implemented")
+
+    def create() = throw new MethodNotSupportedException("not implemented")
+
   }
 
   private def getUrl(u: URL) = {
