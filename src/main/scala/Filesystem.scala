@@ -11,6 +11,7 @@ import Scalaz._
 
 import scala.sys
 import java.nio.file.{StandardOpenOption, Files}
+import com.hp.hpl.jena.vocabulary.RDF
 
 class Filesystem(
   baseDirectory: File,
@@ -49,27 +50,41 @@ class Filesystem(
     
     def get(unused: CacheControl.Value = CacheControl.CacheFirst): Validation[Throwable, Model] = {
       val model = ModelFactory.createDefaultModel()
-      val guessLang = fileOnDisk.getName match {
-        case Authoritative.r(_,suffix) => Representation.fromSuffix(suffix) match {
-          case RDFRepr(rdfLang) => rdfLang
-          case _ => lang
+
+      if (fileOnDisk.isDirectory) {
+        val sioc = "http://rdfs.org/sioc/ns#"
+        val dirRes = model.createResource(name.toString)
+        dirRes.addProperty(RDF.`type`,model.createResource(sioc+"Container"))
+        for ( f <- fileOnDisk.listFiles() ) {
+          val furl = new URL(name,f.getName)
+          val item =model.createResource(furl.toString)
+          dirRes.addProperty(model.createProperty(sioc+"container_of"),item)
+          item.addProperty(RDF.`type`,model.createResource(sioc+"Item"))
         }
-        case _ => lang
-      }
-      if (fileOnDisk.exists()) {
-        val fis = new FileInputStream(fileOnDisk)
-        try {
-          val reader = model.getReader(guessLang.jenaLang)
-          reader.read(model, fis, url.toString)
-        } catch {
-          case je: JenaException => throw je
-        }
-        fis.close()
         model.success
       } else {
-        mode match {
-          case AllResourcesAlreadyExist => model.success
-          case ResourcesDontExistByDefault => new FileNotFoundException().fail
+        val guessLang = fileOnDisk.getName match {
+          case Authoritative.r(_, suffix) => Representation.fromSuffix(suffix) match {
+            case RDFRepr(rdfLang) => rdfLang
+            case _ => lang
+          }
+          case _ => lang
+        }
+        if (fileOnDisk.exists()) {
+          val fis = new FileInputStream(fileOnDisk)
+          try {
+            val reader = model.getReader(guessLang.jenaLang)
+            reader.read(model, fis, url.toString)
+          } catch {
+            case je: JenaException => throw je
+          }
+          fis.close()
+          model.success
+        } else {
+          mode match {
+            case AllResourcesAlreadyExist => model.success
+            case ResourcesDontExistByDefault => new FileNotFoundException().fail
+          }
         }
       }
     }
