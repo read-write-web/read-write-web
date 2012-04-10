@@ -6,6 +6,8 @@ import org.w3.readwriteweb.utiltest._
 import dispatch._
 import java.net.URL
 import java.io.File
+import com.hp.hpl.jena.vocabulary.RDF
+import com.hp.hpl.jena.sparql.vocabulary.FOAF
 
 object PutRDFXMLSpec extends SomePeopleDirectory {
 
@@ -71,6 +73,7 @@ object PostRDFSpec extends SomeDataInStore {
     }
   }
 
+  var createdDocURL: URL = _
 
   "POSTing an RDF document to a Joe's directory/collection" should {
     "succeed and create a resource on disk" in {
@@ -81,12 +84,19 @@ object PostRDFSpec extends SomeDataInStore {
       }
       val (code, head) = Http(handler)
       code must_== 201
-      val headURI = new URL(head.trim)
-      val file = new File(root, headURI.getPath.substring(baseURL.size))
+      createdDocURL = new URL(head.trim)
+      val file = new File(root, createdDocURL.getPath.substring(baseURL.size))
       file must exist
     }
 
-
+    "the relative URLs of the POSTed doc are tied to the created URL" in {
+      val newModelShouldBe = modelFromString(diffRDF, createdDocURL, RDFXML).toOption.get
+      val rdfxml = Http(Request.strToRequest(createdDocURL.toString) as_model(createdDocURL, RDFXML))
+      rdfxml must beIsomorphicWith(newModelShouldBe)
+      val jl = rdfxml.getResource(createdDocURL+"#JL")
+      val clazz = jl.getPropertyResourceValue(RDF.`type`)
+      clazz must_== FOAF.Person
+    }
 
   }
   
