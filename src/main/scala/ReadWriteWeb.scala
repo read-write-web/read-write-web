@@ -118,7 +118,7 @@ trait ReadWriteWeb[Req, Res] {
                   case PostRDF(model) => {
                     logger.info("RDF content:\n" + model.toString())
                     for {
-                      model <- rNew.save(model) failMap {
+                      _ <- rNew.save(model) failMap {
                         t => InternalServerError ~> ResponseString(t.getStackTraceString)
                       }
                     } yield Created ~> ResponseHeader("Location",Seq(rNew.name.toString))

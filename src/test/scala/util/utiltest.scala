@@ -61,6 +61,8 @@ package object utiltest {
     def get_header(header: String): Handler[String] = req >:> { _(header).head }
 
     def get: Request = req.copy(method="GET")
+
+    def delete: Request = req.copy(method="DELETE")
     
     def >++ [A, B, C] (block:  Request => (Handler[A], Handler[B], Handler[C])) = {
       Handler(req, { (code, res, opt_ent) =>

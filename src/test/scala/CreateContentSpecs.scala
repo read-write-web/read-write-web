@@ -30,7 +30,7 @@ object PutRDFXMLSpec extends SomePeopleDirectory {
       model must beIsomorphicWith (referenceModel)
     }
   }
-  
+
 }
 
 
@@ -71,6 +71,7 @@ object PostRDFSpec extends SomeDataInStore {
     }
   }
 
+
   "POSTing an RDF document to a Joe's directory/collection" should {
     "succeed and create a resource on disk" in {
       val handler = dirUri.post(diffRDF, RDFXML) >+ { req =>
@@ -79,18 +80,14 @@ object PostRDFSpec extends SomeDataInStore {
           (status_code,loc)
       }
       val (code, head) = Http(handler)
-      System.out.println("code="+code)
-      System.out.println("head="+head)
       code must_== 201
       val headURI = new URL(head.trim)
-      System.out.println("root="+root)
       val file = new File(root, headURI.getPath.substring(baseURL.size))
       file must exist
     }
 
-    "create a resource on disk" in {
-//      joeProfileOnDisk must be file
-    }
+
+
   }
   
 }

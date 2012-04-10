@@ -19,11 +19,27 @@ object PostBouleshitSpec extends SomeDataInStore {
 
 object DeleteResourceSpec extends SomeDataInStore {
 
-  """a DELETE request""" should {
-    "not delete the resource" in {
-      val statusCode = Http.when(_ == 204)(uri.copy(method="DELETE") get_statusCode)
-      statusCode must_== 204
+
+  "DELETEing Joe's URI" should {
+    "before doing it his resource must" in {
+      "be created and return a 201" in {
+        val httpCode = Http(uri.put(RDFXML, rdfxml) get_statusCode)
+        httpCode must_== 201
+      }
+      "create a document on disk" in {
+        resourceOnDisk must exist
+      }
+    }
+
+    "succeed" in {
+      val httpCode:Int = Http(uri.delete get_statusCode)
+      httpCode must_== 204
+    }
+
+    "delete the document on disk" in {
+      resourceOnDisk mustNot exist
     }
   }
+
 
 }
