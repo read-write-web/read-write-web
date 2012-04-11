@@ -8,6 +8,7 @@ import java.net.URL
 import java.io.File
 import com.hp.hpl.jena.vocabulary.RDF
 import com.hp.hpl.jena.sparql.vocabulary.FOAF
+import com.hp.hpl.jena.rdf.model.Model
 
 object PutRDFXMLSpec extends SomePeopleDirectory {
 
@@ -98,7 +99,20 @@ object PostRDFSpec extends SomeDataInStore {
       clazz must_== FOAF.Person
     }
 
+    "the directory should say that it contains that resource" in {
+      val (statusCode, model): Pair[Int,Model] = Http(dirUri >+ {
+        req => (req.get_statusCode,
+          req as_model(uriBase, RDFXML))
+      } )
+      val sioc = "http://rdfs.org/sioc/ns#"
+      statusCode must_== 200
+      val newRes = model.createResource(createdDocURL.toURI.toString)
+      model.contains(model.createResource(uri.to_uri.toString),model.createProperty(sioc+"container_of"),newRes) mustBe true
+      model.contains(newRes,RDF.`type`,model.createResource(sioc+"Item")) mustBe true
+    }
   }
+
+
   
 }
 

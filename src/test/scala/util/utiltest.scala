@@ -62,6 +62,8 @@ package object utiltest {
 
     def get: Request = req.copy(method="GET")
 
+    def get(lang: Lang): Request = req.copy(method="GET") <:< Map("Accept"->lang.contentType)
+
     def delete: Request = req.copy(method="DELETE")
     
     def >++ [A, B, C] (block:  Request => (Handler[A], Handler[B], Handler[C])) = {

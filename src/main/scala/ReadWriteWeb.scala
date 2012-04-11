@@ -85,13 +85,15 @@ trait ReadWriteWeb[Req, Res] {
               val body = source.getLines.mkString("\n")
               Ok ~> ViaSPARQL ~> ContentType("text/html") ~> ResponseString(body)
             }
-            case GET(_) | HEAD(_) =>
+            case  GET(_) | HEAD(_) =>
               for {
                 model <- r.get() failMap { x => NotFound }
-                lang = representation match {
-                  case RDFRepr(l) => l
-                  case _ => Lang.default
-                }
+                lang =  AcceptLang.unapply(req).getOrElse{
+                    representation match {
+                      case RDFRepr(l) => l
+                      case _ => Lang.default
+                    }
+                  }
               } yield {
                 val res = req match {
                   case GET(_) => Ok ~> ViaSPARQL ~> ContentType(lang.contentType) ~> ResponseModel(model, uri, lang)
@@ -155,7 +157,7 @@ trait ReadWriteWeb[Req, Res] {
                 }
                 case PostQuery(query) => {
                   logger.info("SPARQL Query:\n" + query.toString())
-                  lazy val lang = RequestLang(req) getOrElse Lang.default
+                  lazy val lang = RequestLang.unapply(req) getOrElse Lang.default
                   for {
                     model <- r.get() failMap { t => NotFound }
                   } yield {

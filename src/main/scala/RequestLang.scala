@@ -26,14 +26,27 @@ package org.w3.readwriteweb
 import unfiltered.request._
 
 object RequestLang {
-  
+
+  //is this type of use of apply, where it returns a type different from the class it seems
+  //to be constructing not confusing?
   def apply(req: HttpRequest[_]): Option[Lang] =
     Lang(RequestContentType(req))
 
   def unapply(req: HttpRequest[_]): Option[Lang] =
-    apply(req)
+    Lang(RequestContentType(req))
 
   def unapply(ct: String): Option[Lang] =
     Lang(ct)
     
+}
+
+object AcceptLang {
+
+
+  def unapply(req: HttpRequest[_]): Option[Lang] =
+    Lang(Accept(req))
+
+  def unapply(ct: String): Option[Lang] =
+    Lang(ct)
+
 }
