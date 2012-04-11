@@ -59,7 +59,8 @@ class Filesystem(
           val furl = new URL(name,f.getName)
           val item =model.createResource(furl.toString)
           dirRes.addProperty(model.createProperty(sioc+"container_of"),item)
-          item.addProperty(RDF.`type`,model.createResource(sioc+"Item"))
+          if (f.isDirectory) item.addProperty(RDF.`type`,model.createResource(sioc+"Container"))
+          else item.addProperty(RDF.`type`,model.createResource(sioc+"Item"))
         }
         model.success
       } else {
