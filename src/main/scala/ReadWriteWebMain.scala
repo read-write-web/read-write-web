@@ -35,9 +35,10 @@ trait ReadWriteWebArgs {
   |  --http  start server as plain http server
   |  --https start server as in secured mode using https (TLS)
   |  --language [turtle, rdfxml] save RDF in one of the given formats on disk
-  |  --clientTLS [secure, insecure] client connections abide by CA verification
+  |  --clientTLS [secure, noCA, noDomain] client connections abide by CA verification
   |   * secure : if server certificate is not signed by well known CA don't accept
-  |   * insecure: if the server certificate is not signed by well known CA ignore and continue
+  |   * noCA: if the server certificate is not signed by well known CA ignore and continue
+  |   * noDomain: for test situations where the server certificate does not even name the machine it is on correctly
   |   * [todo: add more flexible server certificate verification mechanisms]
   |
   |NOTES
@@ -71,10 +72,14 @@ trait ReadWriteWebArgs {
   val clientTLSsecurity = parser.option[Boolean](List("clientTLS"),"c","client TLS connection security level") {
     (sValue, opt) =>
       sValue match {
-        case "insecure" => {
+        case "noCA" => {
           //todo: work with system property as a hack for the moment, as passing around conexts is going to require
           //      a lot of rewriting
-          System.setProperty("rww.clientTLSsecurity","insecure")
+          System.setProperty("rww.clientTLSsecurity","noCA")
+          false
+        }
+        case "noDomain" => {
+          System.setProperty("rww.clientTLSsecurity","noDomain")
           false
         }
         case _ => {

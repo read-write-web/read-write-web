@@ -72,21 +72,26 @@ object GraphCache extends ResourceManager with Logging {
     client.getParams.setParameter(CoreConnectionPNames.SO_TIMEOUT, 15000)
   }
 
-  lazy val sslClientSecure = Option(System.getProperty("rww.clientTLSsecurity")).map{
-    case "secure" => true
-    case _ => false
-  }.getOrElse(false)
+  Option(System.getProperty("rww.clientTLSsecurity")).map {
+    case "noCA" => {
+      val sf = new SSLSocketFactory(new TrustStrategy {
+        def isTrusted(chain: Array[X509Certificate], authType: String) = true
+      });
+      insecure(sf)
+    }
+    case "noDomain" => {
+      val sf = new SSLSocketFactory(new TrustStrategy {
+        def isTrusted(chain: Array[X509Certificate], authType: String) = true
+      }, SSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+      insecure(sf);
+    }
+    case "secure" => Unit
+  }
 
 
-  if (!sslClientSecure) try {
-    val sf = new SSLSocketFactory(new TrustStrategy {
-      def isTrusted(chain: Array[X509Certificate], authType: String) = true
-    });
-    val scheme = new Scheme("https", 443, sf);
-    http.client.getConnectionManager().getSchemeRegistry().register(scheme);
-  } catch {
-    case e: NoSuchAlgorithmException => logger.error("missing alogrithm ",e)
-    case other => logger.error("cought an error setting client",other); throw other;
+  def insecure(sf: SSLSocketFactory): Unit = {
+    val scheme = new Scheme("https", 443, sf)
+    http.client.getConnectionManager().getSchemeRegistry().register(scheme)
   }
 
   def basePath = null //should be cache dir?
