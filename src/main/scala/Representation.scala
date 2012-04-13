@@ -14,6 +14,9 @@ object Representation {
       case "turtle" | "ttl" => RDFRepr(TURTLE)
       case "rdf" => RDFRepr(RDFXML)
       case "htm" | "html" | "xhtml" => HTMLRepr
+      case "jpeg" => ImageRepr(JPEG)
+      case "png" => ImageRepr(PNG)
+      case "gif" => ImageRepr(GIF)
       case "/" => DirectoryRepr
       case _ => UnknownRepr
     }
@@ -21,16 +24,22 @@ object Representation {
   
 
   val htmlContentTypes = Set("text/html", "application/xhtml+xml")
+  val imgageTypes = Set("image/jpeg","image/png","image/gif")
   
   def acceptsHTML(ct: Iterable[String]) =
     ! (htmlContentTypes & ct.toSet).isEmpty
+
+  def acceptsPicture(ct: Iterable[String]) =
+    ! (imgageTypes & ct.toSet).isEmpty
   
   def fromAcceptedContentTypes(ct: Iterable[String]): Representation = {
     Lang(ct) map RDFRepr.apply getOrElse {
+      Image(ct).map(ImageRepr.apply(_)).getOrElse {
       if (acceptsHTML(ct))
         HTMLRepr
       else
         UnknownRepr
+      }
     }
   }
   
@@ -52,6 +61,7 @@ object Representation {
 }
 
 case class RDFRepr(lang: Lang) extends Representation
+case class ImageRepr(mime: Image) extends Representation
 case object HTMLRepr extends Representation
 case object DirectoryRepr extends Representation
 case object UnknownRepr extends Representation

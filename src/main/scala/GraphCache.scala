@@ -30,13 +30,13 @@ import java.net.{ConnectException, URL}
 import scalaz.{Scalaz, Validation}
 import java.util.concurrent.TimeUnit
 import com.google.common.cache.{LoadingCache, CacheLoader, CacheBuilder, Cache}
-import java.io.{File, FileOutputStream}
 import com.weiglewilczek.slf4s.Logging
 import javax.net.ssl.SSLContext
 import org.apache.http.conn.scheme.Scheme
 import java.security.NoSuchAlgorithmException
 import org.apache.http.conn.ssl.{TrustStrategy, SSLSocketFactory}
 import java.security.cert.X509Certificate
+import java.io.{InputStream, File, FileOutputStream}
 
 
 /**
@@ -118,12 +118,15 @@ object GraphCache extends ResourceManager with Logging {
     //perhaps the resource manager should be split into read/write sections?
     def save(model: Model) =  throw new MethodNotSupportedException("not implemented")
 
-    def createDirectory(model: Model) =  throw new MethodNotSupportedException("not implemented")
+    def createDirectory =  throw new MethodNotSupportedException("not implemented")
 
     def delete = throw new MethodNotSupportedException("not implemented")
 
     def create() = throw new MethodNotSupportedException("not implemented")
 
+    def getStream = throw new MethodNotSupportedException("not implemented")
+
+    def putStream(in: InputStream) = throw new MethodNotSupportedException("not implemented")
   }
 
   private def getUrl(u: URL) = {

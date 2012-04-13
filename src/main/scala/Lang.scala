@@ -30,7 +30,6 @@ sealed trait Lang {
     case HTML => "HTML"
     case XHTML => "XHTML"
   }
-
 }
 
 object Lang {

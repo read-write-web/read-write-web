@@ -1,6 +1,7 @@
 package org.w3.readwriteweb
 
 import auth.{AuthZ, NullAuthZ}
+import netty.ResponseBin
 import org.w3.readwriteweb.util._
 
 import scala.io.Source
@@ -85,6 +86,13 @@ trait ReadWriteWeb[Req, Res] {
               val body = source.getLines.mkString("\n")
               Ok ~> ViaSPARQL ~> ContentType("text/html") ~> ResponseString(body)
             }
+            case GET(_) if representation.isInstanceOf[ImageRepr] => {
+              for (in <- r.getStream failMap {x => NotFound })
+              yield {
+                val ImageRepr(typ) = representation
+                Ok ~> ContentType(typ.contentType) ~> ResponseBin(in)
+              }
+            }
             case  GET(_) | HEAD(_) =>
               for {
                 model <- r.get() failMap { x => NotFound }
@@ -101,10 +109,14 @@ trait ReadWriteWeb[Req, Res] {
                 }
                 res ~> ContentLocation( uri.toString ) // without this netty (perhaps jetty too?) sends very weird headers, breaking tests
               }
+            case PUT(_) if representation.isInstanceOf[ImageRepr] => {
+              for (_ <- r.putStream(Body.stream(req)) failMap { t=> InternalServerError ~> ResponseString(t.getStackTraceString)})
+              yield Created
+            }
             case PUT(_) & RequestLang(lang) if representation == DirectoryRepr => {
               for {
                 bodyModel <- modelFromInputStream(Body.stream(req), uri, lang) failMap { t => BadRequest ~> ResponseString(t.getStackTraceString) }
-                _ <- r.createDirectory(bodyModel) failMap { t => InternalServerError ~> ResponseString(t.getStackTraceString) }
+                _ <- r.createDirectory failMap { t => InternalServerError ~> ResponseString(t.getStackTraceString) }
               } yield Created
             }
             case PUT(_) & RequestLang(lang) =>
@@ -190,9 +202,5 @@ trait ReadWriteWeb[Req, Res] {
           }
           res
         }
-      
-    
-    
-  
 
 }

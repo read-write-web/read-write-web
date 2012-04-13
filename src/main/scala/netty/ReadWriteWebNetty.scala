@@ -142,11 +142,9 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
 
 case class ResponseBin(bis: InputStream) extends ResponseStreamer {
   override def stream(out: OutputStream) {
-    var c=0
-    val buf = new Array[Byte](1024)
-    do {
-      c = bis.read(buf)
-      if (c > 0) out.write(buf,0,c)
-    } while (c > -1)
+    val buf = new Array[Byte](4096)
+    Iterator continually bis.read(buf) takeWhile (-1 !=) foreach  { bytesRead =>
+      out.write(buf,0,bytesRead)
+    }
   }
 }

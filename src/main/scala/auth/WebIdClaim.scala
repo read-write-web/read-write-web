@@ -87,7 +87,7 @@ class WebIDClaim(val san: String, val key: PublicKey) {
               if (mod.getDatatype == XSDDatatype.XSDhexBinary &&
                 new BigInteger(stripSpace(mod.getLexicalForm), 16) == rsakey.getModulus) {
                 val exp = sol.getLiteral("e")
-                numericDataTypes.contains(exp.getDatatype) && new BigInteger(exp.getLexicalForm) == rsakey.getPublicExponent
+                numericDataTypes.contains(exp.getDatatype) && new BigInteger(exp.getLexicalForm.trim) == rsakey.getPublicExponent
               } else false
             } catch {
               case _ => false

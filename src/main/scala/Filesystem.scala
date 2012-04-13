@@ -17,50 +17,54 @@ class Filesystem(
   baseDirectory: File,
   val basePath: String,
   val lang: Lang)(mode: RWWMode) extends ResourceManager {
-  
+
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  
+
   def sanityCheck(): Boolean =
     baseDirectory.exists && baseDirectory.isDirectory
 
   def resource(url: URL): Resource = new Resource {
     def name() = url
-    val relativePath: String = url.getPath.replaceAll("^"+basePath.toString+"/?", "")
+
+    val relativePath: String = url.getPath.replaceAll("^" + basePath.toString + "/?", "")
     val fileOnDisk = new File(baseDirectory, relativePath)
     lazy val parent = fileOnDisk.getParentFile
-    
+
     private def parentMustExist(): Unit = {
       val parent = fileOnDisk.getParentFile
-      if (! parent.exists) sys.error("Parent directory %s does not exist" format parent.getAbsolutePath)
-      if (! parent.isDirectory) sys.error("Parent %s is not a directory" format parent.getAbsolutePath)
+      if (!parent.exists) sys.error("Parent directory %s does not exist" format parent.getAbsolutePath)
+      if (!parent.isDirectory) sys.error("Parent %s is not a directory" format parent.getAbsolutePath)
     }
-    
+
     private def createDirectoryOnDisk(): Unit = {
       parentMustExist()
       val r = fileOnDisk.mkdir()
       if (!r) sys.error("Could not create %s" format fileOnDisk.getAbsolutePath)
-      logger.debug("%s successfully created: %s" format (fileOnDisk.getAbsolutePath, r.toString))
+      logger.debug("%s successfully created: %s" format(fileOnDisk.getAbsolutePath, r.toString))
     }
-    
+
     private def createFileOnDisk(): Unit = {
       parentMustExist()
       val r = fileOnDisk.createNewFile()
-      logger.debug("%s successfully created: %s" format (fileOnDisk.getAbsolutePath, r.toString))
+      logger.debug("%s successfully created: %s" format(fileOnDisk.getAbsolutePath, r.toString))
     }
-    
+
     def get(unused: CacheControl.Value = CacheControl.CacheFirst): Validation[Throwable, Model] = {
       val model = ModelFactory.createDefaultModel()
 
+      //for files: other possible ontologies to use would be
+      // "Linked Data Basic Profile 1.0" http://www.w3.org/Submission/2012/02/
+      // "the posix ontology" used by data.fm http://www.w3.org/ns/posix/stat#
       if (fileOnDisk.isDirectory) {
         val sioc = "http://rdfs.org/sioc/ns#"
         val dirRes = model.createResource(name.toString)
-        dirRes.addProperty(RDF.`type`,model.createResource(sioc+"Container"))
-        for ( f <- fileOnDisk.listFiles() ) {
-          val furl = new URL(name,f.getName)
-          val item =model.createResource(furl.toString)
-          dirRes.addProperty(model.createProperty(sioc+"container_of"),item)
-          if (f.isDirectory) item.addProperty(RDF.`type`,model.createResource(sioc+"Container"))
-          else item.addProperty(RDF.`type`,model.createResource(sioc+"Item"))
+        dirRes.addProperty(RDF.`type`, model.createResource(sioc + "Container"))
+        for (f <- fileOnDisk.listFiles()) {
+          val furl = new URL(name, f.getName)
+          val item = model.createResource(furl.toString)
+          dirRes.addProperty(model.createProperty(sioc + "container_of"), item)
+          if (f.isDirectory) item.addProperty(RDF.`type`, model.createResource(sioc + "Container"))
+          else item.addProperty(RDF.`type`, model.createResource(sioc + "Item"))
         }
         model.success
       } else {
@@ -89,7 +93,29 @@ class Filesystem(
         }
       }
     }
-    
+
+    def getStream = try {
+      new BufferedInputStream(new FileInputStream(fileOnDisk)).success
+    } catch {
+      case fe: FileNotFoundException => fe.fail
+      case se: SecurityException => se.fail
+    }
+
+    def putStream(in: InputStream): Validation[Throwable, Unit] = {
+      val out = new FileOutputStream(fileOnDisk)
+      val buf = new Array[Byte](4096)
+      try {
+       val good = Iterator continually in.read(buf) takeWhile (-1 !=) foreach  { bytesRead =>
+          out.write(buf,0,bytesRead)
+        }
+        good.success
+      } catch {
+        case ioe: IOException => ioe.fail
+      }
+
+    }
+
+
     def save(model: Model): Validation[Throwable, Unit] =
       try {
         parent.mkdirs()
@@ -101,7 +127,7 @@ class Filesystem(
         case t => t.fail
       }
 
-    def createDirectory(model: Model): Validation[Throwable, Unit] =
+    def createDirectory: Validation[Throwable, Unit] =
       try {
         createDirectoryOnDisk().success
 //        val fos = new FileOutputStream(fileOnDisk)
@@ -112,26 +138,27 @@ class Filesystem(
         case t => t.fail
       }
 
-    def delete : Validation[Throwable, Unit]= try {
-       Files.delete(fileOnDisk.toPath).success
+    def delete: Validation[Throwable, Unit] = try {
+      Files.delete(fileOnDisk.toPath).success
     } catch {
       case e: IOException => e.fail
     }
 
-    def create(): Validation[Throwable, Resource] =  {
-       if (!fileOnDisk.exists())
-         new Throwable("Must first create "+name()).fail
-       else if (!fileOnDisk.isDirectory)
-         new Throwable("Can only create a resource in a directory/collection which this is not "+name()).fail
-       else try {
-         val path = Files.createTempFile(fileOnDisk.toPath,"res",lang.suffix)
-         resource(new URL(name(),path.getFileName.toString)).success
-       } catch {
-         case ioe: IOException => ioe.fail
-       }
+    def create(): Validation[Throwable, Resource] = {
+      if (!fileOnDisk.exists())
+        new Throwable("Must first create " + name()).fail
+      else if (!fileOnDisk.isDirectory)
+        new Throwable("Can only create a resource in a directory/collection which this is not " + name()).fail
+      else try {
+        val path = Files.createTempFile(fileOnDisk.toPath, "res", lang.suffix)
+        resource(new URL(name(), path.getFileName.toString)).success
+      } catch {
+        case ioe: IOException => ioe.fail
+      }
     }
 
-
   }
-  
+
 }
+  
+
