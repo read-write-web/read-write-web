@@ -40,11 +40,7 @@ sealed trait Image {
     case PNG => ".png"
   }
 
-  def contentType = this match {
-    case JPEG => "image/jpeg"
-    case GIF => "image/gif"
-    case PNG => "image/png"
-  }
+  def contentType : String
 
 }
 
@@ -68,6 +64,12 @@ object Image {
     }
 }
 
-case object JPEG extends Image
-case object GIF extends Image
-case object PNG extends Image
+case object JPEG extends Image {
+  val contentType = "image/jpeg"
+}
+case object GIF extends Image {
+  val contentType = "image/gif"
+}
+case object PNG extends Image {
+  val contentType = "image/png"
+}

@@ -55,6 +55,12 @@ trait Resource {
 
   //These two methods only work when called on directories
   def createDirectory: Validation[Throwable, Unit]
-  def create(): Validation[Throwable, Resource]
+
+  /**
+   *
+   * @param contentType this should be Lang or ContentType, which should be a superinterface on all CTs
+   * @return
+   */
+  def create(contentType: Representation): Validation[Throwable, Resource]
 }
 

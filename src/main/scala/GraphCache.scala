@@ -122,7 +122,7 @@ object GraphCache extends ResourceManager with Logging {
 
     def delete = throw new MethodNotSupportedException("not implemented")
 
-    def create() = throw new MethodNotSupportedException("not implemented")
+    def create(ct: Representation) = throw new MethodNotSupportedException("not implemented")
 
     def getStream = throw new MethodNotSupportedException("not implemented")
 

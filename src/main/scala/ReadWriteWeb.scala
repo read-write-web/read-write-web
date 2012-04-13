@@ -23,6 +23,7 @@ import unfiltered.Cycle
 import unfiltered.response._
 
 import com.hp.hpl.jena.rdf.model.Model
+import javax.naming.BinaryRefAddr
 
 //object ReadWriteWeb {
 //
@@ -127,7 +128,8 @@ trait ReadWriteWeb[Req, Res] {
             case PUT(_) =>
               BadRequest ~> ResponseString("Content-Type MUST be one of: " + Lang.supportedAsString)
             case POST(_) & RequestContentType(ct) if representation == DirectoryRepr =>
-              r.create() failMap { t => NotFound ~> ResponseString(t.getStackTraceString)} flatMap { rNew =>
+              val createType = Representation.fromAcceptedContentTypes(List(ct))
+              r.create(createType) failMap { t => NotFound ~> ResponseString(t.getStackTraceString)} flatMap { rNew =>
                 Post.parse(Body.stream(req), rNew.name, ct) match {
                   case PostRDF(model) => {
                     logger.info("RDF content:\n" + model.toString())
@@ -136,6 +138,10 @@ trait ReadWriteWeb[Req, Res] {
                         t => InternalServerError ~> ResponseString(t.getStackTraceString)
                       }
                     } yield Created ~> ResponseHeader("Location",Seq(rNew.name.toString))
+                  }
+                  case PostBinary(is) => {
+                    for (_ <- rNew.putStream(is) failMap { t=> InternalServerError ~> ResponseString(t.getStackTraceString)})
+                    yield Created ~> ResponseHeader("Location",Seq(rNew.name.toString))
                   }
                   case _ => {
                     logger.info("Couldn't parse the request")

@@ -12,6 +12,7 @@ import Scalaz._
 import scala.sys
 import java.nio.file.{StandardOpenOption, Files}
 import com.hp.hpl.jena.vocabulary.RDF
+import org.w3.readwriteweb.Image
 
 class Filesystem(
   baseDirectory: File,
@@ -144,13 +145,19 @@ class Filesystem(
       case e: IOException => e.fail
     }
 
-    def create(): Validation[Throwable, Resource] = {
+    def create(contentType: Representation): Validation[Throwable, Resource] = {
       if (!fileOnDisk.exists())
         new Throwable("Must first create " + name()).fail
       else if (!fileOnDisk.isDirectory)
         new Throwable("Can only create a resource in a directory/collection which this is not " + name()).fail
       else try {
-        val path = Files.createTempFile(fileOnDisk.toPath, "res", lang.suffix)
+        //todo: the class hierarchy of content types needs to be improved.
+        val suffix = contentType match {
+          case RDFRepr(lang) => lang.suffix
+          case ImageRepr(tpe) => tpe.suffix
+          case l => lang.suffix
+        }
+        val path = Files.createTempFile(fileOnDisk.toPath, "res", suffix)
         resource(new URL(name(), path.getFileName.toString)).success
       } catch {
         case ioe: IOException => ioe.fail

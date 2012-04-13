@@ -14,7 +14,7 @@ object Representation {
       case "turtle" | "ttl" => RDFRepr(TURTLE)
       case "rdf" => RDFRepr(RDFXML)
       case "htm" | "html" | "xhtml" => HTMLRepr
-      case "jpeg" => ImageRepr(JPEG)
+      case "jpeg" | "jpg" => ImageRepr(JPEG)
       case "png" => ImageRepr(PNG)
       case "gif" => ImageRepr(GIF)
       case "/" => DirectoryRepr
@@ -58,6 +58,9 @@ object Representation {
       case Some(repr) => repr
     }
   }
+
+
+
 }
 
 case class RDFRepr(lang: Lang) extends Representation
