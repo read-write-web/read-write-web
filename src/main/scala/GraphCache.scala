@@ -24,7 +24,6 @@
 package org.w3.readwriteweb
 
 import com.hp.hpl.jena.rdf.model.Model
-import org.apache.http.MethodNotSupportedException
 import org.w3.readwriteweb.util._
 import java.net.{ConnectException, URL}
 import scalaz.{Scalaz, Validation}
@@ -37,6 +36,8 @@ import java.security.NoSuchAlgorithmException
 import org.apache.http.conn.ssl.{TrustStrategy, SSLSocketFactory}
 import java.security.cert.X509Certificate
 import java.io.{InputStream, File, FileOutputStream}
+import org.apache.http.conn.params.ConnRoutePNames
+import org.apache.http.{HttpHost, MethodNotSupportedException}
 
 
 /**
@@ -70,7 +71,14 @@ object GraphCache extends ResourceManager with Logging {
     import org.apache.http.params.CoreConnectionPNames
     client.getParams.setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, 3000)
     client.getParams.setParameter(CoreConnectionPNames.SO_TIMEOUT, 15000)
+    Option(System.getProperty("http.proxy")).map{ uriStr =>
+      val url = new URL(uriStr)
+      val proxy = new HttpHost(url.getHost, url.getPort, url.getProtocol);
+      client.getParams.setParameter(ConnRoutePNames.DEFAULT_PROXY, proxy)
+    }
   }
+
+
 
   Option(System.getProperty("rww.clientTLSsecurity")).map {
     case "noCA" => {

@@ -12,6 +12,7 @@ import ArgotConverters._
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
 import java.lang.String
 import java.io.File
+import java.net.{MalformedURLException, URL}
 
 trait ReadWriteWebArgs {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
@@ -40,6 +41,7 @@ trait ReadWriteWebArgs {
   |   * noCA: if the server certificate is not signed by well known CA ignore and continue
   |   * noDomain: for test situations where the server certificate does not even name the machine it is on correctly
   |   * [todo: add more flexible server certificate verification mechanisms]
+  |  --proxy url: url in the form http://host.example:port
   |
   |NOTES
   |
@@ -87,6 +89,18 @@ trait ReadWriteWebArgs {
           true
         }
       }
+  }
+
+  val proxy = parser.option[URL](List("proxy"),"p","Proxy to use when making client http(s) connections") {
+    (sValue, opt) =>
+        try {
+          val proxy = new URL(sValue);
+          System.getProperties().put("http.proxy", proxy);
+          proxy
+        } catch {
+          case e: MalformedURLException => throw new ArgotConversionException("Option %s: url does not parse correctly "
+            format (opt.name, sValue))
+        }
   }
 
   val httpPort = parser.option[Int]("http", "Port","start the http server on port")
