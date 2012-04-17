@@ -24,7 +24,7 @@ import Scalaz._
 object Post {
   
   val SPARQL = "application/sparql-query"
-  val supportContentTypes = Lang.supportContentTypes + SPARQL ++ Image.supportedImages.map(_.contentType)
+  val supportContentTypes = Lang.supportContentTypes ++ Image.supportedImages.map(_.contentType) + SPARQL
   val supportedAsString = supportContentTypes mkString ", "
 
   
@@ -36,7 +36,7 @@ object Post {
       contentType: String): Post = {
     assert(supportContentTypes contains contentType)
 
-    def inAsString = {
+    val inAsString = {
        val source = Source.fromInputStream(is, "UTF-8")
        source.getLines.mkString("\n")
     }
