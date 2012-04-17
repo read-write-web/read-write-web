@@ -148,22 +148,27 @@ object GraphCache extends ResourceManager with Logging {
       logger.info("fetching "+u.toExternalForm)
 
       //we need to tell the model about the content type
-      val handler: Handler[Validation[Throwable, Model]] = request.>+>[Validation[Throwable, Model]](res =>  {
-        res >:> { headers =>
-          val encoding = headers("Content-Type").headOption match {
+      val handler: Handler[Validation[Throwable, Model]] = Handler(request,{
+        (code,res,ent) =>
+          val encoding = res.getHeaders("Content-Type").headOption match {
             case Some(mime) => {
-              Lang(mime.split(";")(0)) getOrElse Lang.default
+              Lang(mime.getValue.split(";")(0)) getOrElse Lang.default
             }
             case None => RDFXML  //todo: it would be better to try to do a bit of guessing in this case by looking at content
           }
-          val loc = headers("Content-Location").headOption match {
-            case Some(loc) =>  new URL(u,loc)
-            case None => new URL(u.getProtocol,u.getAuthority,u.getPort,u.getPath)
+          val loc = code match {
+            case 301 => res.getHeaders("Content-Location").headOption match {
+                case Some(loc) =>  new URL(u,loc.getValue)
+                case None => new URL(u.getProtocol,u.getAuthority,u.getPort,u.getPath)
+            }
+            case _ => u
           }
-          res>>{ in=> modelFromInputStream(in,loc,encoding) }
+          ent match {
+            case Some(e) => modelFromInputStream(e.getContent,loc,encoding)
+            case None =>  new Exception("response %s for %s has no entity".format(code, u)).fail
+          }
+        })
 
-        }
-      })
       try {
         val future = http(handler)
         future
