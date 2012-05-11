@@ -10,7 +10,7 @@ import scalaz.{Resource => _, _}
 import Scalaz._
 
 import scala.sys
-import java.nio.file.{StandardOpenOption, Files}
+
 import com.hp.hpl.jena.vocabulary.RDF
 import org.w3.readwriteweb.Image
 
@@ -140,9 +140,10 @@ class Filesystem(
       }
 
     def delete: Validation[Throwable, Unit] = try {
-      Files.delete(fileOnDisk.toPath).success
+      if (fileOnDisk.delete()) ().success
+      else new Exception("Failed to delete file "+fileOnDisk).fail
     } catch {
-      case e: IOException => e.fail
+      case e: SecurityException => e.fail
     }
 
     def create(contentType: Representation): Validation[Throwable, Resource] = {
@@ -157,8 +158,8 @@ class Filesystem(
           case ImageRepr(tpe) => tpe.suffix
           case l => lang.suffix
         }
-        val path = Files.createTempFile(fileOnDisk.toPath, "res", suffix)
-        resource(new URL(name(), path.getFileName.toString)).success
+        val path = File.createTempFile("res", suffix, fileOnDisk)
+        resource(new URL(name(), path.getName)).success
       } catch {
         case ioe: IOException => ioe.fail
       }

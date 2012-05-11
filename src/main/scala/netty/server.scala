@@ -28,8 +28,7 @@ import unfiltered.netty._
 import java.lang.String
 import org.jboss.netty.channel.{ChannelPipelineFactory, ChannelHandler}
 import java.security.cert.X509Certificate
-import javax.net.ssl.{SSLEngine, X509ExtendedTrustManager}
-import java.net.Socket
+import javax.net.ssl.X509TrustManager
 
 trait NormalPlan extends cycle.Plan with cycle.ThreadPool with ServerErrorResponse
 
@@ -50,21 +49,12 @@ trait KeyAuth_Ssl extends Ssl {
 
   val nullArray = Array[X509Certificate]()
 
-  val trustManagers = Array[TrustManager](new X509ExtendedTrustManager {
+  val trustManagers = Array[TrustManager](new X509TrustManager {
+    def getAcceptedIssuers = nullArray
 
-    def checkClientTrusted(chain: Array[X509Certificate], authType: String, socket: Socket) {}
+    def checkClientTrusted(p1: Array[X509Certificate], p2: String) {}
 
-    def checkClientTrusted(chain: Array[X509Certificate], authType: String, engine: SSLEngine) {}
-
-    def checkClientTrusted(x509Certificates: Array[X509Certificate], s: String) {}
-
-    def checkServerTrusted(chain: Array[X509Certificate], authType: String, socket: Socket) {}
-
-    def checkServerTrusted(chain: Array[X509Certificate], authType: String, engine: SSLEngine) {}
-
-    def checkServerTrusted(x509Certificates: Array[X509Certificate], s: String) {}
-
-    def getAcceptedIssuers() = nullArray
+    def checkServerTrusted(p1: Array[X509Certificate], p2: String) {}
   })
 
 

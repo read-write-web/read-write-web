@@ -138,7 +138,7 @@ class X509CertSigner(
       List(SSL_CLIENT, S_MIME) foreach { ext => netscapeExt.set(ext, true) }
       extensions.set(
         netscapeExt.getName,
-        new NetscapeCertTypeExtension(false, netscapeExt.getValue))
+        new NetscapeCertTypeExtension(false, netscapeExt.getExtensionValue().clone))
     }
       
     val subjectKeyExt =
