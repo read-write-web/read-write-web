@@ -93,7 +93,7 @@ object SslLoginTest extends  NormalPlan {
   }
 
 
-  def main(args: Array[String]) {
-    new KeyAuth_Https(8443).plan(SslLoginTest).run()
-  }
+//  def main(args: Array[String]) {
+//    new KeyAuth_Https(8443).plan(SslLoginTest).run()
+//  }
 }

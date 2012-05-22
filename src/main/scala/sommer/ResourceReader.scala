@@ -179,6 +179,7 @@ object Test {
        )
   } )
   
+/*
   def main(args: Array[String]) {
 
     val url: String = "http://bblfish.net/people/henry/card"
@@ -219,4 +220,5 @@ object Test {
 //    }
 
   }
+*/
 }

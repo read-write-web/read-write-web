@@ -55,7 +55,7 @@ object WebIDSrvc {
  */
 trait WebIDSrvc[Req,Res] {
   implicit def manif: Manifest[Req]
-  val signer: X509CertSigner
+  val signer: Option[X509CertSigner]
 
   import WebIDSrvc._
 
@@ -63,8 +63,10 @@ trait WebIDSrvc[Req,Res] {
 
   def sign(urlStr: String): URL = {
     val timeStampedUrlStr = urlStr + "ts=" + URLEncoder.encode(dateFormat.format(Calendar.getInstance.getTime), "UTF-8")
-    val signedUri = timeStampedUrlStr +
-      "&sig=" + URLEncoder.encode(new String(Base64.encodeBase64URLSafeString(signer.sign(timeStampedUrlStr))), "UTF-8")
+    val signedUri = signer.map(sgnr =>
+      timeStampedUrlStr +
+      "&sig=" + URLEncoder.encode(new String(Base64.encodeBase64URLSafeString(sgnr.sign(timeStampedUrlStr))), "UTF-8")
+    ).getOrElse(timeStampedUrlStr)
     return new URL(signedUri)
   }
 
@@ -148,9 +150,9 @@ trait WebIDSrvc[Req,Res] {
   }
   
   object aboutTransform extends Transformer {
-    val key = signer.signingCert.getPublicKey.asInstanceOf[RSAPublicKey]
-    $(".modulus").contents = key.getModulus.toString(16)
-    $(".exponent").contents = key.getPublicExponent.toString
+    val key = signer.map(_.signingCert.getPublicKey.asInstanceOf[RSAPublicKey])
+    $(".modulus").contents = key.map(_.getModulus.toString(16)).getOrElse("no key, no modulus - no signature - contact admin!")
+    $(".exponent").contents = key.map(_.getPublicExponent.toString).getOrElse("no key, no exponent")
   }
 
   class ServiceTrans(relyingParty: URL, claim: XClaim) extends Transformer {

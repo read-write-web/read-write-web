@@ -29,7 +29,7 @@ object Dependencies {
   val htmlparser = "nu.validator.htmlparser" % "htmlparser" % "1.2.1"
   val grizzled = "org.clapper" %% "grizzled-scala" % "1.0.8" % "test"
   val scalaz = "org.scalaz" %% "scalaz-core" % "6.0.4"
-  val argot =  "org.clapper" %% "argot" % "0.3.5"
+  val argot =  "org.clapper" %% "argot" % "0.4"
   val guava =  "com.google.guava" % "guava" % "11.0"
 //  val restlet = "org.restlet.dev" % "org.restlet" % "2.1-SNAPSHOT"
 //  val restlet_ssl = "org.restlet.dev" % "org.restlet.ext.ssl" % "2.1-SNAPSHOT"
@@ -56,7 +56,7 @@ object Resolvers {
 object BuildSettings {
 
   val buildOrganization = "org.w3"
-  val buildVersion      = "0.1-SNAPSHOT"
+  val buildVersion      = "0.2-SNAPSHOT"
   val buildScalaVersion = "2.9.1"
 
   val buildSettings = Defaults.defaultSettings ++ Seq (

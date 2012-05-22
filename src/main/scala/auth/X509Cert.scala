@@ -37,25 +37,47 @@ import sun.security.x509._
 import org.w3.readwriteweb.util.trySome
 import actors.threadpool.TimeUnit
 import com.google.common.cache.{CacheLoader, CacheBuilder, Cache}
+import scalaz.Validation
+import scalaz.Scalaz._
 
-object X509CertSigner {
+import com.weiglewilczek.slf4s.Logging
 
-  def apply(
-      keyStoreLoc: URL,
-      keyStoreType: String,
-      password: String,
-      alias: String): X509CertSigner = {
-    val keystore = KeyStore.getInstance(keyStoreType)
+object X509CertSigner extends Logging {
 
-    IO.use(keyStoreLoc.openStream()) { in =>
-      keystore.load(in, password.toCharArray)
+  def apply( keyStoreLoc: Option[URL],
+             keyStoreType: Option[String],
+             password: Option[String],
+             alias: Option[String]): Option[X509CertSigner] = {
+    try {
+      for {
+        loc <- keyStoreLoc
+        tp <- keyStoreType
+      } yield {
+        val pass = password.map(_.toCharArray).getOrElse(null)
+        val alias2 = alias.getOrElse("")  //todo there are better ways of finding an alias than this
+        val ks = KeyStore.getInstance(tp)
+        IO.use(loc.openStream()) {
+          in => ks.load(in, pass)
+        }
+        val privateKey = ks.getKey(alias2, pass).asInstanceOf[PrivateKey]
+        val certificate = ks.getCertificate(alias2).asInstanceOf[X509Certificate]
+        //one could verify that indeed this is the private key corresponding to the public key in the cert.
+        new X509CertSigner(certificate, privateKey)
+      }
+    } catch {
+      case e: Exception => {
+        logger.warn("could not load TLS certificate for certificate signing service", e)
+        None
+      }
     }
-    val privateKey = keystore.getKey(alias, password.toCharArray).asInstanceOf[PrivateKey]
-    val certificate = keystore.getCertificate(alias).asInstanceOf[X509Certificate]
-    //one could verify that indeed this is the private key corresponding to the public key in the cert.
-
-    new X509CertSigner(certificate, privateKey)
   }
+
+  def apply( keyStoreLoc: URL,
+             keyStoreType: String,
+             password: String,
+             alias: String): X509CertSigner =
+    apply(Option(keyStoreLoc),Option(keyStoreType),Option(password),Option(alias)).get
+
 }
 
 class X509CertSigner(

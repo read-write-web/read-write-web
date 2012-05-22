@@ -40,7 +40,7 @@ BE PATIENT: the first time, some operations take some time because it downloads
 
 ### to auto-compile the source
 
-    > ~ compile
+    > compile
 
 ### to launch tests under sbt (will cache all the dependencies the first time, can take a while)
 
@@ -48,15 +48,93 @@ BE PATIENT: the first time, some operations take some time because it downloads
 
 ### to run the Web App
 
+Get the full command line options 
+
+    > run --help
+
+You are then given a choise of using either the Jetty or the Netty Server.  ( The Netty Server has better WebID support.)
+You will then get a listing of all the options.
+
+The following is known to work with https
+
+   > run --lang turtle --keyStore src/test/resources/KEYSTORE.jks --ksPass secret --https 8443 test_www /2012/
+
+Because of the .meta.n3 in the test_www directory you will not be able to GET the contents there
+
+
+The ReadWriteWeb app
+--------------------
+
+To get this:
+
+    hg clone https://dvcs.w3.org/hg/read-write-web
+    cd read-write-web
+    less README.markdown
+    ./sbt
+    
+* see [http://mercurial.selenic.com/](http://mercurial.selenic.com/) for hg
+* see [https://github.com/harrah/xsbt/wiki](https://github.com/harrah/xsbt/wiki) for sbt
+
+This project depends on:
+
+* Java 6
+* that's all :-)
+
+It comes with
+
+* sbt project
+* generic sbt launcher
+* jar packager (assembly)
+* eclipse plugin for sbt
+* Web framework (Unfiltered)
+* embedded Web server (Jetty)
+* tests for web api (specs)
+* logger (slf4j)
+* the Jena/ARQ libraries
+
+How to start geeking
+--------------------
+
+BE PATIENT: the first time, some operations take some time because it downloads
+            all the dependencies...
+
+### to launch sbt
+
+    $ ./sbt
+
+### to auto-compile the source
+
+    >  compile
+
+### to launch tests under sbt (will cache all the dependencies the first time, can take a while)
+
+    > test
+
+### to run the Web App and get the full command line options
+
     > run
 
-or
+    Choose either the Netty or the Jetty servers to continue.
+    You will get a full list of options
 
-    > run 8080
+    To start an insecure server start
+   
+    > run --lang turtle  --http 8080 test_www /2012/ 
+
+   You can now request resources using curl on the command line
+
+   $ curl -i -H "Accept: application/rdf+xml" http://localhost:8080/2012/foaf.n3 
+
+   It is possible to PUT, RDF resources too and a couple of image formats, as 
+   well as to create directories etc...
 
 ### to generate the eclipse configuration
 
     > eclipse same-targets
+
+### to generate the IntelliJ configuration
+  
+    > gen-idea
 
 ### to package the application as a stand-alone jar (creates target/read-write-web.jar)
 
@@ -65,39 +143,42 @@ or
 Using the stand-alone jar
 -------------------------
 
-    java -jar target/read-write-web.jar 8080 ~/WWW/2011/09 /2011/09  [options]
+    $ java -jar target/read-write-web.jar 
 
-Options:
-
- *   --relax   All documents exist as empty RDF files (like a wiki).
- *   --strict  Documents must be created using PUT else they return 404
-
-To run with WebID see next section.
-    
     
 HTTPS with WebID 
 ----------------
 
-### to run on https with WebID
+### to run on https with WebID ( http://webid.info/ )
     
-    Wether you run the binary from the command line as described below or run it directly inside sbt you need to set the following parameters to java
- * -Djetty.ssl.keyStoreType=JKS                              - the keystore type (usually JKS)
- * -Djetty.ssl.keyStore=src/test/resources/KEYSTORE.jks      - the path to the keystore  
- * -Djetty.ssl.keyStorePassword=secret                       - the secret password for the keystore
- * -Dsun.security.ssl.allowUnsafeRenegotiation=true          - to allow unsafe TLS renegotiation
- * -Dsun.security.ssl.allowLegacyHelloMessages=true          - to allow legacy TLS hello Messages
+   > run --lang turtle --keyStore src/test/resources/KEYSTORE.jks --ksPass secret --https 8443 test_www /2012/
 
-The sun.security options are described in more detail http://download.oracle.com/javase/7/docs/technotes/guides/security/jsse/JSSERefGuide.html#workarounds
-So to run the compiled jar you can use
+   You can now request resources using curl over https using the command line
 
-   > java -Djetty.ssl.keyStoreType=JKS -Djetty.ssl.keyStore=/Users/hjs/tmp/cert/KEYSTORE.jks -Djetty.ssl.keyStorePassword=secret -jar target/read-write-web.jar --https 8443 www_test /2011/09
+   $ curl -k -i -H "Accept: application/rdf+xml" https://localhost:8443/2012/foaf.n3
 
-or to run sbt use the shorthand options in the bin/rwsbt.sh shell script eg
+   In the test_www directory there is a meta.n3 file. If you move it to .meta.n3
 
-  > bin/rwsbt.sh -n -sslUnsafe -sslLegacy
+   $ cd test_www
+   $ mv meta.n3 .meta.n3
 
-(exercise: improve the script so that all options can be set with it)
-### to enable debug add the following parameters after 'java'
+   Then the directory will be access controlled. You will need a functioning WebID to authenticate.
 
-     -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005
+### to enable debug mode
+
+    start sbt with the 
+
+    $ bin/rwsbt.sh -d      
+
+### to generate the eclipse configuration
+
+    > eclipse same-targets
+
+### to generate the IntelliJ configuration
+  
+    > gen-idea
+
+### to package the application as a stand-alone jar (creates target/read-write-web.jar)
+
+    > assembly
 

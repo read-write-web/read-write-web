@@ -35,6 +35,7 @@ import java.io.{InputStream, OutputStream}
 import unfiltered.response._
 import unfiltered.netty._
 import collection.immutable.List
+import scala.None
 
 /**
  * ReadWrite Web for Netty server, allowing TLS renegotiation
@@ -50,6 +51,7 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
 
      try {
        parser.parse(args)
+       postParse
      } catch {
        case e: ArgotUsageException => err.println(e.message); sys.exit(1)
      }
@@ -68,19 +70,24 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
 
      val echo =  new cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with NettyEchoPlan
 
-     //this is incomplete: we should be able to start both ports.... not sure how to do this yet.
-     val service = httpsPort.value match {
-       case Some(port) => new KeyAuth_Https(port)
-       case None => new KeyAuth_Https(httpPort.value.get)
+     val domain = host.value.getOrElse("0.0.0.0")
+     //only one of the following two servers can be started at one time
+     //having two would require a lot more care with issues of overwriting
+     httpsPort.value.map {
+       port => new KeyAuth_Https(port).
+         plan(publicStatic).
+         plan( echo ).
+         plan( x509v ).
+         plan( webidp ).
+         plan( rww ).run()
      }
 
-
-     // configures and launches a Netty server
-     service.plan(publicStatic).
-       plan( echo ).
-       plan( x509v ).
-       plan( webidp ).
-       plan( rww ).run()
+     httpPort.value.map {
+      port => Http(httpPort.value.get,domain).
+        plan(publicStatic).
+        plan( echo ).
+        plan( rww ).run()
+    }
      
    }
 
@@ -137,6 +144,16 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
     val signer = ReadWriteWebNetty.signer
   }
 
+  /**
+   * set environmental variables, but adapt them for the underlying server
+   * (a silly hack because jetty and netty in unfiltered use different TLS security
+   * properties, and I don't want to dig through each library to set that right just now)
+   * @param name
+   * @param value
+   */
+  def setPropHack(name: String, value: String) {
+    System.setProperty("netty."+name,value)
+  }
 }
 
 
