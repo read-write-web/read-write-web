@@ -167,4 +167,10 @@ RWW comes with a simple authentication service that you can use to help
 others who don't have WebID to get going without needing to deploy TLS 
 services. Go to https://localhost:8443/srv/idp in your browser .
 
+This of course is not installed if you run as server on --http and it is
+disabled for Jetty, as in Jetty I have not found how to do TLS renegotiation
+so that the certificate does not need to be requested if the resource is not
+protected. (On such servers one needs authentication to happen on a different 
+port )
+
 
