@@ -34,8 +34,9 @@ Community
 For any improvement ideas and and bugfixes send e-mail to henry.story@bblfish.net  
 
 This application is based on standards that the following groups are discussing:
-* the [http://www.w3.org/community/rww/](read-write-web community group)
-* the [http://www.w3.org/community/webid/](WebID community group)  
+
+* the [read-write-web community group](http://www.w3.org/community/rww/)
+* the [WebID community group](http://www.w3.org/community/webid/) 
 
 
 How to start geeking
@@ -105,7 +106,7 @@ If you want to debug SBT using an IDE the start sbt with
 Access control with WebID 
 -------------------------
 
-### start server on https port with WebID ( http://webid.info/ )
+### start server on https port with [WebID](http://webid.info/)
     
     > run --lang turtle --keyStore src/test/resources/KEYSTORE.jks --clientTLS noCA --ksPass secret --https 8443 test_www /2012/
 
@@ -147,6 +148,7 @@ This will save your certificate in the keychain associated with the browser.
 You can then edit the .meta.n3 file to give yourself read/write/execute access using that certificate.
 
 If you want to use that certificate using curl, follw these steps:
+
 * save the certificate to your hardrive as a pkcs12 ( p12 ) file 
 * convert it to pem including private key
     > openssl pkcs12  -in cert.p12 -out myCert.pem
