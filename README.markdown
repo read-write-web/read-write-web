@@ -132,7 +132,7 @@ Curl returns a SSL error, because the server asked curl for a client certificate
     Content-Length: 0
 
 In order to be able to access protected.n3 you need to use a WebID enabled certificate 
-when connecting and add that WebID to the list of 
+when connecting and add that WebID to the access controlfile .meta.n3
  
     $ curl -k -i -E src/test/resources/JohnDoe.pem https://localhost:8443/2012/private.n3
       Enter PEM pass phrase:
@@ -147,8 +147,8 @@ This will save your certificate in the keychain associated with the browser.
 You can then edit the .meta.n3 file to give yourself read/write/execute access using that certificate.
 
 If you want to use that certificate using curl, follw these steps:
- * save the certificate to your hardrive as a pkcs12 ( p12 ) file 
- * convert it to pem including private key
+* save the certificate to your hardrive as a pkcs12 ( p12 ) file 
+* convert it to pem including private key
     > openssl pkcs12  -in cert.p12 -out myCert.pem
 
 Extra Userful Services provided  
@@ -172,5 +172,16 @@ disabled for Jetty, as in Jetty I have not found how to do TLS renegotiation
 so that the certificate does not need to be requested if the resource is not
 protected. (On such servers one needs authentication to happen on a different 
 port )
+
+TODO
+----
+
+There is still a lot to do. Some things we are working on:
+
+* improve asynchronous behavior using akka.io 
+* make it easy to switch between Jena, Sesame and other frameworks using [https://github.com/w3c/banana-rdf/](banana-rdf
+* improve the access control reasoning (which is very very basic for the moment)
+* improve architecture to work more fluidly with non RDF resources, such as pictures or videos
+* enrich the HTTP headers with the metadata for the access control files (so that one can follow one's nose)
 
 
