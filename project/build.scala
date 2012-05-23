@@ -41,6 +41,7 @@ object Dependencies {
 //  val akka_remote = "com.typesafe.akka" % "akka-remote" % "2.0-M3"
 //  val finagle_http = "com.twitter" %% "finagle-http" % "1.9.12"
   val subcut = "org.scala-tools.subcut" %% "subcut" % "1.0"
+  val socko = "org.mashupbots.socko" %% "socko-webserver" % "0.1.0"
 }
 
 // some usefull repositories
@@ -123,6 +124,7 @@ object YourProjectBuild extends Build {
         scalate,
         htmlparser,
         slf4s,
+        socko,
         async_http_client,
         aalto_xml, antiXML) ,
 
