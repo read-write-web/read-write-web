@@ -34,8 +34,8 @@ Community
 For any improvement ideas and and bugfixes send e-mail to henry.story@bblfish.net  
 
 This application is based on standards that the following groups are discussing:
- * the read-write-web community group at http://www.w3.org/community/rww/
- * the WebID community group at http://www.w3.org/community/webid/
+* the [http://www.w3.org/community/rww/](read-write-web community group)
+* the [http://www.w3.org/community/webid/](WebID community group)  
 
 
 How to start geeking
@@ -165,7 +165,7 @@ with
 
 RWW comes with a simple authentication service that you can use to help
 others who don't have WebID to get going without needing to deploy TLS 
-services. Go to https://localhost:8443/srv/idp in your browser .
+services. Go to [https://localhost:8443/srv/idp](https://localhost:8443/srv/idp) in your browser .
 
 This of course is not installed if you run as server on --http and it is
 disabled for Jetty, as in Jetty I have not found how to do TLS renegotiation
@@ -179,7 +179,7 @@ TODO
 There is still a lot to do. Some things we are working on:
 
 * improve asynchronous behavior using akka.io 
-* make it easy to switch between Jena, Sesame and other frameworks using [https://github.com/w3c/banana-rdf/](banana-rdf
+* make it easy to switch between Jena, Sesame and other frameworks using [https://github.com/w3c/banana-rdf/](banana-rdf)
 * improve the access control reasoning (which is very very basic for the moment)
 * improve architecture to work more fluidly with non RDF resources, such as pictures or videos
 * enrich the HTTP headers with the metadata for the access control files (so that one can follow one's nose)
