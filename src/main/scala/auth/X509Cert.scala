@@ -35,31 +35,62 @@ import interfaces.RSAPublicKey
 import unfiltered.util.IO
 import sun.security.x509._
 import org.w3.readwriteweb.util.trySome
+import actors.threadpool.TimeUnit
+import com.google.common.cache.{CacheLoader, CacheBuilder, Cache}
+import scalaz.Validation
+import scalaz.Scalaz._
 
-object X509CertSigner {
+import com.weiglewilczek.slf4s.Logging
 
-  def apply(
-      keyStoreLoc: URL,
-      keyStoreType: String,
-      password: String,
-      alias: String): X509CertSigner = {
-    val keystore = KeyStore.getInstance(keyStoreType)
+object X509CertSigner extends Logging {
 
-    IO.use(keyStoreLoc.openStream()) { in =>
-      keystore.load(in, password.toCharArray)
+  def apply( keyStoreLoc: Option[URL],
+             keyStoreType: Option[String],
+             password: Option[String],
+             alias: Option[String]): Option[X509CertSigner] = {
+    try {
+      for {
+        loc <- keyStoreLoc
+        tp <- keyStoreType
+      } yield {
+        val pass = password.map(_.toCharArray).getOrElse(null)
+        val alias2 = alias.getOrElse("")  //todo there are better ways of finding an alias than this
+        val ks = KeyStore.getInstance(tp)
+        IO.use(loc.openStream()) {
+          in => ks.load(in, pass)
+        }
+        val privateKey = ks.getKey(alias2, pass).asInstanceOf[PrivateKey]
+        val certificate = ks.getCertificate(alias2).asInstanceOf[X509Certificate]
+        //one could verify that indeed this is the private key corresponding to the public key in the cert.
+        new X509CertSigner(certificate, privateKey)
+      }
+    } catch {
+      case e: Exception => {
+        logger.warn("could not load TLS certificate for certificate signing service", e)
+        None
+      }
     }
-    val privateKey = keystore.getKey(alias, password.toCharArray).asInstanceOf[PrivateKey]
-    val certificate = keystore.getCertificate(alias).asInstanceOf[X509Certificate]
-    //one could verify that indeed this is the private key corresponding to the public key in the cert.
-
-    new X509CertSigner(certificate, privateKey)
   }
+
+  def apply( keyStoreLoc: URL,
+             keyStoreType: String,
+             password: String,
+             alias: String): X509CertSigner =
+    apply(Option(keyStoreLoc),Option(keyStoreType),Option(password),Option(alias)).get
+
 }
 
 class X509CertSigner(
-    signingCert: X509Certificate,
+    val signingCert: X509Certificate,
     signingKey: PrivateKey ) {
   val WebID_DN="""O=FOAF+SSL, OU=The Community of Self Signers, CN=Not a Certification Authority"""
+
+  val sigAlg = signingKey.getAlgorithm match {
+    case "RSA" =>  "SHA1withRSA"
+    case "DSA" =>  "SHA1withDSA"
+    //else will throw a case exception
+  }
+
 
   /**
    * Adapted from http://bfo.com/blog/2011/03/08/odds_and_ends_creating_a_new_x_509_certificate.html
@@ -69,11 +100,13 @@ class X509CertSigner(
    *
    * WARNING THIS IS   in construction
    *
+   * Look in detail at http://www.ietf.org/rfc/rfc2459.txt
+   *
    * Create a self-signed X.509 Certificate
    * @param subjectDN the X.509 Distinguished Name, eg "CN=Test, L=London, C=GB"
-   * @param pair the KeyPair
+   * @param subjectKey the public key for the subject
    * @param days how many days from now the Certificate is valid for
-   * @param algorithm the signing algorithm, eg "SHA1withRSA"
+   * @param webId a WebID to place in the Subject Alternative Name field of the Cert to be generated
    */
   def generate(
       subjectDN: String,
@@ -116,7 +149,7 @@ class X509CertSigner(
       import KeyUsageExtension._
       val keyUsage = new KeyUsageExtension
       val usages =
-        List(DIGITAL_SIGNATURE, NON_REPUDIATION, KEY_ENCIPHERMENT, KEY_AGREEMENT,  KEY_CERTSIGN)
+        List(DIGITAL_SIGNATURE, NON_REPUDIATION, KEY_ENCIPHERMENT, KEY_AGREEMENT)
       usages foreach { usage => keyUsage.set(usage, true) }
       extensions.set(keyUsage.getName,keyUsage)
     }
@@ -127,7 +160,7 @@ class X509CertSigner(
       List(SSL_CLIENT, S_MIME) foreach { ext => netscapeExt.set(ext, true) }
       extensions.set(
         netscapeExt.getName,
-        new NetscapeCertTypeExtension(false, netscapeExt.getValue))
+        new NetscapeCertTypeExtension(false, netscapeExt.getExtensionValue().clone))
     }
       
     val subjectKeyExt =
@@ -159,16 +192,33 @@ class X509CertSigner(
     return cert
   }
 
+  val clonesig : Signature =  sig
+
+  def sig: Signature = {
+    if (clonesig != null && clonesig.isInstanceOf[Cloneable]) clonesig.clone().asInstanceOf[Signature]
+    else {
+      val signature = Signature.getInstance(sigAlg)
+      signature.initSign(signingKey)
+      signature
+    }
+  }
+
+  def sign(string: String): Array[Byte] = {
+      val signature = sig
+      signature.update(string.getBytes("UTF-8"))
+      signature.sign
+  }
+
 }
 
 
 object Certs {
 
-  def unapplySeq[T](r: HttpRequest[T])(implicit m: Manifest[T]): Option[IndexedSeq[Certificate]] = {
+  def unapplySeq[T](r: HttpRequest[T])(implicit m: Manifest[T], fetch: Boolean=true): Option[IndexedSeq[Certificate]] = {
     if (m <:< manifest[HttpServletRequest])
       unapplyServletRequest(r.asInstanceOf[HttpRequest[HttpServletRequest]])
     else if (m <:< manifest[ReceivedMessage])
-      unapplyReceivedMessage(r.asInstanceOf[HttpRequest[ReceivedMessage]])
+      unapplyReceivedMessage(r.asInstanceOf[HttpRequest[ReceivedMessage]],fetch)
     else
       None //todo: should  throw an exception here?
   }
@@ -182,24 +232,29 @@ object Certs {
       case _ => None
     }
   
-  private def unapplyReceivedMessage[T <: ReceivedMessage](r: HttpRequest[T]): Option[IndexedSeq[Certificate]] = {
+  private def unapplyReceivedMessage[T <: ReceivedMessage](r: HttpRequest[T], fetch: Boolean): Option[IndexedSeq[Certificate]] = {
 
     import org.jboss.netty.handler.ssl.SslHandler
     
     val sslh = r.underlying.context.getPipeline.get(classOf[SslHandler])
     
     trySome(sslh.getEngine.getSession.getPeerCertificates.toIndexedSeq) orElse {
-      sslh.setEnableRenegotiation(true)
-      r match {
-        case UserAgent(agent) if needAuth(agent) => sslh.getEngine.setNeedClientAuth(true)
-        case _ => sslh.getEngine.setWantClientAuth(true)  
+      //it seems that the jvm does not keep a very good cache of remote certificates in a session. But
+      //see http://stackoverflow.com/questions/8731157/netty-https-tls-session-duration-why-is-renegotiation-needed
+      if (!fetch) None
+      else {
+        sslh.setEnableRenegotiation(true) // todo: does this have to be done on every request?
+        r match {
+          case UserAgent(agent) if needAuth(agent) => sslh.getEngine.setNeedClientAuth(true)
+          case _ => sslh.getEngine.setWantClientAuth(true)
+        }
+        val future = sslh.handshake()
+        future.await(30000) //that's certainly way too long.
+        if (future.isDone && future.isSuccess)
+          trySome(sslh.getEngine.getSession.getPeerCertificates.toIndexedSeq)
+        else
+          None
       }
-      val future = sslh.handshake()
-      future.await(30000) //that's certainly way too long.
-      if (future.isDone && future.isSuccess)
-        trySome(sslh.getEngine.getSession.getPeerCertificates.toIndexedSeq)
-      else
-        None
     }
 
   }
@@ -213,7 +268,7 @@ object Certs {
   *
   */
   def needAuth(agent: String): Boolean =
-    agent contains "Java"
+    (agent contains "Java")  | (agent contains "AppleWebKit")  |  (agent contains "Opera") | (agent contains "libcurl")
   
 }
 

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<!--
+  ~ Copyright (c) 2011 Henry Story (bblfish.net)
+  ~ under the MIT licence defined at
+  ~    http://www.opensource.org/licenses/mit-license.html
+  -->
+<html>
+<head>
+    <title>WebID Authentication Service</title>
+    <link rel="stylesheet" type="text/css" href="idp/production.min.css"/>
+    <script src="/public/logout.js" type="text/javascript"></script>
+    <script src="idp/jquery.1.7.1.min.js"></script>
+    <script>
+        $(needyLogin);
+    </script>
+</head>
+
+<body class="form">
+
+
+<div id="wrapper">
+    <header id="header" class="cf">
+        <div class="wrapper">
+            <img id="logo" src="idp/icon.png"/>
+        </div>
+    </header>
+
+    <div id="content">
+        <section id="formWrap">
+            <form id="login" class="webidform" novalidate="" action="WebIdService.auth.html" method="POST">
+                <div id="favicon">
+                    <div class="vertical">
+                        <a class="response auth" href="http://webid.fcns.eu/"><span class="button sitename" id="sitename">webid.fcns.eu</span></a>
+                    </div>
+                </div>
+                <div id="signIn">
+                    <div class="arrow"></div>
+                    <div class="table">
+                        <div class="vertical contents">
+                            <div class="form_section">
+                                <span class="authenticated">
+                                    <p><b>Name:</b> <span class="user_name">Bblfish</span></p>
+                                    <img class="mugshot" height="100px" src="http://bblfish.net/pix/bfish.small.east.jpg" alt="User avatar"/>
+                                </span>
+                                <div class="submit cf">
+                                    <input type="submit"  class="light" tabindex="3" value="change id" onclick="logout()"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </section>
+
+        <section id="wait" style="display: none; ">
+            <div class="table">
+                <div class="vertical contents">
+                    <h2>Communicating with server</h2>
+
+                    <p>Just a moment while we talk with the server.</p>
+                </div>
+            </div>
+        </section>
+
+
+        <section id="error">
+            <div class="table">
+                <div class="vertical contents">
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+</div>
+<!-- END OF SITE_WRAPPER -->
+
+<footer>
+    WebID for a distributed Secure Social Web ... Now !
+</footer>
+<!-- END OF FOOTER -->
+
+
+</body>
+</html>

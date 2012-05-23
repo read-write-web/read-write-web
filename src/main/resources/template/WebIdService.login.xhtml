@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2011 Henry Story (bblfish.net)
+  ~ under the MIT licence defined at
+  ~    http://www.opensource.org/licenses/mit-license.html
+  ~
+  ~ Permission is hereby granted, free of charge, to any person obtaining a copy of
+  ~ this software and associated documentation files (the "Software"), to deal in the
+  ~ Software without restriction, including without limitation the rights to use, copy,
+  ~ modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
+  ~ and to permit persons to whom the Software is furnished to do so, subject to the
+  ~ following conditions:
+  ~
+  ~ The above copyright notice and this permission notice shall be included in all
+  ~ copies or substantial portions of the Software.
+  ~
+  ~ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+  ~ INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+  ~ PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+  ~ HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+  ~ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+  ~ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  -->
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head id="head">
+	<title>WebId Identity Provider Info Page</title>
+	<script src="/public/logout.js" type="text/javascript" />
+</head>
+<body>
+
+<p>Welcome <span class="user_name">Henry Story</span></p>
+
+<table>
+    <tr>
+        <td>
+          <a class="rp_url" href="http://bblfish.net/?webid=http%3A%2F%2Fbblfish.net%2Fpeople%2Fhenry%2Fcard%23me&amp;ts=2011-12-04T01%3A16%3A58-0800&amp;sig=GgxhFmf__2M0aQDjFU4Yg1bfjk90npXOUo6Mn_5xL4Z7H5mVP1BpDmoBorFT5uVvkDWOaSRU6ka2oo04GgoIsL9xODiYej7u0Cg-lEnA8aqL_7_X2pv1j3C6nPj-huZctEDi3QmmggtKsOVRp_0q8l9mmqIU-TBRyLjkk3mk6yUcWyAUu-pMP6DHqV-XVwys5Y3UYmeM3lPqOS_6wdd-qS-GkSZadtJEXu-IPUBEFWrVzGEx_Bu-WWWqbU5r0N6iY5PxmsZkKCSSdxfjGV-kjtHNcTQFbSlaGPkKeEEAPDLtoxxpBdaRUy4oO6biAW5tfp_eId_sfVHxLhaxqU9jnA">
+             <button>login to <span class="rp_name">bblfish.net</span></button>
+          </a>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <img class="mugshot" src="http://farm1.static.flickr.com/164/373663745_e2066a4950.jpg" alt="mugshot"/>
+        </td>
+    </tr>
+</table>
+
+<p>Or would you rather use a different Identity? <a href="" onclick="return logout()">logout</a> -- (only works on IE and Firefox)</p>
+
+</body>
+</html>

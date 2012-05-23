@@ -15,6 +15,7 @@ sealed trait Post
 case class PostUpdate(update: UpdateRequest) extends Post
 case class PostRDF(model: Model) extends Post
 case class PostQuery(query: Query) extends Post
+case class PostBinary(in: InputStream) extends Post
 case object PostUnknown extends Post
 
 import scalaz._
@@ -23,7 +24,7 @@ import Scalaz._
 object Post {
   
   val SPARQL = "application/sparql-query"
-  val supportContentTypes = Lang.supportContentTypes + SPARQL
+  val supportContentTypes = Lang.supportContentTypes ++ Image.supportedImages.map(_.contentType) + SPARQL
   val supportedAsString = supportContentTypes mkString ", "
 
   
@@ -34,41 +35,36 @@ object Post {
       base: URL,
       contentType: String): Post = {
     assert(supportContentTypes contains contentType)
-    val source = Source.fromInputStream(is, "UTF-8")
-    val s = source.getLines.mkString("\n")
-    parse(s, base, contentType)
-  }
-  
-  def parse(
-      s: String,
-      base: URL,
-      contentType: String): Post = {
-    assert(supportContentTypes contains contentType)
-    
-    val reader = new StringReader(s)
-    
+
+    val inAsString = {
+       val source = Source.fromInputStream(is, "UTF-8")
+       source.getLines.mkString("\n")
+    }
+
     def postUpdate =
       try {
-        val update: UpdateRequest = UpdateFactory.create(s, base.toString)
+        val update: UpdateRequest = UpdateFactory.create(inAsString, base.toString)
         PostUpdate(update).success
       } catch {
         case qpe: QueryParseException => qpe.fail
       }
       
     def postRDF(lang: Lang) =
-      modelFromString(s, base, lang) flatMap { model => PostRDF(model).success }
+      modelFromString(inAsString, base, lang) flatMap { model => PostRDF(model).success }
     
     def postQuery =
       try {
-        val query = QueryFactory.create(s)
+        val query = QueryFactory.create(inAsString)
         PostQuery(query).success
       } catch {
         case qe: QueryException => qe.fail
       }
+
     
     contentType match {
       case SPARQL => postUpdate | (postQuery | PostUnknown)
       case RequestLang(lang) => postRDF(lang) | PostUnknown
+      case GIF.contentType | JPEG.contentType | PNG.contentType => PostBinary(is)
     }
 
   }

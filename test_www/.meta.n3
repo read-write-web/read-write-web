@@ -5,9 +5,18 @@
 :a1 a acl:Authorization;
    acl:accessTo <foaf.n3>;
    acl:mode acl:Write;
-   acl:agent <http://bblfish.net/people/henry/card#me> .
+   acl:agent <https://localhost:8443/2012/foaf.n3#joe> .
 
+:a2 a acl:Authorization;
+   acl:accessTo <private.n3>;
+   acl:mode acl:Write, acl:Read;
+   acl:agent  <https://localhost:8443/2012/foaf.n3#joe> .
     
+:readAll a acl:Authorization;
+   acl:accessTo <hello.n3>;
+   acl:mode acl:Read;
+   acl:agentClass foaf:Agent .
+
 :readAll a acl:Authorization;
    acl:accessTo <foaf.n3>;
    acl:mode acl:Read;

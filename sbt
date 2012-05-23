@@ -3,9 +3,9 @@
 dir=$(dirname $0)
 cd "$dir"
 
-url="http://repo.typesafe.com/typesafe/ivy-releases/org.scala-tools.sbt/sbt-launch/0.11.0/sbt-launch.jar"
+url="http://repo.typesafe.com/typesafe/ivy-releases/org.scala-tools.sbt/sbt-launch/0.11.2/sbt-launch.jar"
 
-sbt="sbt-launch-0.11.0.jar"
+sbt="sbt-launch-0.11.2.jar"
 
 # set the right tool to download sbt
 if [ -n "$tool" ]; then
@@ -38,5 +38,5 @@ if [ ! -f "$sbt" ]; then
 fi
 
 # tweak this line according to your needs
-java -Xmx512M -jar -Dfile.encoding=UTF8 -Xmx1536M -Xss1M -XX:+CMSClassUnloadingEnabled -XX:MaxPermSize=256m "$dir/$sbt" "$@"
+java $SBT_PROPS -Xmx512M -jar -Dfile.encoding=UTF8 -Xmx1536M -Xss1M -XX:+CMSClassUnloadingEnabled -XX:MaxPermSize=256m "$dir/$sbt" "$@"
 

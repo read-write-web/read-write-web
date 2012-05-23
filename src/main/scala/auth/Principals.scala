@@ -24,29 +24,72 @@
 package org.w3.readwriteweb.auth
 
 import java.security.Principal
-
-/**
- * @author hjs
- * @created: 13/10/2011
- */
+import com.hp.hpl.jena.rdf.model.Model
+import com.hp.hpl.jena.shared.WrappedIOException
+import scalaz.{Scalaz, Validation}
+import Scalaz._
+import java.net.{ConnectException, URL}
+import org.w3.readwriteweb.{CacheControl, GraphCache}
 
 /**
  * @author Henry Story from http://bblfish.net/
  * @created: 09/10/2011
  */
 
-case class WebIdPrincipal(webid: String) extends Principal {
-  def getName = webid
+/**
+ * The WebID - ie, verified identity - something like a Principal.
+ * it is arguable that it should know what it was verified against.
+ */
+protected object WebID {
+
+  def apply(subjectAlternativeName: String): Validation[SANFailure,WebID] =
+    toUrl(subjectAlternativeName) flatMap {  url =>
+        val protocol = url.getProtocol
+        if ("http".equals(protocol) || "https".equals(protocol)) {
+          new WebID(url).success
+        } else UnsupportedProtocol("only http and https url supported at present",subjectAlternativeName).fail
+    }
+
+
+
+  def toUrl(urlStr: String): Validation[SANFailure,URL] = {
+    try { new URL(urlStr).success } catch {
+      // oops: should be careful, not all SANs are perhaps traditionally written out as a full URL.
+      case e => URISyntaxError("unparseable Subject Alternative Name",urlStr).fail
+    }
+  }
+
+}
+
+/**
+ * A WebID Principal
+ * Can only be constructed by the object, which does some minimal verifications
+ **/
+case class WebID private (val url: URL) extends Principal {
+  import org.w3.readwriteweb.util.wrapValidation
+
+  def getName = url.toExternalForm
+
   override def equals(that: Any) = that match {
-    case other: WebIdPrincipal => other.webid == webid
+    case other: WebID => other.url == url
     case _ => false
   }
+
+  //TODO: now that we are no longer passing the GraphCache around it's questionable whether we still need this method
+  //in this class
+  def getDefiningModel(cacheControl: CacheControl.Value = CacheControl.CacheFirst): Validation[ProfileError, Model] =
+    GraphCache.resource(url).get(cacheControl) failMap {
+      case ioe: WrappedIOException => new ProfileGetError("error fetching profile", Some(ioe),url)
+      case connE : ConnectException => new ProfileGetError("error fetching profile", Some(connE),url)
+      case other => new ProfileParseError("error parsing profile", Some(other),url)
+    }
 }
+
 
 case class Anonymous() extends Principal {
   def getName = "anonymous"
   override def equals(that: Any) =  that match {
-      case other: WebIdPrincipal => other eq this 
+      case other: Principal => other eq this
       case _ => false
     } //anonymous principals are equal only when they are identical. is this wise?
       //well we don't know when two anonymous people are the same or different.

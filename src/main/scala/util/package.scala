@@ -5,8 +5,9 @@ import com.hp.hpl.jena.rdf.model._
 import scalaz._
 import Scalaz._
 import java.net.URL
+import com.weiglewilczek.slf4s.Logging
 
-package object util {
+package object util extends Logging {
   
   def modelFromInputStream(
       is: InputStream,
@@ -17,7 +18,10 @@ package object util {
       m.getReader(lang.jenaLang).read(m, is, base.toString)
       m.success
     } catch {
-      case t => t.fail
+      case t =>  {
+        logger.info("cought exception turning stream into model ",t)
+        t.fail
+      }
     }
   
   def modelFromString(
@@ -41,9 +45,17 @@ package object util {
   // I wonder if this is already defined somewhere...
   def trySome[T](body: => T): Option[T] =
     try {
-      Option(body)
+      val res = body;
+      if (res == null) None else Option(res)
     } catch {
       case _ => None
     }
   
+   def tryOrFail[T](body: => T): Validation[Throwable,T] =
+      try {
+        val res = body;
+        res.success
+      } catch {
+        case e => e.fail
+      }
 }

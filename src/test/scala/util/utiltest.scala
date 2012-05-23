@@ -59,8 +59,12 @@ package object utiltest {
     def get_statusCode: Handler[Int] = new Handler(req, (c, r, e) => c, { case t => () })
     
     def get_header(header: String): Handler[String] = req >:> { _(header).head }
-    
+
     def get: Request = req.copy(method="GET")
+
+    def get(lang: Lang): Request = req.copy(method="GET") <:< Map("Accept"->lang.contentType)
+
+    def delete: Request = req.copy(method="DELETE")
     
     def >++ [A, B, C] (block:  Request => (Handler[A], Handler[B], Handler[C])) = {
       Handler(req, { (code, res, opt_ent) =>

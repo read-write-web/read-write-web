@@ -23,10 +23,14 @@
 
 package org.w3.readwriteweb.auth
 
-import unfiltered.request.Path
-import unfiltered.response.{Html, ContentType, Ok}
-import org.w3.readwriteweb.WebCache
 import unfiltered.Cycle
+import xml.{Elem, XML}
+import unfiltered.request.Path
+import org.fusesource.scalate.scuery.{Transform, Transformer}
+import unfiltered.scalate.Scalate
+import java.text.DateFormat
+import java.util.Date
+import unfiltered.response.{CacheControl, Expires, Ok, Html}
 
 /**
  * This plan just described the X509 WebID authentication information.
@@ -39,26 +43,78 @@ import unfiltered.Cycle
  * @created: 13/10/2011
  */
 
-trait X509view[Request,Response]  {
-   implicit def wc: WebCache
-   implicit def manif: Manifest[Request]
+trait X509view[Req,Res]  {
+   implicit def manif: Manifest[Req]
 
-    def intent: Cycle.Intent[Request, Response] =  {
-      case req @ Path(path) if path startsWith "/test/auth/x509" =>
-        Ok ~> ContentType("text/html") ~> Html(
-          <html><head><title>Authentication Page</title></head>
-        { req match {
-          case X509Claim(xclaim) => <body>
-            <h1>Authentication Info received</h1>
-            <p>You were identified with the following WebIDs</p>
-             <ul>{xclaim.webidclaims.filter(cl=>cl.verified).map(p=> <li>{p.webId}</li>)}</ul>
-            <p>You sent the following certificate</p>
-            <pre>{xclaim.cert.toString}</pre>
-          </body>
-          case _ => <body><p>We received no Authentication information</p></body>
-        }
-          }</html>)
+  val fileDir = "/template/"
 
+  lazy val webidTst: Elem = XML.load(this.getClass.getResourceAsStream(fileDir+"WebId.xhtml"))
+  lazy val noX509: Elem = XML.load(this.getClass.getResourceAsStream(fileDir+"NoWebId.xhtml"))
+  
+  def intent : Cycle.Intent[Req,Res] = {
+    case req @ Path("/test/WebId")  => req match {
+      case X509Claim(claim) => Ok ~> Html( new X509Filler(claim).apply(webidTst) ) ~> Expires("0") ~> CacheControl("no-cache")
+      case _ => Ok ~> Html (new NoX509().apply(noX509)) ~> Expires("0") ~> CacheControl("no-cache")
+    }
+    case req @ Path("/test/WebIdAuth2") => Ok ~> Scalate(req, "hello.ssp")
+  }
+
+}
+
+class NoX509() extends Transformer {
+  $(".date").contents = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.LONG).format(new Date)
+}
+
+class X509Filler(x509: X509Claim) extends Transformer {
+  def pretty(res: Outcome) = {
+    res match {
+      case org.w3.readwriteweb.auth.passed => <span class="outcome_passed">passed</span>
+      case org.w3.readwriteweb.auth.failed => <span class="outcome_failed">failed</span>
+      case org.w3.readwriteweb.auth.untested => <span class="outcome_untested">untested</span>
+    }
+  }
+  $(".date").contents = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.LONG).format( x509.claimReceivedDate)
+  $(".cert_test") { node =>
+      val x509Assertion = new Assertion(certOk,x509);
+      val x509Assertions = x509Assertion::x509Assertion.depends
+      val ff = for (ast <- x509Assertions) yield {
+        new Transform(node) {
+          $(".tst_question").contents = ast.test.title
+          $(".tst_txt").contents = ast.test.description
+          $(".tst_res").contents = pretty(ast.result.outcome)
+          $(".tst_res_txt").contents = ast.result.description
+        }.toNodes()
       }
+      ff.flatten
+  }
+  $(".san_number").contents = if (x509.claims.size == 0) "No" else x509.claims.size.toString
+  $(".san_verified") { node => if (x509.claims.size==0) <span/> else
+    new Transform(node) {
+      $(".san_verified_no").contents = x509.verified.size.toString
+    }.toNodes()
+  }
+
+  $(".webid_test") { node =>
+    val ff = for (idclaim <- x509.claims) yield {
+      val idAsrt = new Assertion(webidClaimTst, idclaim)
+      new Transform(node) {
+        $(".webid").contents = idclaim.san
+        $(".tst_res_txt").contents = idAsrt.result.description
+        $(".tst_res").contents = pretty(idAsrt.result.outcome)
+        $(".webid_cause") { n2 =>
+          val nn = for (a <- idAsrt.depends) yield {
+            new Transform(n2) {
+              $(".cause_question").contents = a.test.title
+              $(".cause_txt").contents = a.test.description
+              $(".cause_res").contents = a.result.outcome.name
+            }.toNodes()
+          }
+          nn.flatten
+        }
+      }.toNodes()
+    }
+    ff.flatten
+  }
+  $(".certificate").contents = x509.cert.toString
 
 }

@@ -34,11 +34,12 @@ import scala.collection.mutable
 import javax.net.ssl._
 import java.io.File
 import org.w3.readwriteweb.{Post, RDFXML, TURTLE}
+import org.apache.commons.codec.binary.Hex
 
 
 /**
  * A key manager that can contain multiple keys, but where the client can take one of a number of identities
- * One at a time - so this is not sychronised. It also assumes that the server will accept all CAs, which in
+ * One at a time - so this is not synchronised. It also assumes that the server will accept all CAs, which in
  * these test cases it does.
  */
 class FlexiKeyManager extends X509ExtendedKeyManager {
@@ -101,11 +102,11 @@ object CreateWebIDSpec extends SecureFileSystemBased {
 
   val updatePk = """
        PREFIX cert: <http://www.w3.org/ns/auth/cert#>
-       PREFIX rsa: <http://www.w3.org/ns/auth/rsa#>
+       PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
        PREFIX : <#>
        INSERT DATA {
-         :jL cert:key [ rsa:modulus "%s"^^cert:hex;
-                        rsa:public_exponent "%s"^^cert:int ] .
+         :jL cert:key [ cert:modulus "%s"^^xsd:hexBinary;
+                        cert:exponent "%s"^^xsd:integer ] .
        }
   """
 
@@ -159,7 +160,7 @@ object CreateWebIDSpec extends SecureFileSystemBased {
          keystore,
          "JKS",
          "secret",
-         "localhost"
+         "selfsigned"
        )
 
        val rsagen = KeyPairGenerator.getInstance("RSA")
@@ -181,8 +182,9 @@ object CreateWebIDSpec extends SecureFileSystemBased {
 
        val joeKey = joeCert(0).getPublicKey.asInstanceOf[RSAPublicKey]
 
+       val hex = new String(Hex.encodeHex(joeKey.getModulus.toByteArray))
        val updateQStr = updatePk.format(
-                     joeKey.getModulus.toString(16),
+                     hex.stripPrefix("00"),
                      joeKey.getPublicExponent()
        )
 

@@ -1,6 +1,7 @@
 #!/bin/bash 
 
-KS=src/test/resources/KEYSTORE.jks
+BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+KS=$BASE/src/test/resources/KEYSTORE.jks
 while [ $# -gt 0 ] 
 do 
  case $1 in 
@@ -22,6 +23,5 @@ do
   shift 1
  done
 
-
 export SBT_PROPS=$PROPS
-xsbt 
+$BASE/sbt 
