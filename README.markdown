@@ -181,7 +181,7 @@ TODO
 There is still a lot to do. Some things we are working on:
 
 * improve asynchronous behavior using akka.io 
-* make it easy to switch between Jena, Sesame and other frameworks using [https://github.com/w3c/banana-rdf/](banana-rdf)
+* make it easy to switch between Jena, Sesame and other frameworks using [banana-rdf](https://github.com/w3c/banana-rdf/)
 * improve the access control reasoning (which is very very basic for the moment)
 * improve architecture to work more fluidly with non RDF resources, such as pictures or videos
 * enrich the HTTP headers with the metadata for the access control files (so that one can follow one's nose)
