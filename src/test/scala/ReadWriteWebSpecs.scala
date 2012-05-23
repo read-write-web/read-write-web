@@ -7,11 +7,13 @@ object ReadWriteWebSpec extends Specification {
       // access content
       GetStrictModeSpec, GetWikiModeSpec,
       ContentNegociationSpec,
+      // create directory
+      CreateDirSpec,
       // create content
       PutRDFXMLSpec, PostRDFSpec,
       PutInvalidRDFXMLSpec, PostOnNonExistingResourceSpec,
       // sparql query
-      PostSelectSpec, PostConstructSpec, PostAskSpec, 
+      PostSelectSpec, PostConstructSpec, PostAskSpec,
       // sparql update
       PostInsertSpec,
       // delete content

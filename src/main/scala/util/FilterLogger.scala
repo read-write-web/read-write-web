@@ -13,9 +13,9 @@ class FilterLogger(logger: Logger) extends Filter {
   def destroy(): Unit = ()
 
   def doFilter(
-    request: ServletRequest,
-    response: ServletResponse,
-    chain: FilterChain): Unit = {
+      request: ServletRequest,
+      response: ServletResponse,
+      chain: FilterChain): Unit = {
     val r: HttpServletRequest = request.asInstanceOf[HttpServletRequest]
     val method = r.getMethod
     val uri = r.getRequestURI 

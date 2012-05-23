@@ -2,48 +2,68 @@ package org.w3.readwriteweb.util
 
 import org.w3.readwriteweb._
 
+import auth.RDFAuthZ
 import org.specs._
-import java.net.URL
-import unfiltered.response._
-import unfiltered.request._
 import dispatch._
 import java.io._
 
-import com.codecommit.antixml._
 import grizzled.file.GrizzledFile._
 
-import com.hp.hpl.jena.rdf.model._
-import com.hp.hpl.jena.query._
-import com.hp.hpl.jena.update._
-
-import org.w3.readwriteweb.util._
 import org.w3.readwriteweb.utiltest._
+import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
+import unfiltered.filter.Planify
+import unfiltered.netty.{ReceivedMessage, ServerErrorResponse, cycle}
+import unfiltered.spec.netty.Started
 
-trait ResourceManaged extends Specification with unfiltered.spec.jetty.Served {
+trait JettyResourceManaged extends Specification with unfiltered.spec.jetty.Served {
   
   def resourceManager: ResourceManager
-  
-  def setup = { _.filter(new ReadWriteWeb(resourceManager).plan) }
+
+  val rww = new ReadWriteWeb[HttpServletRequest,HttpServletResponse] {
+     val rm = resourceManager
+     def manif = manifest[HttpServletRequest]
+   }
+
+  def setup = { _.filter(Planify(rww.intent)) }
  
 }
 
+/**
+ * Netty Resource managed.
+ **/
+trait ResourceManaged extends Specification with unfiltered.spec.netty.Served {
+  import org.jboss.netty.handler.codec.http._
+
+  def resourceManager: ResourceManager
+
+  val rww = new cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with ReadWriteWeb[ReceivedMessage,HttpResponse] {
+    val rm = resourceManager
+    def manif = manifest[ReceivedMessage]
+  }
+
+  def setup = { _.plan(rww) }
+
+}
+
+
+
 trait FilesystemBased extends ResourceManaged {
-  
+
   lazy val mode: RWWMode = ResourcesDontExistByDefault
-  
-  lazy val language = "RDF/XML-ABBREV"
-    
-  lazy val baseURL = "/2007/wiki"
-  
+
+  lazy val lang = RDFXML
+
+  lazy val baseURL = "/wiki"
+
   lazy val root = new File(new File(System.getProperty("java.io.tmpdir")), "readwriteweb")
 
-  lazy val resourceManager = new Filesystem(root, baseURL, language)(mode)
-  
+  lazy val resourceManager = new Filesystem(root, baseURL, lang)(mode)
+
   doBeforeSpec {
     if (root.exists) root.deleteRecursively()
     root.mkdir()
   }
-  
+
 }
 
 trait SomeRDF extends SomeURI {
@@ -62,26 +82,41 @@ trait SomeRDF extends SomeURI {
 """
 """
     
-  val referenceModel = modelFromString(rdfxml, uriBase).toOption.get
+  val referenceModel = modelFromString(rdfxml, uriBase, RDFXML).toOption.get
 
 }
 
 trait SomeURI extends FilesystemBased {
   
   val emptyModel = com.hp.hpl.jena.rdf.model.ModelFactory.createDefaultModel()
+
+  val peopleDirPath = "wiki/people/"
+
+  lazy val dirUri = host / peopleDirPath
   
-  lazy val uri = host / "2007/wiki/people/JoeLambda"
+  lazy val uri = host / "wiki/people/JoeLambda"
   
   lazy val uriBase = baseURI(uri)
+  
+  lazy val directory = new File(root, "people")
   
   lazy val resourceOnDisk = new File(root, "people/JoeLambda")
   
 }
 
-trait SomeDataInStore extends FilesystemBased with SomeRDF with SomeURI {
+trait SomePeopleDirectory extends SomeRDF with SomeURI {
   
   doBeforeSpec {
-    val httpCode = Http(uri.put(rdfxml) get_statusCode)
+    val httpCode = Http(dirUri.put(RDFXML, rdfxml) get_statusCode)
+    httpCode must_== 201
+  }
+  
+}
+
+trait SomeDataInStore extends SomePeopleDirectory {
+  
+  doBeforeSpec {
+    val httpCode = Http(uri.put(RDFXML, rdfxml) get_statusCode)
     httpCode must_== 201
   }
   

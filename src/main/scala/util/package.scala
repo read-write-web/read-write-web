@@ -2,66 +2,36 @@ package org.w3.readwriteweb
 
 import java.io._
 import com.hp.hpl.jena.rdf.model._
-import com.hp.hpl.jena.query._
-import unfiltered.response._
 import scalaz._
 import Scalaz._
+import java.net.URL
+import com.weiglewilczek.slf4s.Logging
 
-package object util {
+package object util extends Logging {
   
-  val defaultLang = "RDF/XML-ABBREV"
-
-  class MSAuthorVia(value: String) extends ResponseHeader("MS-Author-Via", List(value))
-  
-  object ViaSPARQL extends MSAuthorVia("SPARQL")
-  
-  object ResponseModel {
-    def apply(model: Model, base: String, encoding: RDFEncoding): ResponseStreamer =
-      new ResponseStreamer {
-        def stream(os: OutputStream): Unit =
-          encoding match {
-            case RDFXML => model.getWriter("RDF/XML-ABBREV").write(model, os, base)
-            case TURTLE => model.getWriter("TURTLE").write(model, os, base)
-          }
-      }
-  }
-
-  object ResponseResultSet {
-    def apply(rs: ResultSet): ResponseStreamer =
-      new ResponseStreamer {
-        def stream(os: OutputStream): Unit = ResultSetFormatter.outputAsXML(os, rs) 
-      }
-    def apply(result: Boolean): ResponseStreamer =
-      new ResponseStreamer {
-        def stream(os: OutputStream):Unit = ResultSetFormatter.outputAsXML(os, result) 
-      }
-  }
-
-  //Passing strings into mathod arguments, especially as these differ completely between rdf stacks is not so good
-  //passing objects is better
-  def modelFromInputStream(is:InputStream, base: String,  lang: RDFEncoding): Validation[Throwable, Model]=
-      modelFromInputStream(is, base, RDFEncoding.jena(lang))
-
   def modelFromInputStream(
       is: InputStream,
-      base: String,
-      lang: String = "RDF/XML-ABBREV"): Validation[Throwable, Model] =
+      base: URL,
+      lang: Lang): Validation[Throwable, Model] =
     try {
       val m = ModelFactory.createDefaultModel()
-      m.read(is, base, lang)
+      m.getReader(lang.jenaLang).read(m, is, base.toString)
       m.success
     } catch {
-      case t => t.fail
+      case t =>  {
+        logger.info("cought exception turning stream into model ",t)
+        t.fail
+      }
     }
   
   def modelFromString(
       s: String,
-      base: String,
-      lang: String = "RDF/XML-ABBREV"): Validation[Throwable, Model] =
+      base: URL,
+      lang: Lang): Validation[Throwable, Model] =
     try {
       val reader = new StringReader(s)
       val m = ModelFactory.createDefaultModel()
-      m.read(reader, base, lang)
+      m.getReader(lang.jenaLang).read(m, reader, base.toString)
       m.success
     } catch {
       case t => t.fail
@@ -72,4 +42,20 @@ package object util {
   
   implicit def unwrap[E, F <: E, S <: E](v: Validation[F,S]): E = v.fold(e => e, s => s)
   
+  // I wonder if this is already defined somewhere...
+  def trySome[T](body: => T): Option[T] =
+    try {
+      val res = body;
+      if (res == null) None else Option(res)
+    } catch {
+      case _ => None
+    }
+  
+   def tryOrFail[T](body: => T): Validation[Throwable,T] =
+      try {
+        val res = body;
+        res.success
+      } catch {
+        case e => e.fail
+      }
 }

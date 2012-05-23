@@ -1,0 +1,189 @@
+<!--
+  ~ Copyright (c) 2011 Denis Duvauchelle (denisduvauchelle.com)
+  ~ under the MIT licence defined at
+  ~    http://www.opensource.org/licenses/mit-license.html
+  -->
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>SocWeb - The new semantic web</title>
+
+<link rel="shortcut icon" type="image/x-icon" href="a_img/favicon.ico">
+<link rel="stylesheet" type="text/css" href="a_css/general.css">
+
+
+
+<script type="text/javascript" src="a_js/jquery144min.js"></script>
+
+<!--PLUGGIN FOR AUTO COMPLETE-->
+<link rel="stylesheet" type="text/css" href="a_js/jquery-autocomplete/jquery.autocomplete.css">
+<script type="text/javascript" src="a_js/jquery-autocomplete/jquery.autocomplete.js"></script>
+
+<!--PLUGGIN FOR AJAX FILE UPLOADER-->
+<script type="text/javascript" src="js/ajaxuploader.js"></script>
+
+<script type="text/javascript" src="a_js/general.js"></script>
+
+
+</head> 
+
+<body>
+
+
+<div id="topbar">
+	<div class="wrapper">
+        		<h1 id="logo">SocWeb</h1>
+                <form method="get" action="">
+                	<input type="text" value="" name="q" id="main_search">
+                	<button type="submit"></button>
+                </form>
+                
+                <a href="index.html" class="topbar_links">The Wall</a>
+                <a href="social_book.html" class="topbar_links">Social book</a>
+                
+                <div>
+                
+
+
+	<a href=""><img src="a_img/avatar.png" height="20" align="absmiddle" /> &nbsp;&nbsp;Username</a>
+	<span>|</span>
+	<a href="">Log out</a>
+
+
+
+                    
+                    
+                </div>
+    </div> 
+</div>
+ 
+ 
+ 
+	<div id="site_wrapper">
+
+        <div id="status_box">
+            <h2>Say what you go to say:</h2>
+            <form method="post" id="form_status">
+            <textarea name="status_input" id="status_input"></textarea>
+            
+            <div id="status_options_file" class="hide">
+                <button type="button" id="status_upload_file">Upload a file</button>
+                <span class="hider" id="status_file_name"></span>
+                <br />
+            </div>
+            <br />
+            <button id="status_btn_submit" type="submit">Update</button> <span>( Hit Tab + enter to submit the post )</span>
+            <input id="status_file_temp_name" type="hidden" name="file_name" value=""  />
+            <input type="hidden" name="actions" value="add_status">
+            </form>
+        </div>
+
+
+
+        <br><br>
+        <h1>Feed display</h1>
+        <br><br>
+
+
+        <div class="story_box" id='story_box_181'>
+            <div class="story_left_column">
+                <img src="http://media.linkedin.com/mpr/mprx/0_7QQHyxI2mtCFMsAC7kvRypI8C-cbRJKCDTtByjsggciBXgbGi8nX-gaPuyBZZOlmm5k9PsX9885p" alt="User avatar" />
+            </div>
+        
+        
+            <div class="story_right_column">
+                <div class="text " id="text_181">This is where your wall post will go.</div>
+                <span>Published by <a href="#" class='username'>@denisduvauchelle</a></span> | 
+                <a href='#' class='show_comment' title='181'>Add a comment</a>
+            </div>
+            
+            <div class="clear"></div>
+            
+            <div class="story_bottom_row">
+                
+                
+                <div class="story_bottom_right">
+                    
+                </div>
+                
+                <div class="clear"></div>
+            
+            </div>
+            
+            <div class="clear"></div>
+        
+            <div class='hide' id='comment_area_181'>
+                <br>
+                <div id="placing_181"></div>
+            
+        
+                <div class="story_comments">
+                        <div class="story_comments_img">
+                            <img src="http://media.linkedin.com/mpr/mprx/0_7QQHyxI2mtCFMsAC7kvRypI8C-cbRJKCDTtByjsggciBXgbGi8nX-gaPuyBZZOlmm5k9PsX9885p" alt="User avatar" width="30" height="30" />
+                        </div>
+                        <div class="story_comments_txt">
+                             Username - <strong>This is a comment </strong>
+                        </div>
+                        <div class="clear"></div>
+                </div>
+            
+            
+            
+                <div class="story_comments">
+                    
+                    <div class="story_comments_img">
+                        <img src="http://media.linkedin.com/mpr/mprx/0_7QQHyxI2mtCFMsAC7kvRypI8C-cbRJKCDTtByjsggciBXgbGi8nX-gaPuyBZZOlmm5k9PsX9885p" alt="User avatar" width="30" height="30" />
+                    </div>
+                    
+                    <div class="story_comments_txt">
+                        <form class='comments_form' method='post'>
+                        <textarea name="comment" class="story_comment_textarea" id='comment_field_181'></textarea>
+                        <input type='hidden' name="id_feed" value='181' >
+                        <input type='hidden' name="actions" value='add_comment' >
+                        <button type="submit">Post</button>
+                        </form>
+                    </div>
+                    
+                    <div class="clear"></div>
+                    
+                </div>
+                
+            </div>
+            
+        </div>
+
+
+
+	
+    <div class="clear"></div>
+
+    
+
+
+</div>  <!-- END OF SITE_WRAPPER -->
+
+	<div id="footer" class="wrapper">
+    	
+   	
+	</div> <!-- END OF FOOTER -->
+
+
+<script type="text/javascript">
+/*
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-25910668-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+*/
+</script>
+
+</body>
+</html>

@@ -16,5 +16,7 @@ src/test/scala.egp
 sbt-launch*.jar
 .scala_dependencies
 *.orig
+.cache
+.settings
 .idea
 .idea_modules

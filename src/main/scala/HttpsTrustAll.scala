@@ -1,18 +1,24 @@
 /*
  * Copyright (c) 2011 Henry Story (bblfish.net)
- * All rights reserved.
+ * under the MIT licence defined
+ *    http://www.opensource.org/licenses/mit-license.html
  *
- * Redistribution and use in source and binary forms are permitted
- * provided that the above copyright notice and this paragraph are
- * duplicated in all such forms and that any documentation,
- * advertising materials, and other materials related to such
- * distribution and use acknowledge that the software was developed
- * by Henry Story.  The name of bblfish.net may not be used to endorse
- * or promote products derived
- * from this software without specific prior written permission.
- * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in the
+ * Software without restriction, including without limitation the rights to use, copy,
+ * modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so, subject to the
+ * following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+ * PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 package org.w3.readwriteweb
@@ -23,7 +29,9 @@ import org.jsslutils.keystores.KeyStoreLoader
 import org.jsslutils.sslcontext.trustmanagers.TrustAllClientsWrappingTrustManager
 import org.jsslutils.sslcontext.{X509TrustManagerWrapper, X509SSLContextFactory}
 import sys.SystemProperties
+import scala.util.Properties.{propOrNone => getProperty, javaHome}
 import unfiltered.jetty.{Ssl, Https}
+import unfiltered.jetty.Server
 
 
 /**
@@ -31,7 +39,10 @@ import unfiltered.jetty.{Ssl, Https}
  * @created: 12/10/2011
  */
 
-case class HttpsTrustAll(override val port: Int, override val host: String) extends Https(port, host) with TrustAll
+class HttpsTrustAll(
+    override val port: Int,
+    override val host: String)
+extends Https(port, host) with TrustAll
 
 
 /**
@@ -49,36 +60,45 @@ case class HttpsTrustAll(override val port: Int, override val host: String) exte
  *  the user experience would be very bad, since TLS does not give many options for explaining what the problem
  *  is.
  */
-trait TrustAll { self: Ssl =>
-   import scala.sys.SystemProperties._
+trait TrustAll extends Ssl with Server with DelayedInit {
 
-   lazy val sslContextFactory = new X509SSLContextFactory(
-               serverCertKeyStore,
-               tryProperty("jetty.ssl.keyStorePassword"),
-               serverCertKeyStore); //this one is not needed since our wrapper ignores all trust managers
+  import scala.sys.SystemProperties._
 
-   lazy val trustWrapper = new X509TrustManagerWrapper {
-     def wrapTrustManager(trustManager: X509TrustManager) = new TrustAllClientsWrappingTrustManager(trustManager)
-   }
-
-   lazy val serverCertKeyStore = {
+  val patchedSslContextFactory = {
+    val trustWrapper =
+      new X509TrustManagerWrapper {
+        def wrapTrustManager(trustManager: X509TrustManager) =
+          new TrustAllClientsWrappingTrustManager(trustManager)
+      }
+    
+    val serverCertKeyStore = {
       val keyStoreLoader = new KeyStoreLoader
-   		keyStoreLoader.setKeyStoreType(System.getProperty("jetty.ssl.keyStoreType","JKS"))
-   		keyStoreLoader.setKeyStorePath(trustStorePath)
-   		keyStoreLoader.setKeyStorePassword(System.getProperty("jetty.ssl.keyStorePassword","password"))
-      keyStoreLoader.loadKeyStore();
-   }
+      keyStoreLoader.setKeyStoreType(getProperty("jetty.ssl.keyStoreType") getOrElse "JKS")
+      keyStoreLoader.setKeyStorePath(trustStorePath)
+      keyStoreLoader.setKeyStorePassword(getProperty("jetty.ssl.keyStorePassword") getOrElse "password")
+      keyStoreLoader.loadKeyStore()
+    }
+    
+    val factory = new X509SSLContextFactory(
+      serverCertKeyStore,
+      getProperty("jetty.ssl.keyStorePassword") getOrElse sys.error("jetty.ssl.keyStorePassword not set"),
+      serverCertKeyStore) //this one is not needed since our wrapper ignores all trust managers
+    
+    factory.setTrustManagerWrapper(trustWrapper)
+    
+    factory
+  }
 
-   sslContextFactory.setTrustManagerWrapper(trustWrapper);
-
-
- 	 lazy val trustStorePath =  new SystemProperties().get("jetty.ssl.keyStore") match {
-       case Some(path) => path
-       case None => new File(new File(tryProperty("user.home")), ".keystore").getAbsolutePath
-   }
-
-   sslConn.setSslContext(sslContextFactory.buildSSLContext())
-   sslConn.setWantClientAuth(true)
+  val trustStorePath =
+    getProperty("jetty.ssl.keyStore") getOrElse {
+      new File(new File(javaHome), ".keystore").getAbsolutePath
+    }
+  
+  // not tested if ok, there was a problem anyway
+  def delayedInit(x: ⇒ Unit): Unit = {
+    sslConn.setSslContext(patchedSslContextFactory.buildSSLContext())
+    sslConn.setWantClientAuth(true)
+  }
 
 }
 

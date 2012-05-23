@@ -1,0 +1,18 @@
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix cert: <http://www.w3.org/ns/auth/cert#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+@prefix : <#> .
+
+<> a foaf:PersonalProfileDocument;
+   foaf:primaryTopic :joe .
+
+:joe a foaf:Person;
+    foaf:name "John Doe";
+    foaf:knows <http://bblfish.net/people/henry/card#me> ;
+    cert:key [ 
+        rdfs:comment "create using https://my-profile.eu/certgen.php on 23 May 2012";
+        cert:modulus "ad8751acee3204b7285d2e519e5ef9774f7e34e4e50500a1a1c2752948c7a4b285072d93d012d6453b5bf170a70c10ef3d64482286099a127711283e54eee1cf1c8e1aafa2233ad29cad1d1677b34c1f45ea2f296e522423777fd4b463d922de5f016711adc24177e4755e27ba4fb178a1c4b4689845763e6d6c2d32a5ffeddf9f5fadb9c8e2e7b2a7e86d6c6642d5ae8d9fc7a82c57ac0cd75b797c8386dcb223e6ba938358ab31acddf35beea5fc5e965acf705dd848740c3d17772001419dfca5a7672e29dafa130d2d37f79ed262a58c98b5f3172704d73d0c91e8f6bb046c7d623fe6be1b56199f96bf9fac559607a01445e1198618433659209cf4c919"^^xsd:hexBinary;
+       cert:exponent 65537
+    ] .
