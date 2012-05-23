@@ -23,7 +23,7 @@ It comes with
 * jar packager (assembly)
 * eclipse plugin for sbt
 * Web framework (Unfiltered)
-* embedded Web server (Jetty)
+* embedded Web server (Jetty or Netty)
 * tests for web api (specs)
 * logger (slf4j)
 * the Jena/ARQ libraries
