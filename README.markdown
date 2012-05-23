@@ -119,7 +119,7 @@ The following file is readable by all and so you will be able to access it:
     HTTP/1.1 200 OK
     ...
 
-In the test_www directory there is a .meta.n3 file which contains the access rules as defined by the http://www.w3.org/wiki/WebAccessControl vocabulary. ( this is still a very minimal implementation of what is possible ) These say that private.n3 requires authentication. And indeed:
+In the `test_www` directory there is a .meta.n3 file which contains the access rules as defined by the http://www.w3.org/wiki/WebAccessControl vocabulary. ( this is still a very minimal implementation of what is possible ) These say that private.n3 requires authentication. And indeed:
  
     $ curl -k -i -H "Accept: application/rdf+xml" https://localhost:8443/2012/private.n3
     curl: (56) SSL read: error:14094412:SSL routines:SSL3_READ_BYTES:sslv3 alert bad certificate, errno 0
@@ -143,15 +143,15 @@ when connecting and add that WebID to the access controlfile .meta.n3
 
 ### creating your own certificate
 
-You can create your own certificate in your browser using a service such as https://my-profile.eu/
-This will save your certificate in the keychain associated with the browser. 
-You can then edit the .meta.n3 file to give yourself read/write/execute access using that certificate.
+You can create your own certificate in your browser using a service such as [https://my-profile.eu/](https://my-profile.eu/) This will save your certificate in the keychain associated with the browser.
+You can then edit the .meta.n3 file to give yourself read/write/execute access using that certificate)
 
 If you want to use that certificate using curl, follw these steps:
 
 * save the certificate to your hardrive as a pkcs12 ( p12 ) file 
 * convert it to pem including private key
-    > openssl pkcs12  -in cert.p12 -out myCert.pem
+
+   > openssl pkcs12  -in cert.p12 -out myCert.pem
 
 Extra Userful Services provided  
 -------------------------------
@@ -180,7 +180,7 @@ TODO
 
 There is still a lot to do. Some things we are working on:
 
-* improve asynchronous behavior using akka.io 
+* improve asynchronous behavior using [akka.io](http://akka.io/)
 * make it easy to switch between Jena, Sesame and other frameworks using [banana-rdf](https://github.com/w3c/banana-rdf/)
 * improve the access control reasoning (which is very very basic for the moment)
 * improve architecture to work more fluidly with non RDF resources, such as pictures or videos
