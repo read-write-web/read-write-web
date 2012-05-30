@@ -36,7 +36,6 @@ import dispatch.Http
 import org.apache.http.client.HttpClient
 import javax.net.ssl.{SSLContext, X509TrustManager, KeyManager}
 import util.trySome
-import java.nio.file.Files
 
 /**
  * @author hjs
@@ -132,16 +131,17 @@ trait SecureFileSystemBased extends SecureResourceManaged {
 
   lazy val root = {
     outDirBase.mkdirs()
-    val dir = Files.createTempDirectory(outDirBase.toPath, "test_rww_")
+    val dir = File.createTempFile("test_rww_",".dir",outDirBase)
     System.out.println("Temp directory: "+dir.toString)
-    dir.toFile
+    dir.delete() //ugly hack!!, need to delete the temporary file and replace it with a directory
+    dir.mkdirs()
+    dir
   }
 
   lazy val resourceManager = new Filesystem(root, baseURL, lang)(mode)
 
   doBeforeSpec {
-    if (root.exists) root.deleteRecursively()
-    root.mkdir()
+
   }
 
 }
