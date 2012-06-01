@@ -12,7 +12,6 @@ import Scalaz._
 import scala.sys
 
 import com.hp.hpl.jena.vocabulary.RDF
-import org.w3.readwriteweb.Image
 
 class Filesystem(
   baseDirectory: File,

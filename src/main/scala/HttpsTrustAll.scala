@@ -28,7 +28,6 @@ import javax.net.ssl.X509TrustManager
 import org.jsslutils.keystores.KeyStoreLoader
 import org.jsslutils.sslcontext.trustmanagers.TrustAllClientsWrappingTrustManager
 import org.jsslutils.sslcontext.{X509TrustManagerWrapper, X509SSLContextFactory}
-import sys.SystemProperties
 import scala.util.Properties.{propOrNone => getProperty, javaHome}
 import unfiltered.jetty.{Ssl, Https}
 import unfiltered.jetty.Server
@@ -62,7 +61,6 @@ extends Https(port, host) with TrustAll
  */
 trait TrustAll extends Ssl with Server with DelayedInit {
 
-  import scala.sys.SystemProperties._
 
   val patchedSslContextFactory = {
     val trustWrapper =
