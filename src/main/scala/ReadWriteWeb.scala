@@ -126,7 +126,7 @@ trait ReadWriteWeb[Req, Res] {
                 _ <- r.save(bodyModel) failMap { t => InternalServerError ~> ResponseString(t.getStackTraceString) }
               } yield Created
             case PUT(_) =>
-              BadRequest ~> ResponseString("Content-Type MUST be one of: " + Lang.supportedAsString)
+              BadRequest ~> ResponseString("Content-Type for PUT be one of: " + Lang.supportedAsString)
             case POST(_) & RequestContentType(ct) if representation == DirectoryRepr =>
               val createType = Representation.fromAcceptedContentTypes(List(ct))
               r.create(createType) failMap { t => NotFound ~> ResponseString(t.getStackTraceString)} flatMap { rNew =>
@@ -198,8 +198,8 @@ trait ReadWriteWeb[Req, Res] {
                 }
               }
             }
-            case POST(_) =>
-              BadRequest ~> ResponseString("Content-Type MUST be one of: " + Post.supportedAsString)
+            case POST(_) & RequestContentType(ct) =>    // @@@ not exhaustive
+              BadRequest ~> ResponseString("Content-Type '" + ct + "' for POST must be one of: " + Post.supportedAsString)
             case DELETE(_) => {
               for { _ <- r.delete failMap { t => NotFound ~> ResponseString("Error found"+t.toString)}
               } yield NoContent
