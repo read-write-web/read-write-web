@@ -27,6 +27,11 @@ object Post {
   val supportContentTypes = Lang.supportContentTypes ++ Image.supportedImages.map(_.contentType) + SPARQL
   val supportedAsString = supportContentTypes mkString ", "
 
+  def supportsContentType(contentTypeHeader: String) = {
+    supportContentTypes.contains(cleanHeader(contentTypeHeader))
+  }
+
+  def cleanHeader(headerVal: String) = headerVal.split(";")(0).trim
   
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
@@ -34,7 +39,7 @@ object Post {
       is: InputStream,
       base: URL,
       contentType: String): Post = {
-    assert(supportContentTypes contains contentType)
+    assert(supportsContentType(contentType))
 
     val inAsString = {
        val source = Source.fromInputStream(is, "UTF-8")
@@ -61,7 +66,7 @@ object Post {
       }
 
     
-    contentType match {
+    cleanHeader(contentType) match {
       case SPARQL => postUpdate | (postQuery | PostUnknown)
       case RequestLang(lang) => postRDF(lang) | PostUnknown
       case GIF.contentType | JPEG.contentType | PNG.contentType => PostBinary(is)

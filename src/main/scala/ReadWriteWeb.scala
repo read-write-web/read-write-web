@@ -149,7 +149,7 @@ trait ReadWriteWeb[Req, Res] {
                   }
                 }
               }
-            case POST(_) & RequestContentType(ct) if Post.supportContentTypes contains ct => {
+            case POST(_) & RequestContentType(ct) if Post.supportsContentType(ct) => {
               Post.parse(Body.stream(req), uri, ct) match {
                 case PostUnknown => {
                   logger.info("Couldn't parse the request")
