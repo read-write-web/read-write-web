@@ -141,6 +141,10 @@ when connecting and add that WebID to the access controlfile .meta.n3
 
 [ the curl password is "secret" ]
 
+You can then update the foaf file with new relations with a command like
+
+    $ curl -X POST -H "Content-Type: application/sparql-query; charset=UTF-8" --data-binary "INSERT DATA { <http://bblfish.net/#hjs> <http://xmlns.com/foaf/0.1/knows> <http://fcns.eu/people/andrei/card#me> . } " -k -i -E src/test/resources/JohnDoe.pem https://localhost:8443/2012/foaf.n3
+
 ### creating your own certificate
 
 You can create your own certificate in your browser using a service such as [https://my-profile.eu/](https://my-profile.eu/) This will save your certificate in the keychain associated with the browser.
