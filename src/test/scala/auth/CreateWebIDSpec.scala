@@ -189,7 +189,7 @@ object CreateWebIDSpec extends SecureFileSystemBased {
        )
 
        val httpCode = Http(
-         webidProfile.secure.postSPARQL(updateQStr) get_statusCode )
+         webidProfile.secure.post(updateQStr,Post.SPARQL+" ; charset=UTF-8") get_statusCode )
         httpCode must_== 200
      }
 

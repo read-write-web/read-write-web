@@ -49,7 +49,7 @@ package object utiltest {
     def postSPARQL(body: String): Request =
       post(body, Post.SPARQL)
       
-    private def post(body: String, contentType: String): Request =
+   def post(body: String, contentType: String): Request =
       (req <:< Map("Content-Type" -> contentType) <<< body).copy(method="POST")
 
       
