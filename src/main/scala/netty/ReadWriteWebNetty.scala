@@ -64,6 +64,7 @@ object ReadWriteWebNetty extends ReadWriteWebArgs {
      
      val rww = new cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with ReadWriteWeb[ReceivedMessage,HttpResponse]{
           val rm = filesystem
+          val base: Option[String] = uriBase.value
           def manif = manifest[ReceivedMessage]
           override val authz = new RDFAuthZ[ReceivedMessage,HttpResponse](filesystem)
      }

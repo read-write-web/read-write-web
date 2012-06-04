@@ -180,9 +180,7 @@ trait ReadWriteWebArgs {
   val httpPort = parser.option[Int]("http", "port","start the http server on port")
   val httpsPort = parser.option[Int]("https","port","start the https server on port")
 
-  val uriBase = parser.option[String]("base","uri","base URI for processing RDF") {
-    (sValue, opt) => System.setProperty("rww.uriBase", sValue)
-  }
+  val uriBase = parser.option[String]("base","uri","base URI for processing RDF")
 
   val rootDirectory = parser.parameter[File]("rootDirectory", "path to root directory where files are served", false) {
     (sValue, opt) => {

@@ -44,6 +44,7 @@ object ReadWriteWebJetty extends ReadWriteWebArgs {
     
     val rww = new ReadWriteWeb[HttpServletRequest,HttpServletResponse] {
       val rm = filesystem
+      val base: Option[String] = uriBase.value
       def manif = manifest[HttpServletRequest]
       override implicit val authz = new RDFAuthZ[HttpServletRequest,HttpServletResponse](filesystem)
     }

@@ -44,6 +44,28 @@ object Authoritative {
     else "" //todo: should perhaps throw an exception here.
   }
 
+  def unapply2[T](req: HttpRequest[T], uriBase:Option[String]) (implicit m: Manifest[T]) : Tuple2[URL, Representation] =  {
+
+    // val uriBase: Option[String] = Option(System getProperty "rww.uriBase") // @@ Hack
+
+    val uri = reqURL(m, req)
+    val suffixOpt = uri match {
+      case r(_, suffix) => Some(suffix)
+      case _ if uri endsWith "/" => Some("/")
+      case _ => None
+    }
+
+    uriBase match {
+        case Some(base) => {
+            System.out.println("Base is " + base)
+            System.out.println("req.uri is " + req.uri)
+            (new URL(new URL(base), req.uri), Representation(suffixOpt, Accept(req)))
+        }
+        case None =>  (new URL(uri), Representation(suffixOpt, Accept(req)))
+    }
+  }
+
+  
   def unapply[T](req: HttpRequest[T]) (implicit m: Manifest[T]) : Option[(URL, Representation)] =  {
 
     val uriBase: Option[String] = Option(System getProperty "rww.uriBase") // @@ Hack

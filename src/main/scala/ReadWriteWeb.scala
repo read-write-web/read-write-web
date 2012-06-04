@@ -39,6 +39,7 @@ import javax.naming.BinaryRefAddr
  */
 trait ReadWriteWeb[Req, Res] {
   val rm: ResourceManager
+  val base : Option[String]
   implicit def manif: Manifest[Req]
   implicit val authz: AuthZ[Req, Res] = new NullAuthZ[Req, Res]
   // a few type short cuts to make it easier to reason with the code here
@@ -79,7 +80,8 @@ trait ReadWriteWeb[Req, Res] {
    */
   def rwwIntent  =  (req: HttpRequest[Req]) => {
 
-          val Authoritative(uri: URL, representation: Representation) = req
+          // val Authoritative(uri: URL, representation: Representation) = req
+          var (uri: URL, representation: Representation) = Authoritative.unapply2(req, base)
           val r: Resource = rm.resource(uri)
           val res: ResponseFunction[Res] = req match {
             case GET(_) if representation == HTMLRepr => {
