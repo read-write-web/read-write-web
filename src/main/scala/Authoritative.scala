@@ -35,7 +35,9 @@ object Authoritative {
   val r = """^(.*)\.(\w{0,4})$""".r
 
   // all of this would be unnecessary if req.uri would really return the full URI
-  // we should try to push for that to be done at unfiltered layer
+  // we should try to push for that to be done at unfiltered layer - HS
+  // Alternatively, build the system to not need to know, or be told, its base hostport. - TBL
+  //
   def reqURL[T](m: Manifest[T], r: HttpRequest[T]): String = {
     if (m <:< manifest[HttpServletRequest]) reqUrlServlet(r.asInstanceOf[HttpRequest[HttpServletRequest]])
     else if (m <:< manifest[ReceivedMessage]) reqUrlNetty(r.asInstanceOf[HttpRequest[ReceivedMessage]])
@@ -43,13 +45,20 @@ object Authoritative {
   }
 
   def unapply[T](req: HttpRequest[T]) (implicit m: Manifest[T]) : Option[(URL, Representation)] =  {
+
+    val uriBase: Option[String] = Option(System getProperty "rww.uriBase") // @@ Hack
+
     val uri = reqURL(m, req)
     val suffixOpt = uri match {
       case r(_, suffix) => Some(suffix)
       case _ if uri endsWith "/" => Some("/")
       case _ => None
     }
-    Some((new URL(uri), Representation(suffixOpt, Accept(req))))
+
+    uriBase match {
+        case Some(base) => Some((new URL(new URL(base), req.uri), Representation(suffixOpt, Accept(req))))        
+        case None =>  Some((new URL(uri), Representation(suffixOpt, Accept(req))))
+    }
   }
 
 
