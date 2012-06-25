@@ -110,6 +110,7 @@ trait SecureResourceManaged extends Specification with SecureServed {
     val rm = resourceManager
     def manif = manifest[ReceivedMessage]
     override val authz = new RDFAuthZ[ReceivedMessage,HttpResponse](resourceManager)
+    val base = None
   }
 
   def setup = { _.plan(rww) }

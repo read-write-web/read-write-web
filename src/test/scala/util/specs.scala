@@ -20,9 +20,10 @@ trait JettyResourceManaged extends Specification with unfiltered.spec.jetty.Serv
   def resourceManager: ResourceManager
 
   val rww = new ReadWriteWeb[HttpServletRequest,HttpServletResponse] {
-     val rm = resourceManager
-     def manif = manifest[HttpServletRequest]
-   }
+    val rm = resourceManager
+    def manif = manifest[HttpServletRequest]
+    val base = None
+  }
 
   def setup = { _.filter(Planify(rww.intent)) }
  
@@ -39,6 +40,8 @@ trait ResourceManaged extends Specification with unfiltered.spec.netty.Served {
   val rww = new cycle.Plan  with cycle.ThreadPool with ServerErrorResponse with ReadWriteWeb[ReceivedMessage,HttpResponse] {
     val rm = resourceManager
     def manif = manifest[ReceivedMessage]
+
+    val base = None
   }
 
   def setup = { _.plan(rww) }
