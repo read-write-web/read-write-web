@@ -119,7 +119,7 @@ The following file is readable by all and so you will be able to access it:
     HTTP/1.1 200 OK
     ...
 
-In the `test_www` directory there is a .meta.n3 file which contains the access rules as defined by the http://www.w3.org/wiki/WebAccessControl vocabulary. ( this is still a very minimal implementation of what is possible ) These say that private.n3 requires authentication. And indeed:
+In the `test_www` directory there is a [.meta.n3](https://dvcs.w3.org/hg/read-write-web/file/fae877adc4d2/test_www/.meta.n3) file which contains the access rules as defined by the http://www.w3.org/wiki/WebAccessControl vocabulary. ( this is still a very minimal implementation of what is possible ) These say that private.n3 requires authentication. And indeed:
  
     $ curl -k -i -H "Accept: application/rdf+xml" https://localhost:8443/2012/private.n3
     curl: (56) SSL read: error:14094412:SSL routines:SSL3_READ_BYTES:sslv3 alert bad certificate, errno 0
