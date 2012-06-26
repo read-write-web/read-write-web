@@ -17,7 +17,7 @@ import Query.{QueryTypeSelect => SELECT,
               QueryTypeConstruct => CONSTRUCT,
               QueryTypeDescribe => DESCRIBE}
 
-import scalaz.{Scalaz, Resource => _}
+import scalaz.{Resource => _, Validation, Scalaz}
 import Scalaz._
 import unfiltered.request._
 import unfiltered.Cycle
@@ -85,34 +85,51 @@ trait ReadWriteWeb[Req, Res] {
           var (uri: URL, representation: Representation) = Authoritative.unapply2(req, base)
           val r: Resource = rm.resource(uri)
           val res: ResponseFunction[Res] = req match {
-            case GET(_) if representation == HTMLRepr => {
-              val source = Source.fromFile("src/main/resources/skin.html")("UTF-8")
-              val body = source.getLines.mkString("\n")
-              Ok ~> ViaSPARQL ~> ContentType("text/html") ~> ResponseString(body)
-            }
-            case GET(_) if representation.isInstanceOf[ImageRepr] => {
-              for (in <- r.getStream failMap {x => NotFound })
-              yield {
-                val ImageRepr(typ) = representation
-                Ok ~> ContentType(typ.contentType) ~> ResponseBin(in)
-              }
-            }
-            case  GET(_) | HEAD(_) =>
-              for {
-                model <- r.get() failMap { x => NotFound }
-                lang =  AcceptLang.unapply(req).getOrElse{
-                    representation match {
-                      case RDFRepr(l) => l
-                      case _ => Lang.default
-                    }
-                  }
-              } yield {
-                val res = req match {
-                  case GET(_) => Ok ~> ViaSPARQL ~> ContentType(lang.contentType) ~> ResponseModel(model, uri, lang)
-                  case HEAD(_) => Ok ~> ViaSPARQL ~> ContentType(lang.contentType)
+            case  GET(_) | HEAD(_) => {
+              val res: Validation[ResponseFunction[Any],Tuple2[ResponseFunction[Any],ResponseFunction[Any]]] =
+                if ( representation == HTMLRepr && r.exists &&
+                      Representation.fromSuffix(uri.toString).isInstanceOf[RDFRepr] ) {
+                // we have an rdf resource, but we wish to wrap it in html for the browser
+                val source = Source.fromFile("src/main/resources/skin.html")("UTF-8")
+                val body = source.getLines.mkString("\n")
+                (Ok ~> ViaSPARQL ~> ContentType("text/html"), ResponseString(body)).success
+              } else if (representation.isInstanceOf[ImageRepr] ) {
+                for (in <- r.getStream failMap {x => NotFound })
+                yield {
+                  val ImageRepr(typ) = representation
+                  (Ok ~> ContentType(typ.contentType), ResponseBin(in))
                 }
-                res ~> AccessControlAllowAll ~> ContentLocation( uri.toString ) // without this netty (perhaps jetty too?) sends very weird headers, breaking tests
+              } else if ( representation == HTMLRepr)  {
+                for (in <- r.getStream failMap {x => NotFound })
+                yield {
+                  (Ok ~> HtmlContent, ResponseBin(in))
+                }
+              } else if (representation == JSRepr)  {
+                for (in <- r.getStream failMap {x => NotFound })
+                yield {
+                  (Ok ~> JsContent, ResponseBin(in))
+                }
+              } else {
+                for {
+                  model <- r.get() failMap { x => NotFound }
+                  lang =  AcceptLang.unapply(req).getOrElse{
+                      representation match {
+                        case RDFRepr(l) => l
+                        case _ => Lang.default
+                      }
+                    }
+                } yield {
+                  (Ok ~> ViaSPARQL ~> ContentType(lang.contentType) ~> AccessControlAllowAll ~> ContentLocation( uri.toString ),ResponseModel(model, uri, lang)) // without this netty (perhaps jetty too?) sends very weird headers, breaking tests
+                }
               }
+              res.map { goodResponsePair =>
+                val (headers,body)=goodResponsePair
+                req match {
+                  case GET(_) => headers~>body
+                  case HEAD(_) => headers
+                }
+              }
+            }
             case PUT(_) if representation.isInstanceOf[ImageRepr] => {
               for (_ <- r.putStream(Body.stream(req)) failMap { t=> InternalServerError ~> ResponseString(t.getStackTraceString)})
               yield Created
@@ -208,7 +225,7 @@ trait ReadWriteWeb[Req, Res] {
               } yield NoContent
             }
 //            case OPTIONS(_) => {
-              //todo
+//              //todo
 //            }
             case _ => MethodNotAllowed ~> Allow("GET", "PUT", "POST")
           }

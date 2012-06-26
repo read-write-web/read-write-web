@@ -164,6 +164,7 @@ class Filesystem(
       }
     }
 
+    def exists = fileOnDisk.exists()
   }
 
 }

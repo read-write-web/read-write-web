@@ -11,6 +11,7 @@ object Representation {
   def fromSuffix(suffix: String): Representation = {
     suffix match {
       case "n3" => RDFRepr(N3)
+      case "js" => JSRepr
       case "turtle" | "ttl" => RDFRepr(TURTLE)
       case "rdf" => RDFRepr(RDFXML)
       case "htm" | "html" | "xhtml" => HTMLRepr
@@ -66,5 +67,6 @@ object Representation {
 case class RDFRepr(lang: Lang) extends Representation
 case class ImageRepr(mime: Image) extends Representation
 case object HTMLRepr extends Representation
+case object JSRepr extends Representation
 case object DirectoryRepr extends Representation
 case object UnknownRepr extends Representation

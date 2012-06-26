@@ -43,7 +43,7 @@ trait Resource {
   def getStream: Validation[Throwable,InputStream]
   def delete: Validation[Throwable, Unit]
   def save(model:Model):Validation[Throwable, Unit]
-
+  def exists: Boolean
   /**
    * PUT the inputstream in the location
    *

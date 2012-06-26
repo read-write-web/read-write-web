@@ -135,6 +135,8 @@ object GraphCache extends ResourceManager with Logging {
     def getStream = throw new MethodNotSupportedException("not implemented")
 
     def putStream(in: InputStream) = throw new MethodNotSupportedException("not implemented")
+
+    def exists = throw new MethodNotSupportedException("not implemented")
   }
 
   private def getUrl(u: URL) = {
