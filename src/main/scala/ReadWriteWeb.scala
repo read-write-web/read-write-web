@@ -1,5 +1,6 @@
 package org.w3.readwriteweb
 
+import _root_.util.AccessControlAllowAll
 import auth.{AuthZ, NullAuthZ}
 import netty.ResponseBin
 import org.w3.readwriteweb.util._
@@ -110,7 +111,7 @@ trait ReadWriteWeb[Req, Res] {
                   case GET(_) => Ok ~> ViaSPARQL ~> ContentType(lang.contentType) ~> ResponseModel(model, uri, lang)
                   case HEAD(_) => Ok ~> ViaSPARQL ~> ContentType(lang.contentType)
                 }
-                res ~> ContentLocation( uri.toString ) // without this netty (perhaps jetty too?) sends very weird headers, breaking tests
+                res ~> AccessControlAllowAll ~> ContentLocation( uri.toString ) // without this netty (perhaps jetty too?) sends very weird headers, breaking tests
               }
             case PUT(_) if representation.isInstanceOf[ImageRepr] => {
               for (_ <- r.putStream(Body.stream(req)) failMap { t=> InternalServerError ~> ResponseString(t.getStackTraceString)})
@@ -206,6 +207,9 @@ trait ReadWriteWeb[Req, Res] {
               for { _ <- r.delete failMap { t => NotFound ~> ResponseString("Error found"+t.toString)}
               } yield NoContent
             }
+//            case OPTIONS(_) => {
+              //todo
+//            }
             case _ => MethodNotAllowed ~> Allow("GET", "PUT", "POST")
           }
           res
