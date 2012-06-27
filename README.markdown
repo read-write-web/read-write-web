@@ -80,6 +80,8 @@ ou can now request resources using curl on the command line
 It is possible to PUT, RDF resources too and a couple of image formats, as 
 well as to create directories etc... The test suites have some good examples of this. 
 
+   $ curl -k -X PUT -i --data-binary "<#me> a <http://xmlns.com/foaf/0.1/Person>." -H "Content-Type: text/turtle" http://localhost:8080/2012/example.n3
+
 ### to generate the eclipse configuration
 
     > eclipse same-targets
@@ -118,6 +120,7 @@ The following file is readable by all and so you will be able to access it:
     $ curl -k -i -H "Accept: application/rdf+xml" https://localhost:8443/2012/foaf.n3 
     HTTP/1.1 200 OK
     ...
+
 
 In the `test_www` directory there is a [.meta.n3.off](https://dvcs.w3.org/hg/read-write-web/file/cff4d0159b26/test_www/.meta.n3.off) file which contains the access rules as defined by the http://www.w3.org/wiki/WebAccessControl vocabulary. ( this is still a very minimal implementation of what is possible ) These say that private.n3 requires authentication. 
 For it to be enabled you need to rename .meta.n3.off to .meta.n3 . When that is done :
