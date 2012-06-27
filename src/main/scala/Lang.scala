@@ -40,15 +40,17 @@ object Lang {
   
   val default = RDFXML
   
-  def apply(contentType: String): Option[Lang] =
-    contentType.trim.toLowerCase match {
-      case "text/n3" => Some(N3)
-      case "text/turtle" => Some(TURTLE)
-      case "application/rdf+xml" => Some(RDFXML)
-      case "text/html" => Some(HTML)
-      case "application/xhtml+xml" => Some(XHTML)
-      case _ => None
-  }    
+  def apply(contentType: String): Option[Lang] = {
+     val ct = contentType.split(";")(0)
+     ct.trim.toLowerCase match {
+        case "text/n3" => Some(N3)
+        case "text/turtle" => Some(TURTLE)
+        case "application/rdf+xml" => Some(RDFXML)
+        case "text/html" => Some(HTML)
+        case "application/xhtml+xml" => Some(XHTML)
+        case _ => None
+     }
+  }
   
   def apply(cts: Iterable[String]): Option[Lang] =
     cts map Lang.apply collectFirst { case Some(lang) => lang }

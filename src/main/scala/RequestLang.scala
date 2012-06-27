@@ -32,8 +32,10 @@ object RequestLang {
   def apply(req: HttpRequest[_]): Option[Lang] =
     Lang(RequestContentType(req))
 
-  def unapply(req: HttpRequest[_]): Option[Lang] =
-    Lang(RequestContentType(req))
+  def unapply(req: HttpRequest[_]): Option[Lang] = {
+    val res = Lang(RequestContentType(req))
+    res
+  }
 
   def unapply(ct: String): Option[Lang] =
     Lang(ct)
