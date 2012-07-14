@@ -158,6 +158,11 @@ object GraphCache extends ResourceManager with Logging {
             }
             case None => RDFXML  //todo: it would be better to try to do a bit of guessing in this case by looking at content
           }
+          // an oddity of HTTP, see the discussion on the WebID mailing list
+          // http://lists.w3.org/Archives/Public/public-webid/2012Apr/0004.html
+          // and the bug report on the httpbis mailing list
+          // http://trac.tools.ietf.org/wg/httpbis/trac/ticket/154
+          // and the definition of httpbis
           val loc = code match {
             case 301 => res.getHeaders("Content-Location").headOption match {
                 case Some(loc) =>  new URL(u,loc.getValue)
